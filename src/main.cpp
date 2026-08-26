@@ -6,6 +6,7 @@
 
 #include "common.h"
 #include "entry/entry.h"
+#include <camera.h>
 
 namespace {
 
@@ -89,6 +90,10 @@ void gameInit(Game &_game) {
   // Create vertex stream declaration.
   PosColorVertex::init();
 
+  cameraCreate();
+  cameraSetPosition({0.0f, 0.0f, -5.0f});
+  cameraSetVerticalAngle(0.0f);
+
   // Create static vertex buffer.
   _game.m_vbh = bgfx::createVertexBuffer(
       bgfx::makeRef(s_triangleVertices.data(),
@@ -111,7 +116,11 @@ void gameInit(Game &_game) {
  * @param _game Game state to advance.
  * @param _dt   Step duration in seconds; always kFixedDt.
  */
-void gameUpdate(Game &_game, float _dt) { _game.m_frameTime.frame(); }
+void gameUpdate(Game &_game, [[maybe_unused]] float _dt) {
+  _game.m_frameTime.frame();
+  cameraUpdate(bx::toSeconds<float>(_game.m_frameTime.getDeltaTime()),
+               _game.m_mouseState);
+}
 
 /**
  * @brief Submits one frame.
@@ -129,10 +138,11 @@ void gameRender(const Game &_game) {
 
   // Set view and projection matrix for view 0.
   {
-    const bx::Vec3 at = {0.0f, 0.0f, 0.0f};
-    const bx::Vec3 eye = {0.0f, 0.0f, -5.0f};
+    // const bx::Vec3 at = {0.0f, 0.0f, 0.0f};
+    // const bx::Vec3 eye = {0.0f, 0.0f, -5.0f};
     std::array<float, 16> view{};
-    bx::mtxLookAt(view.data(), eye, at);
+    cameraGetViewMtx(view.data());
+    // bx::mtxLookAt(view.data(), eye, at);
 
     std::array<float, 16> proj{};
     bx::mtxProj(proj.data(), 60.0f,
@@ -140,17 +150,19 @@ void gameRender(const Game &_game) {
                     static_cast<float>(_game.m_height),
                 0.1f, 100.0f, bgfx::getCaps()->homogeneousDepth);
     bgfx::setViewTransform(0, view.data(), proj.data());
+
+    // Set view 0 default viewport.
+    bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(_game.m_width),
+                      static_cast<uint16_t>(_game.m_height));
   }
-  // Set rotation matrix for view 0
+
+  // Set rotation matrix for current model
   {
     std::array<float, 16> rotationMtx{};
     bx::mtxRotateY(rotationMtx.data(), time * 2.f);
 
     bgfx::setTransform(rotationMtx.data());
   }
-
-  bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(_game.m_width),
-                    static_cast<uint16_t>(_game.m_height));
 
   // Ensure view 0 is cleared even though nothing else is submitted to it yet.
   // bgfx::touch(0);
@@ -174,6 +186,7 @@ void gameRender(const Game &_game) {
  * @return Process exit code.
  */
 auto gameShutdown(Game &_game) -> int {
+  cameraDestroy();
   bgfx::destroy(_game.m_vbh);
   bgfx::destroy(_game.m_program);
   bgfx::shutdown();
