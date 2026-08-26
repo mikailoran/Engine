@@ -2,22 +2,12 @@
 #include <bgfx_utils.h>
 #include <bx/timer.h>
 
-#include <algorithm>
 #include <array>
 
+#include "common.h"
 #include "entry/entry.h"
 
 namespace {
-
-/// Fixed simulation step, in seconds. The simulation advances in whole steps of
-/// this size regardless of how fast frames are actually rendered.
-constexpr float kFixedDt = 1.0f / 60.0f;
-
-/// Upper bound on a single frame's measured duration, in seconds. Without this,
-/// a long stall (breakpoint, window drag) produces a huge delta that spawns
-/// more fixed steps than the next frame can afford, which in turn lengthens
-/// that frame -- the "spiral of death".
-constexpr double kMaxFrameTime = 0.25;
 
 struct PosColorVertex {
   float m_x;
@@ -37,11 +27,13 @@ struct PosColorVertex {
 
 bgfx::VertexLayout PosColorVertex::ms_layout;
 
-constexpr auto RED = 0xff0000ff; // RGBA
+constexpr auto RED = 0xff0000ff;   // RGBA
+constexpr auto GREEN = 0xff00ff00; // RGBA
+constexpr auto BLUE = 0xffff0000;  // RGBA
 const std::array<PosColorVertex, 3> s_triangleVertices{
     {{-1.0f, -1.0f, 0.0f, RED},
-     {1.0f, -1.0f, 0.0f, RED},
-     {0.0f, 1.0f, 1.0f, RED}}};
+     {1.0f, -1.0f, 0.0f, GREEN},
+     {0.0f, 1.0f, 0.0f, BLUE}}};
 
 /**
  * @brief Whole game state: window/reset parameters plus everything the
@@ -62,8 +54,9 @@ struct Game {
 
   entry::MouseState m_mouseState;
 
-  /// Accumulated simulation time, in seconds. Stands in for real game state.
-  float m_elapsed = 0.0f;
+  FrameTime m_frameTime;
+
+  static constexpr uint64_t RENDER_STATE = BGFX_STATE_DEFAULT;
 };
 
 /**
@@ -75,8 +68,6 @@ struct Game {
  * @param _game Game state to initialise.
  */
 void gameInit(Game &_game) {
-  // Hand bgfx the native window/display handles entry created for us. The
-  // handle type matters on Linux, where it distinguishes X11 from Wayland.
   bgfx::Init init;
   init.type = bgfx::RendererType::Count; // auto-select backend
   init.platformData.nwh =
@@ -107,6 +98,8 @@ void gameInit(Game &_game) {
   // TODO: remove hardcoded path
   entry::setCurrentDir("/home/mikail/Work/mygame/");
   _game.m_program = loadProgram("vs.sc", "fs.sc");
+
+  _game.m_frameTime.reset();
 }
 
 /**
@@ -118,7 +111,7 @@ void gameInit(Game &_game) {
  * @param _game Game state to advance.
  * @param _dt   Step duration in seconds; always kFixedDt.
  */
-void gameFixedUpdate(Game &_game, float _dt) { _game.m_elapsed += _dt; }
+void gameUpdate(Game &_game, float _dt) { _game.m_frameTime.frame(); }
 
 /**
  * @brief Submits one frame.
@@ -130,7 +123,31 @@ void gameFixedUpdate(Game &_game, float _dt) { _game.m_elapsed += _dt; }
  *               is not a multiple of the fixed rate. Unused until there is
  *               something to interpolate.
  */
-void gameRender(const Game &_game, [[maybe_unused]] float _alpha) {
+void gameRender(const Game &_game) {
+
+  const auto time = bx::toSeconds<float>(_game.m_frameTime.getDurationTime());
+
+  // Set view and projection matrix for view 0.
+  {
+    const bx::Vec3 at = {0.0f, 0.0f, 0.0f};
+    const bx::Vec3 eye = {0.0f, 0.0f, -5.0f};
+    std::array<float, 16> view{};
+    bx::mtxLookAt(view.data(), eye, at);
+
+    std::array<float, 16> proj{};
+    bx::mtxProj(proj.data(), 60.0f,
+                static_cast<float>(_game.m_width) /
+                    static_cast<float>(_game.m_height),
+                0.1f, 100.0f, bgfx::getCaps()->homogeneousDepth);
+    bgfx::setViewTransform(0, view.data(), proj.data());
+  }
+  // Set rotation matrix for view 0
+  {
+    std::array<float, 16> rotationMtx{};
+    bx::mtxRotateY(rotationMtx.data(), time * 2.f);
+
+    bgfx::setTransform(rotationMtx.data());
+  }
 
   bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(_game.m_width),
                     static_cast<uint16_t>(_game.m_height));
@@ -141,14 +158,12 @@ void gameRender(const Game &_game, [[maybe_unused]] float _alpha) {
   const bgfx::Stats *stats = bgfx::getStats();
   constexpr float one_sec_in_ms = 1000.0f;
   bgfx::dbgTextClear();
-  bgfx::dbgTextPrintf(0, 1, 0x0f, "Own game loop, fixed %.2f ms step.",
-                      static_cast<double>(kFixedDt) * one_sec_in_ms);
-  bgfx::dbgTextPrintf(0, 2, 0x0f, "Elapsed sim time: %.2f s",
-                      static_cast<double>(_game.m_elapsed));
   bgfx::dbgTextPrintf(0, 3, 0x0f, "Backbuffer %dW x %dH", stats->width,
                       stats->height);
 
   bgfx::setVertexBuffer(0, _game.m_vbh);
+
+  bgfx::setState(Game::RENDER_STATE);
   bgfx::submit(0, _game.m_program);
   // Advance to the next frame; kicks the render thread.
   bgfx::frame();
@@ -188,32 +203,13 @@ auto _main_(int /*_argc*/, char ** /*_argv*/) -> int {
   Game game;
   gameInit(game);
 
-  // Fixed-timestep loop with an accumulator: measure the real frame duration,
-  // bank it, then spend it in whole fixed steps. Rendering happens once per
-  // iteration at whatever rate the display allows.
-  const auto freq = static_cast<double>(bx::getHPFrequency());
-  auto last = bx::getHPCounter();
-  double accumulator = 0.0;
-
   // processEvents pumps entry's event queue and returns true when the window
   // asks to close; it also writes back width/height and handles reset.
   while (!entry::processEvents(game.m_width, game.m_height, game.m_debug,
                                game.m_reset, &game.m_mouseState)) {
-    const int64_t now = bx::getHPCounter();
-    auto frameTime = static_cast<double>(now - last) / freq;
-    last = now;
+    gameUpdate(game, 0.0f);
 
-    frameTime = std::min(frameTime, kMaxFrameTime);
-
-    accumulator += frameTime;
-
-    while (accumulator >= static_cast<double>(kFixedDt)) {
-      gameFixedUpdate(game, kFixedDt);
-      accumulator -= static_cast<double>(kFixedDt);
-    }
-
-    gameRender(game,
-               static_cast<float>(accumulator / static_cast<double>(kFixedDt)));
+    gameRender(game);
   }
 
   return gameShutdown(game);
