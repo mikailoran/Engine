@@ -36,6 +36,26 @@ const std::array<PosColorVertex, 3> s_triangleVertices{
      {1.0f, -1.0f, 0.0f, GREEN},
      {0.0f, 1.0f, 0.0f, BLUE}}};
 
+static std::array<PosColorVertex, 8> s_cubeVertices = {{
+    {-1.0f, 1.0f, 1.0f, 0xff000000},
+    {1.0f, 1.0f, 1.0f, 0xff0000ff},
+    {-1.0f, -1.0f, 1.0f, 0xff00ff00},
+    {1.0f, -1.0f, 1.0f, 0xff00ffff},
+    {-1.0f, 1.0f, -1.0f, 0xffff0000},
+    {1.0f, 1.0f, -1.0f, 0xffff00ff},
+    {-1.0f, -1.0f, -1.0f, 0xffffff00},
+    {1.0f, -1.0f, -1.0f, 0xffffffff},
+}};
+
+static const std::array<uint16_t, 36> s_cubeTriList = {{
+    0, 1, 2,          // 0
+    1, 3, 2, 4, 6, 5, // 2
+    5, 6, 7, 0, 2, 4, // 4
+    4, 2, 6, 1, 5, 3, // 6
+    5, 7, 3, 0, 4, 1, // 8
+    4, 5, 1, 2, 3, 6, // 10
+    6, 3, 7,
+}};
 /**
  * @brief Whole game state: window/reset parameters plus everything the
  *        simulation owns.
@@ -50,7 +70,9 @@ struct Game {
   uint32_t m_debug = BGFX_DEBUG_TEXT;
   uint32_t m_reset = BGFX_RESET_VSYNC;
 
-  bgfx::VertexBufferHandle m_vbh;
+  bgfx::VertexBufferHandle m_vbhTriangle;
+  bgfx::VertexBufferHandle m_vbhCube;
+  bgfx::IndexBufferHandle m_ibh;
   bgfx::ProgramHandle m_program;
 
   entry::MouseState m_mouseState;
@@ -95,10 +117,18 @@ void gameInit(Game &_game) {
   cameraSetVerticalAngle(0.0f);
 
   // Create static vertex buffer.
-  _game.m_vbh = bgfx::createVertexBuffer(
+  _game.m_vbhTriangle = bgfx::createVertexBuffer(
       bgfx::makeRef(s_triangleVertices.data(),
                     s_triangleVertices.size() * sizeof(PosColorVertex)),
       PosColorVertex::ms_layout);
+
+  _game.m_vbhCube = bgfx::createVertexBuffer(
+      bgfx::makeRef(s_cubeVertices.data(),
+                    s_cubeVertices.size() * sizeof(PosColorVertex)),
+      PosColorVertex::ms_layout);
+
+  _game.m_ibh = bgfx::createIndexBuffer(bgfx::makeRef(
+      s_cubeTriList.data(), s_cubeTriList.size() * sizeof(uint16_t)));
 
   // TODO: remove hardcoded path
   entry::setCurrentDir("/home/mikail/Work/mygame/");
@@ -168,12 +198,13 @@ void gameRender(const Game &_game) {
   // bgfx::touch(0);
 
   const bgfx::Stats *stats = bgfx::getStats();
-  constexpr float one_sec_in_ms = 1000.0f;
   bgfx::dbgTextClear();
   bgfx::dbgTextPrintf(0, 3, 0x0f, "Backbuffer %dW x %dH", stats->width,
                       stats->height);
 
-  bgfx::setVertexBuffer(0, _game.m_vbh);
+  // bgfx::setVertexBuffer(0, _game.m_vbhTriangle);
+  bgfx::setVertexBuffer(0, _game.m_vbhCube);
+  bgfx::setIndexBuffer(_game.m_ibh);
 
   bgfx::setState(Game::RENDER_STATE);
   bgfx::submit(0, _game.m_program);
@@ -187,7 +218,9 @@ void gameRender(const Game &_game) {
  */
 auto gameShutdown(Game &_game) -> int {
   cameraDestroy();
-  bgfx::destroy(_game.m_vbh);
+  bgfx::destroy(_game.m_vbhTriangle);
+  bgfx::destroy(_game.m_vbhCube);
+  bgfx::destroy(_game.m_ibh);
   bgfx::destroy(_game.m_program);
   bgfx::shutdown();
   return 0;
