@@ -1,0 +1,9 @@
+# clangd reads this automatically. The compilation database is emitted into
+# build/ by CMAKE_EXPORT_COMPILE_COMMANDS.
+CompileFlags:
+  CompilationDatabase: build
+
+Diagnostics:
+  # Run clang-tidy inline; check selection comes from .clang-tidy.
+  ClangTidy:
+    FastCheckFilter: Loose

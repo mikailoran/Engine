@@ -1,0 +1,59 @@
+---
+# Start from nothing, then opt in. bugprone/clang-analyzer catch real defects;
+# performance and modernize are advisory.
+# Checks: >
+#   -*,
+#   bugprone-*,
+#   clang-analyzer-*,
+#   concurrency-*,
+#   performance-*,
+#   modernize-*,
+#   readability-*,
+#   -modernize-use-trailing-return-type,
+#   -readability-identifier-length,
+#   -readability-magic-numbers,
+#   -readability-uppercase-literal-suffix,
+#   -readability-braces-around-statements,
+#   -readability-implicit-bool-conversion,
+#   -bugprone-easily-swappable-parameters
+
+Checks: >
+  -*,
+  bugprone-*,
+  clang-analyzer-*,
+  cppcoreguidelines-*,
+  misc-*,
+  concurrency-*,
+  performance-*,
+  modernize-*,
+  readability-*,
+  -modernize-use-trailing-return-type,
+  -modernize-use-designated-initializers,
+  -readability-identifier-length,
+  -readability-magic-numbers,
+  -readability-uppercase-literal-suffix,
+  -readability-braces-around-statements,
+  -readability-implicit-bool-conversion,
+  -cppcoreguidelines-avoid-magic-numbers
+
+# Checks: >
+#   *,
+#   bugprone-*,
+#   clang-analyzer-*,
+#   concurrency-*,
+#   performance-*,
+#   modernize-*,
+#   readability-*,
+#   -llvmlibc-*,
+#   -llvm-*,
+#   -hicpp-*,
+#   -altera-*,
+#   -fuchsia-*,
+#   -readability-uppercase-literal-suffix,
+
+# Only diagnose headers under src/. Without this, every bgfx and bx header
+# pulled in transitively is analysed too, which buries real findings.
+HeaderFilterRegex: 'src/.*'
+
+WarningsAsErrors: ''
+FormatStyle: file
