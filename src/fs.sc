@@ -1,4 +1,4 @@
-$input v_color0
+$input v_pos, v_view, v_normal, v_color0
 
 #include <bgfx_shader.sh>
 

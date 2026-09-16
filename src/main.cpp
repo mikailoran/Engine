@@ -10,52 +10,9 @@
 
 namespace {
 
-struct PosColorVertex {
-  float m_x;
-  float m_y;
-  float m_z;
-  uint32_t m_abgr;
-
-  static void init() {
-    ms_layout.begin()
-        .add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float)
-        .add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Uint8, true)
-        .end();
-  };
-
-  static bgfx::VertexLayout ms_layout;
-};
-
-bgfx::VertexLayout PosColorVertex::ms_layout;
-
 constexpr auto RED = 0xff0000ff;   // RGBA
 constexpr auto GREEN = 0xff00ff00; // RGBA
 constexpr auto BLUE = 0xffff0000;  // RGBA
-const std::array<PosColorVertex, 3> s_triangleVertices{
-    {{-1.0f, -1.0f, 0.0f, RED},
-     {1.0f, -1.0f, 0.0f, GREEN},
-     {0.0f, 1.0f, 0.0f, BLUE}}};
-
-static std::array<PosColorVertex, 8> s_cubeVertices = {{
-    {-1.0f, 1.0f, 1.0f, 0xff000000},
-    {1.0f, 1.0f, 1.0f, 0xff0000ff},
-    {-1.0f, -1.0f, 1.0f, 0xff00ff00},
-    {1.0f, -1.0f, 1.0f, 0xff00ffff},
-    {-1.0f, 1.0f, -1.0f, 0xffff0000},
-    {1.0f, 1.0f, -1.0f, 0xffff00ff},
-    {-1.0f, -1.0f, -1.0f, 0xffffff00},
-    {1.0f, -1.0f, -1.0f, 0xffffffff},
-}};
-
-static const std::array<uint16_t, 36> s_cubeTriList = {{
-    0, 1, 2,          // 0
-    1, 3, 2, 4, 6, 5, // 2
-    5, 6, 7, 0, 2, 4, // 4
-    4, 2, 6, 1, 5, 3, // 6
-    5, 7, 3, 0, 4, 1, // 8
-    4, 5, 1, 2, 3, 6, // 10
-    6, 3, 7,
-}};
 /**
  * @brief Whole game state: window/reset parameters plus everything the
  *        simulation owns.
@@ -70,14 +27,13 @@ struct Game {
   uint32_t m_debug = BGFX_DEBUG_TEXT;
   uint32_t m_reset = BGFX_RESET_VSYNC;
 
-  bgfx::VertexBufferHandle m_vbhTriangle;
-  bgfx::VertexBufferHandle m_vbhCube;
-  bgfx::IndexBufferHandle m_ibh;
   bgfx::ProgramHandle m_program;
 
   entry::MouseState m_mouseState;
 
   FrameTime m_frameTime;
+
+  Mesh *m_mesh;
 
   static constexpr uint64_t RENDER_STATE = BGFX_STATE_DEFAULT;
 };
@@ -109,29 +65,15 @@ void gameInit(Game &_game) {
   bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, DARK_GRAY, 1.0f,
                      0);
 
-  // Create vertex stream declaration.
-  PosColorVertex::init();
-
   cameraCreate();
   cameraSetPosition({0.0f, 0.0f, -5.0f});
   cameraSetVerticalAngle(0.0f);
 
-  // Create static vertex buffer.
-  _game.m_vbhTriangle = bgfx::createVertexBuffer(
-      bgfx::makeRef(s_triangleVertices.data(),
-                    s_triangleVertices.size() * sizeof(PosColorVertex)),
-      PosColorVertex::ms_layout);
-
-  _game.m_vbhCube = bgfx::createVertexBuffer(
-      bgfx::makeRef(s_cubeVertices.data(),
-                    s_cubeVertices.size() * sizeof(PosColorVertex)),
-      PosColorVertex::ms_layout);
-
-  _game.m_ibh = bgfx::createIndexBuffer(bgfx::makeRef(
-      s_cubeTriList.data(), s_cubeTriList.size() * sizeof(uint16_t)));
-
   // TODO: remove hardcoded path
   entry::setCurrentDir("/home/mikail/Work/mygame/");
+
+  _game.m_mesh = meshLoad("assets/meshes/compiled/bunny.bin");
+
   _game.m_program = loadProgram("vs.sc", "fs.sc");
 
   _game.m_frameTime.reset();
@@ -164,15 +106,18 @@ void gameUpdate(Game &_game, [[maybe_unused]] float _dt) {
  */
 void gameRender(const Game &_game) {
 
+  // Print debug stats
+  const bgfx::Stats *stats = bgfx::getStats();
+  bgfx::dbgTextClear();
+  bgfx::dbgTextPrintf(0, 3, 0x0f, "Backbuffer %dW x %dH", stats->width,
+                      stats->height);
+
   const auto time = bx::toSeconds<float>(_game.m_frameTime.getDurationTime());
 
   // Set view and projection matrix for view 0.
   {
-    // const bx::Vec3 at = {0.0f, 0.0f, 0.0f};
-    // const bx::Vec3 eye = {0.0f, 0.0f, -5.0f};
     std::array<float, 16> view{};
     cameraGetViewMtx(view.data());
-    // bx::mtxLookAt(view.data(), eye, at);
 
     std::array<float, 16> proj{};
     bx::mtxProj(proj.data(), 60.0f,
@@ -187,27 +132,15 @@ void gameRender(const Game &_game) {
   }
 
   // Set rotation matrix for current model
-  {
-    std::array<float, 16> rotationMtx{};
-    bx::mtxRotateY(rotationMtx.data(), time * 2.f);
-
-    bgfx::setTransform(rotationMtx.data());
-  }
+  std::array<float, 16> rotationMtx{};
+  bx::mtxRotateY(rotationMtx.data(), time * 2.f);
 
   // Ensure view 0 is cleared even though nothing else is submitted to it yet.
   // bgfx::touch(0);
 
-  const bgfx::Stats *stats = bgfx::getStats();
-  bgfx::dbgTextClear();
-  bgfx::dbgTextPrintf(0, 3, 0x0f, "Backbuffer %dW x %dH", stats->width,
-                      stats->height);
-
-  // bgfx::setVertexBuffer(0, _game.m_vbhTriangle);
-  bgfx::setVertexBuffer(0, _game.m_vbhCube);
-  bgfx::setIndexBuffer(_game.m_ibh);
-
-  bgfx::setState(Game::RENDER_STATE);
-  bgfx::submit(0, _game.m_program);
+  // bgfx::setState(Game::RENDER_STATE);
+  meshSubmit(_game.m_mesh, 0, _game.m_program, rotationMtx.data());
+  // bgfx::submit(0, _game.m_program);
   // Advance to the next frame; kicks the render thread.
   bgfx::frame();
 }
@@ -218,9 +151,7 @@ void gameRender(const Game &_game) {
  */
 auto gameShutdown(Game &_game) -> int {
   cameraDestroy();
-  bgfx::destroy(_game.m_vbhTriangle);
-  bgfx::destroy(_game.m_vbhCube);
-  bgfx::destroy(_game.m_ibh);
+  meshUnload(_game.m_mesh);
   bgfx::destroy(_game.m_program);
   bgfx::shutdown();
   return 0;

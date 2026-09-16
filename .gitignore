@@ -10,3 +10,6 @@ shaders/dxbc/
 shaders/dxil/
 shaders/metal/
 shaders/wgsl/
+
+# Compiled mesh binaries
+assets/meshes/compiled/

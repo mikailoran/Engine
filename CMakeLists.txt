@@ -73,3 +73,11 @@ bgfx_compile_shaders(
 # add_custom_command outputs are only built when a target depends on them.
 add_custom_target(shaders DEPENDS ${VS_OUTPUTS} ${FS_OUTPUTS})
 add_dependencies(mygame shaders)
+
+# Compile meshes
+bgfx_compile_geometry(
+  FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/meshes/bunny.obj
+  OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/assets/meshes/compiled/bunny.bin
+)
+add_custom_target(meshes DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/assets/meshes/compiled/bunny.bin)
+add_dependencies(mygame meshes)
