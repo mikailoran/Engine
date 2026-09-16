@@ -28,6 +28,7 @@ struct Game {
   uint32_t m_reset = BGFX_RESET_VSYNC;
 
   bgfx::ProgramHandle m_program;
+  bgfx::UniformHandle u_time;
 
   entry::MouseState m_mouseState;
 
@@ -74,6 +75,9 @@ void gameInit(Game &_game) {
 
   _game.m_mesh = meshLoad("assets/meshes/compiled/bunny.bin");
 
+  _game.u_time = bgfx::createUniform("u_time", bgfx::UniformFreq::Frame,
+                                     bgfx::UniformType::Vec4);
+
   _game.m_program = loadProgram("vs.sc", "fs.sc");
 
   _game.m_frameTime.reset();
@@ -113,6 +117,7 @@ void gameRender(const Game &_game) {
                       stats->height);
 
   const auto time = bx::toSeconds<float>(_game.m_frameTime.getDurationTime());
+  bgfx::setFrameUniform(_game.u_time, &time);
 
   // Set view and projection matrix for view 0.
   {
@@ -152,6 +157,7 @@ void gameRender(const Game &_game) {
 auto gameShutdown(Game &_game) -> int {
   cameraDestroy();
   meshUnload(_game.m_mesh);
+  bgfx::destroy(_game.u_time);
   bgfx::destroy(_game.m_program);
   bgfx::shutdown();
   return 0;
