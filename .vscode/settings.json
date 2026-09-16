@@ -1,0 +1,46 @@
+{
+	// Absolute path: the extension does not always inherit a login shell PATH.
+	"clangd.path": "/usr/bin/clangd",
+	"clangd.arguments": [
+		// Index the project in the background so cross-file navigation and
+		// find-references work; the index is cached under .cache/clangd.
+		"--background-index",
+		// Surface .clang-tidy findings as you type, not just on build.
+		"--clang-tidy",
+		// bgfx headers are included by convention, not discovered; stop clangd
+		// from bolting on #includes of its own.
+		"--header-insertion=never",
+		"--completion-style=detailed",
+		"--compile-commands-dir=${workspaceFolder}/build"
+	],
+	"clangd.onConfigChanged": "restart",
+	// --- Silence cpptools ---------------------------------------------------
+	// cpptools ships a second IntelliSense engine. It does not read
+	// compile_commands.json by default, so it cannot resolve the bgfx/bx
+	// includes and marks the whole file red. These settings stand it down; the
+	// reliable fix is disabling the extension for this workspace as well.
+	"C_Cpp.intelliSenseEngine": "disabled",
+	"C_Cpp.errorSquiggles": "disabled",
+	"C_Cpp.autocomplete": "disabled",
+	"C_Cpp.configurationWarnings": "disabled",
+	// Per-variant build trees: flipping Debug↔Release won't trigger a full
+	// bgfx rebuild, at the cost of disk space.
+	"cmake.buildDirectory": "${workspaceFolder}/build/${buildType}",
+	// Mirror the database to a stable path so clangd's --compile-commands-dir
+	// keeps working regardless of which variant is selected.
+	"cmake.copyCompileCommands": "${workspaceFolder}/build/compile_commands.json",
+	"cmake.configureOnOpen": true,
+	// loadShader() resolves "shaders/<profile>/<name>.bin" relative to the
+	// process working directory, and CMake Tools otherwise launches from the
+	// build tree. This matches launch.json's cwd so F5 and Shift+F5 agree.
+	// "cmake.debugConfig": {
+	// 	"cwd": "${workspaceFolder}"
+	// },
+	"[cpp]": {
+		"editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
+	},
+	"search.exclude": {
+		"build/**": true,
+		"third_party/**": true
+	}
+}

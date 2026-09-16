@@ -1,0 +1,12 @@
+{
+	// clangd is the LLVM language server: completion, navigation, and inline
+	// clang-tidy diagnostics driven by build/compile_commands.json.
+	"recommendations": [
+		"llvm-vs-code-extensions.vscode-clangd"
+	],
+	// cpptools ships its own IntelliSense engine that fights clangd over the
+	// same files. Keep one source of truth.
+	"unwantedRecommendations": [
+		"ms-vscode.cpptools"
+	]
+}
