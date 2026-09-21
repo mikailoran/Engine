@@ -2,32 +2,71 @@
 
 #include "component_array.h"
 #include "types.h"
+#include <cassert>
 #include <memory>
 #include <unordered_map>
 
+// TODO: Mixup between ComponentType and std::size_t
+
 class ComponentManager {
 public:
-  template <class ComponentClass> void RegisterComponent();
+  template <class Component> void RegisterComponent();
 
-  template <class ComponentClass> ComponentType GetComponentType() const;
+  template <class Component> ComponentType GetComponentType() const;
 
-  template <class ComponentClass>
-  void AddComponent(Entity entity, ComponentClass component);
+  template <class Component>
+  void AddComponent(Entity entity, Component component);
 
-  template <class ComponentClass> void RemoveComponentOf(Entity entity);
+  template <class Component> void RemoveComponent(Entity entity);
 
-  template <class ComponentClass> ComponentClass &GetComponentOf(Entity entity);
+  template <class Component> Component &GetComponent(Entity entity);
 
   void EntityDestroyed(Entity entity);
 
 private:
-  template <class ComponentClass>
-  std::unique_ptr<ComponentArray<ComponentType>> GetComponentArray();
+  template <class Component> ComponentArray<Component> &GetComponentArray();
 
-  ComponentType next_component_type_{};
-  std::unordered_map<std::size_t, ComponentType> component_types_;
-  std::unordered_map<std::size_t, std::unique_ptr<ComponentArrayInterface>>
+  std::unordered_map<ComponentType, std::unique_ptr<ComponentArrayInterface>>
       component_arrays_;
 };
 
-template <class ComponentClass> void ComponentManager::RegisterComponent() {}
+template <class Component> void ComponentManager::RegisterComponent() {
+  const auto type = TypeId::Get<Component>();
+  assert(!component_arrays_.contains(type) &&
+         "Registering component type more than once.");
+
+  component_arrays_.emplace(type,
+                            std::make_unique<ComponentArray<Component>>());
+}
+
+template <class Component>
+ComponentType ComponentManager::GetComponentType() const {
+  return TypeId::Get<Component>();
+}
+
+template <class Component>
+void ComponentManager::AddComponent(Entity entity, Component component) {
+  GetComponentArray<Component>().InsertComponent(entity, component);
+}
+
+template <class Component>
+void ComponentManager::RemoveComponent(Entity entity) {
+  GetComponentArray<Component>().RemoveComponent(entity);
+}
+
+template <class Component>
+Component &ComponentManager::GetComponent(Entity entity) {
+  GetComponentArray<Component>().GetComponent(entity);
+}
+
+void ComponentManager::EntityDestroyed(Entity entity) {}
+
+template <class Component>
+ComponentArray<Component> &ComponentManager::GetComponentArray() {
+  const auto type = TypeId::Get<Component>();
+  assert(component_arrays_.contains(type) &&
+         "Component type used before being registered.");
+
+  return *static_cast<ComponentArray<Component> *>(
+      component_arrays_.at(type).get());
+}

@@ -13,18 +13,19 @@ public:
   virtual void EntityDestroyed(Entity entity) = 0;
 };
 
-template <class Type> class ComponentArray : public ComponentArrayInterface {
+template <class Component>
+class ComponentArray : public ComponentArrayInterface {
 public:
-  void InsertComponent(Entity entity, Type component);
+  void InsertComponent(Entity entity, Component component);
 
   void RemoveComponent(Entity entity);
 
-  Type &GetComponent(Entity entity);
+  Component &GetComponent(Entity entity);
 
   void EntityDestroyed(Entity entity) override;
 
 private:
-  std::array<Type, MAX_ENTITIES> component_array_{};
+  std::array<Component, MAX_ENTITIES> components_{};
   std::unordered_map<std::size_t, Entity> index_to_entity_;
   std::unordered_map<Entity, std::size_t> entity_to_index_;
   std::size_t current_size_{0};
@@ -35,7 +36,7 @@ void ComponentArray<Type>::InsertComponent(Entity entity, Type component) {
   assert(!entity_to_index_.contains(entity) &&
          "Component added to same entity more than once.");
 
-  component_array_.at(current_size_) = component;
+  components_.at(current_size_) = component;
   entity_to_index_.at(entity) = current_size_;
   index_to_entity_.at(current_size_) = entity;
 
@@ -51,8 +52,8 @@ void ComponentArray<Type>::RemoveComponent(Entity entity) {
   const auto removed_entity_index = entity_to_index_.at(entity);
   const auto last_entity_index = current_size_ - 1;
   // TODO: What happens if we swap an element with itself?
-  std::swap(component_array_.at(removed_entity_index),
-            component_array_.at(last_entity_index));
+  std::swap(components_.at(removed_entity_index),
+            components_.at(last_entity_index));
 
   // Update maps to reflect change to moved entity
   const auto entity_of_last_element = index_to_entity_.at(last_entity_index);
@@ -71,5 +72,5 @@ template <class Type> Type &ComponentArray<Type>::GetComponent(Entity entity) {
          "Trying to retrieve non-existent component.");
 
   const auto entity_index = entity_to_index_.at(entity);
-  return component_array_.at(entity_index);
+  return components_.at(entity_index);
 }
