@@ -34,8 +34,6 @@ void main()
 	vec4 lc = lit(bln.x, bln.y, 1.0);
 	float fres = fresnel(bln.x, 0.2, 5.0);
 
-	// Diffuse colour comes straight from the vertex colour now that the
-	// animated pattern is gone.
 	vec3 color = v_color0.xyz;
 
 	gl_FragColor.xyz = pow(vec3(0.07, 0.06, 0.08) + color*lc.y + fres*pow(lc.z, 128.0), vec3_splat(1.0/2.2) );

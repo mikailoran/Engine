@@ -13,6 +13,45 @@ namespace {
 constexpr auto RED = 0xff0000ff;   // RGBA
 constexpr auto GREEN = 0xff00ff00; // RGBA
 constexpr auto BLUE = 0xffff0000;  // RGBA
+
+/**
+ * @brief Position + normal vertex, laid out to match what vs.sc expects.
+ *
+ * vs.sc decodes normals with `a_normal.xyz*2.0 - 1.0`, the standard unpack for
+ * a normal stored in [0,1] (the convention used by packed-normal meshes like
+ * the loaded bunny). Raw floats are used here rather than packed bytes, but
+ * they still have to be pre-biased into [0,1] so that decode step recovers the
+ * intended [-1,1] normal.
+ */
+struct FloorVertex {
+  float m_x;
+  float m_y;
+  float m_z;
+  float m_nx;
+  float m_ny;
+  float m_nz;
+
+  static void init() {
+    ms_layout.begin()
+        .add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float)
+        .add(bgfx::Attrib::Normal, 3, bgfx::AttribType::Float)
+        .end();
+  }
+
+  static bgfx::VertexLayout ms_layout;
+};
+bgfx::VertexLayout FloorVertex::ms_layout;
+
+// A single flat quad in the XZ plane (Y up), normal pre-biased to (0.5, 1.0,
+// 0.5) so vs.sc's decode yields a straight-up (0, 1, 0) normal.
+constexpr std::array<FloorVertex, 4> kFloorVertices{{
+    {-10.0f, 0.0f, -10.0f, 0.5f, 1.0f, 0.5f},
+    {10.0f, 0.0f, -10.0f, 0.5f, 1.0f, 0.5f},
+    {10.0f, 0.0f, 10.0f, 0.5f, 1.0f, 0.5f},
+    {-10.0f, 0.0f, 10.0f, 0.5f, 1.0f, 0.5f},
+}};
+constexpr std::array<uint16_t, 6> kFloorIndices{0, 1, 2, 0, 2, 3};
+
 /**
  * @brief Whole game state: window/reset parameters plus everything the
  *        simulation owns.
@@ -35,6 +74,9 @@ struct Game {
   FrameTime m_frameTime;
 
   Mesh *m_mesh;
+
+  bgfx::VertexBufferHandle m_floorVbh;
+  bgfx::IndexBufferHandle m_floorIbh;
 
   static constexpr uint64_t RENDER_STATE = BGFX_STATE_DEFAULT;
 };
@@ -67,13 +109,22 @@ void gameInit(Game &_game) {
                      0);
 
   cameraCreate();
-  cameraSetPosition({0.0f, 0.0f, -5.0f});
+  cameraSetPosition({0.0f, 1.0f, -5.0f});
   cameraSetVerticalAngle(0.0f);
 
   // TODO: remove hardcoded path
   entry::setCurrentDir("/home/mikail/Work/mygame/");
 
   _game.m_mesh = meshLoad("assets/meshes/compiled/bunny.bin");
+
+  // Static floor quad: layout only needs registering once before use.
+  FloorVertex::init();
+  _game.m_floorVbh = bgfx::createVertexBuffer(
+      bgfx::makeRef(kFloorVertices.data(),
+                    kFloorVertices.size() * sizeof(FloorVertex)),
+      FloorVertex::ms_layout);
+  _game.m_floorIbh = bgfx::createIndexBuffer(bgfx::makeRef(
+      kFloorIndices.data(), kFloorIndices.size() * sizeof(uint16_t)));
 
   _game.u_time = bgfx::createUniform("u_time", bgfx::UniformFreq::Frame,
                                      bgfx::UniformType::Vec4);
@@ -146,6 +197,17 @@ void gameRender(const Game &_game) {
   // bgfx::setState(Game::RENDER_STATE);
   meshSubmit(_game.m_mesh, 0, _game.m_program, rotationMtx.data());
   // bgfx::submit(0, _game.m_program);
+
+  // Floor: static, sits at the origin, so an identity transform is enough.
+  // Culling is disabled for this draw so winding order can't hide it.
+  std::array<float, 16> floorMtx{};
+  bx::mtxIdentity(floorMtx.data());
+  bgfx::setTransform(floorMtx.data());
+  bgfx::setVertexBuffer(0, _game.m_floorVbh);
+  bgfx::setIndexBuffer(_game.m_floorIbh);
+  bgfx::setState(BGFX_STATE_DEFAULT & ~BGFX_STATE_CULL_MASK);
+  bgfx::submit(0, _game.m_program);
+
   // Advance to the next frame; kicks the render thread.
   bgfx::frame();
 }
@@ -157,6 +219,8 @@ void gameRender(const Game &_game) {
 auto gameShutdown(Game &_game) -> int {
   cameraDestroy();
   meshUnload(_game.m_mesh);
+  bgfx::destroy(_game.m_floorVbh);
+  bgfx::destroy(_game.m_floorIbh);
   bgfx::destroy(_game.u_time);
   bgfx::destroy(_game.m_program);
   bgfx::shutdown();
