@@ -16,6 +16,8 @@ public:
 template <class Component>
 class ComponentArray : public ComponentArrayInterface {
 public:
+  ComponentArray() = default;
+
   void InsertComponent(Entity entity, Component component);
 
   void RemoveComponent(Entity entity);

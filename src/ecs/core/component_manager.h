@@ -10,6 +10,8 @@
 
 class ComponentManager {
 public:
+  ComponentManager() = default;
+
   template <class Component> void RegisterComponent();
 
   template <class Component> ComponentType GetComponentType() const;
@@ -21,7 +23,7 @@ public:
 
   template <class Component> Component &GetComponent(Entity entity);
 
-  void EntityDestroyed(Entity entity);
+  // void EntityDestroyed(Entity entity);
 
 private:
   template <class Component> ComponentArray<Component> &GetComponentArray();
@@ -59,7 +61,7 @@ Component &ComponentManager::GetComponent(Entity entity) {
   GetComponentArray<Component>().GetComponent(entity);
 }
 
-void ComponentManager::EntityDestroyed(Entity entity) {}
+// void ComponentManager::EntityDestroyed(Entity entity) {}
 
 template <class Component>
 ComponentArray<Component> &ComponentManager::GetComponentArray() {

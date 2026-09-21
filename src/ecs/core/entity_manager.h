@@ -11,7 +11,7 @@ public:
 
   Entity CreateEntity();
 
-  [[nodiscard]] Signature signature(Entity entity) const;
+  [[nodiscard]] Signature signature(Entity entity);
 
   void SetSignature(Entity entity, Signature signature);
 

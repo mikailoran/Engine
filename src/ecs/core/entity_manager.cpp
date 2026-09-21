@@ -17,7 +17,7 @@ Entity EntityManager::CreateEntity() {
   return id;
 }
 
-Signature EntityManager::signature(Entity entity) const {
+Signature EntityManager::signature(Entity entity) {
   return signatures_.at(entity);
 }
 
