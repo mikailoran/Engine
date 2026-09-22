@@ -5,6 +5,7 @@
 #include <array>
 
 #include "ecs/core/ecs.h"
+#include "ecs/core/frame_context.h"
 
 #include "ecs/components/camera.h"
 #include "ecs/components/spin.h"
@@ -187,10 +188,19 @@ void gameInit(Game &_game) {
  */
 void gameUpdate(Game &_game, [[maybe_unused]] float _dt) {
   _game.m_frameTime.frame();
-  auto bx_dt = bx::toSeconds<float>(_game.m_frameTime.getDeltaTime());
-  // _game.m_camera_control.Update(bx_dt);
-  _game.m_physics->Update(_game.m_ecs, bx_dt);
-  cameraUpdate(bx_dt, _game.m_mouseState);
+
+  // Built here for now; Phase 5 hoists construction into the main loop so
+  // rendering can share the same context.
+  const FrameContext ctx{
+      .width = _game.m_width,
+      .height = _game.m_height,
+      .dt = bx::toSeconds<float>(_game.m_frameTime.getDeltaTime()),
+      .time = bx::toSeconds<float>(_game.m_frameTime.getDurationTime()),
+      .mouse = &_game.m_mouseState,
+  };
+
+  _game.m_physics->Update(_game.m_ecs, ctx);
+  cameraUpdate(ctx.dt, _game.m_mouseState);
 }
 
 /**

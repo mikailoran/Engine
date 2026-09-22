@@ -20,6 +20,7 @@ add_executable(mygame src/main.cpp
   src/ecs/core/component_manager.h
   src/ecs/core/ecs.cpp
   src/ecs/core/ecs.h
+  src/ecs/core/frame_context.h
   src/ecs/core/entity_manager.cpp
   src/ecs/core/entity_manager.h
   src/ecs/core/system_manager.h
