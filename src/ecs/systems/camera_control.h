@@ -9,6 +9,4 @@ public:
   void Update(float dt);
 
 private:
-  // TODO: delete debug
-  int what{0};
 };

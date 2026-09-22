@@ -1,6 +1,7 @@
 #include "physics_system.h"
 
 #include "../components/transform.h"
+#include "../core/ecs.h"
 
 void Physics::Init() {}
 
