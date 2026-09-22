@@ -27,7 +27,7 @@ struct Renderable {
 
   /// Render state passed through to meshSubmit. BGFX_STATE_MASK would instead
   /// defer to the state baked into each of the mesh's own groups.
-  std::uint64_t state{BGFX_STATE_DEFAULT};
+  std::uint64_t state{BGFX_STATE_MASK};
 
   /// Which bgfx view to submit into.
   bgfx::ViewId view{0};

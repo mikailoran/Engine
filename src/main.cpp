@@ -8,54 +8,18 @@
 #include "ecs/core/frame_context.h"
 
 #include "ecs/components/camera.h"
+#include "ecs/components/renderable.h"
 #include "ecs/components/spin.h"
 #include "ecs/components/transform.h"
 
 #include "common.h"
 // TODO: Rename "physics_system.h" into "physics.h"
 #include "ecs/systems/physics_system.h"
+#include "ecs/systems/render_system.h"
 #include "entry/entry.h"
 #include <camera.h>
 
 namespace {
-
-/**
- * @brief Position + normal vertex, laid out to match what vs.sc expects.
- *
- * vs.sc decodes normals with `a_normal.xyz*2.0 - 1.0`, the standard unpack for
- * a normal stored in [0,1] (the convention used by packed-normal meshes like
- * the loaded bunny). Raw floats are used here rather than packed bytes, but
- * they still have to be pre-biased into [0,1] so that decode step recovers the
- * intended [-1,1] normal.
- */
-struct FloorVertex {
-  float m_x;
-  float m_y;
-  float m_z;
-  float m_nx;
-  float m_ny;
-  float m_nz;
-
-  static void init() {
-    ms_layout.begin()
-        .add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float)
-        .add(bgfx::Attrib::Normal, 3, bgfx::AttribType::Float)
-        .end();
-  }
-
-  static bgfx::VertexLayout ms_layout;
-};
-bgfx::VertexLayout FloorVertex::ms_layout;
-
-// A single flat quad in the XZ plane (Y up), normal pre-biased to (0.5, 1.0,
-// 0.5) so vs.sc's decode yields a straight-up (0, 1, 0) normal.
-constexpr std::array<FloorVertex, 4> kFloorVertices{{
-    {-10.0f, 0.0f, -10.0f, 0.5f, 1.0f, 0.5f},
-    {10.0f, 0.0f, -10.0f, 0.5f, 1.0f, 0.5f},
-    {10.0f, 0.0f, 10.0f, 0.5f, 1.0f, 0.5f},
-    {-10.0f, 0.0f, 10.0f, 0.5f, 1.0f, 0.5f},
-}};
-constexpr std::array<uint16_t, 6> kFloorIndices{0, 1, 2, 0, 2, 3};
 
 /**
  * @brief Whole game state: window/reset parameters plus everything the
@@ -69,26 +33,20 @@ struct Game {
 
   Ecs m_ecs;
 
+  // Non-owning; SystemManager owns the systems themselves.
   Physics *m_physics = nullptr;
+  RenderSystem *m_render = nullptr;
 
-  Entity m_bunny_entity;
+  Entity m_bunny_entity{0};
 
   uint32_t m_width = 1280;
   uint32_t m_height = 720;
   uint32_t m_debug = BGFX_DEBUG_TEXT;
   uint32_t m_reset = BGFX_RESET_VSYNC;
 
-  bgfx::ProgramHandle m_program;
-  bgfx::UniformHandle u_time;
-
   entry::MouseState m_mouseState;
 
   FrameTime m_frameTime;
-
-  Mesh *m_mesh;
-
-  bgfx::VertexBufferHandle m_floorVbh;
-  bgfx::IndexBufferHandle m_floorIbh;
 };
 
 /**
@@ -125,10 +83,7 @@ void gameInit(Game &_game) {
 
   bgfx::setDebug(_game.m_debug);
 
-  constexpr auto DARK_GRAY = 0x303030ff; // RGBA
-  // View 0 clears the backbuffer each frame.
-  bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, DARK_GRAY, 1.0f,
-                     0);
+  // View 0's clear state is set by RenderSystem::Init, which owns that view.
 
   // --- Camera (temporary; moves into CameraControl) --------------------
   cameraCreate();
@@ -139,6 +94,7 @@ void gameInit(Game &_game) {
   ecs.RegisterComponent<Camera>();
   ecs.RegisterComponent<Transform>();
   ecs.RegisterComponent<Spin>();
+  ecs.RegisterComponent<Renderable>();
 
   // --- ECS: systems, signatures, Init -----------------------------------
   // A system's signature must be set before any entity gains its components:
@@ -153,26 +109,22 @@ void gameInit(Game &_game) {
   }
   _game.m_physics->Init();
 
+  _game.m_render = &ecs.RegisterSystem<RenderSystem>();
+  {
+    Signature signature;
+    signature.set(ecs.GetComponentType<Transform>());
+    signature.set(ecs.GetComponentType<Renderable>());
+    ecs.SetSystemSignature<RenderSystem>(signature);
+  }
+  _game.m_render->Init();
+
   // --- Assets and entities ----------------------------------------------
   bunny_entity = ecs.CreateEntity();
-  ecs.AddComponent(bunny_entity, Transform{.position = {1.0f, 1.0f, 1.0f}});
+  ecs.AddComponent(bunny_entity, Transform{});
   ecs.AddComponent(bunny_entity, Spin{});
-
-  _game.m_mesh = meshLoad("assets/meshes/compiled/bunny.bin");
-
-  // Static floor quad: layout only needs registering once before use.
-  FloorVertex::init();
-  _game.m_floorVbh = bgfx::createVertexBuffer(
-      bgfx::makeRef(kFloorVertices.data(),
-                    kFloorVertices.size() * sizeof(FloorVertex)),
-      FloorVertex::ms_layout);
-  _game.m_floorIbh = bgfx::createIndexBuffer(bgfx::makeRef(
-      kFloorIndices.data(), kFloorIndices.size() * sizeof(uint16_t)));
-
-  _game.u_time = bgfx::createUniform("u_time", bgfx::UniformFreq::Frame,
-                                     bgfx::UniformType::Vec4);
-
-  _game.m_program = loadProgram("vs.sc", "fs.sc");
+  ecs.AddComponent(bunny_entity,
+                   Renderable{.mesh =
+                                  meshLoad("assets/meshes/compiled/bunny.bin")});
 
   _game.m_frameTime.reset();
 }
@@ -213,55 +165,16 @@ void gameUpdate(Game &_game, [[maybe_unused]] float _dt) {
  *               is not a multiple of the fixed rate. Unused until there is
  *               something to interpolate.
  */
-void gameRender(const Game &_game) {
+void gameRender(Game &_game) {
+  const FrameContext ctx{
+      .width = _game.m_width,
+      .height = _game.m_height,
+      .dt = bx::toSeconds<float>(_game.m_frameTime.getDeltaTime()),
+      .time = bx::toSeconds<float>(_game.m_frameTime.getDurationTime()),
+      .mouse = &_game.m_mouseState,
+  };
 
-  // Print debug stats
-  const bgfx::Stats *stats = bgfx::getStats();
-  bgfx::dbgTextClear();
-  bgfx::dbgTextPrintf(0, 3, 0x0f, "Backbuffer %dW x %dH", stats->width,
-                      stats->height);
-
-  const auto time = bx::toSeconds<float>(_game.m_frameTime.getDurationTime());
-  bgfx::setFrameUniform(_game.u_time, &time);
-
-  // Set view and projection matrix for view 0.
-  {
-    std::array<float, 16> view{};
-    cameraGetViewMtx(view.data());
-
-    std::array<float, 16> proj{};
-    bx::mtxProj(proj.data(), 60.0f,
-                static_cast<float>(_game.m_width) /
-                    static_cast<float>(_game.m_height),
-                0.1f, 100.0f, bgfx::getCaps()->homogeneousDepth);
-    bgfx::setViewTransform(0, view.data(), proj.data());
-
-    // Set view 0 default viewport.
-    bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(_game.m_width),
-                      static_cast<uint16_t>(_game.m_height));
-  }
-
-  // Set rotation matrix for bunny
-  std::array<float, 16> bunny_rotation_mtx{};
-  bx::mtxIdentity(bunny_rotation_mtx.data());
-  const auto &ecs_transform =
-      _game.m_ecs.GetComponent<Transform>(_game.m_bunny_entity);
-
-  bx::mtxRotateY(bunny_rotation_mtx.data(), ecs_transform.rotation.y);
-
-  meshSubmit(_game.m_mesh, 0, _game.m_program, bunny_rotation_mtx.data());
-
-  // Floor ; Culling disabled
-  std::array<float, 16> floorMtx{};
-  bx::mtxIdentity(floorMtx.data());
-  bgfx::setTransform(floorMtx.data());
-  bgfx::setVertexBuffer(0, _game.m_floorVbh);
-  bgfx::setIndexBuffer(_game.m_floorIbh);
-  bgfx::setState(BGFX_STATE_DEFAULT & ~BGFX_STATE_CULL_MASK);
-  bgfx::submit(0, _game.m_program);
-
-  // Advance to the next frame; kicks the render thread.
-  bgfx::frame();
+  _game.m_render->Update(_game.m_ecs, ctx);
 }
 
 /**
@@ -269,12 +182,8 @@ void gameRender(const Game &_game) {
  * @return Process exit code.
  */
 auto gameShutdown(Game &_game) -> int {
+  _game.m_render->Shutdown(_game.m_ecs);
   cameraDestroy();
-  meshUnload(_game.m_mesh);
-  bgfx::destroy(_game.m_floorVbh);
-  bgfx::destroy(_game.m_floorIbh);
-  bgfx::destroy(_game.u_time);
-  bgfx::destroy(_game.m_program);
   bgfx::shutdown();
   return 0;
 }
