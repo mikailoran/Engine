@@ -7,6 +7,7 @@
 #include "ecs/core/ecs.h"
 
 #include "ecs/components/camera.h"
+#include "ecs/components/spin.h"
 #include "ecs/components/transform.h"
 
 #include "common.h"
@@ -136,6 +137,7 @@ void gameInit(Game &_game) {
   // --- ECS: components --------------------------------------------------
   ecs.RegisterComponent<Camera>();
   ecs.RegisterComponent<Transform>();
+  ecs.RegisterComponent<Spin>();
 
   // --- ECS: systems, signatures, Init -----------------------------------
   // A system's signature must be set before any entity gains its components:
@@ -145,6 +147,7 @@ void gameInit(Game &_game) {
   {
     Signature signature;
     signature.set(ecs.GetComponentType<Transform>());
+    signature.set(ecs.GetComponentType<Spin>());
     ecs.SetSystemSignature<Physics>(signature);
   }
   _game.m_physics->Init();
@@ -152,6 +155,7 @@ void gameInit(Game &_game) {
   // --- Assets and entities ----------------------------------------------
   bunny_entity = ecs.CreateEntity();
   ecs.AddComponent(bunny_entity, Transform{.position = {1.0f, 1.0f, 1.0f}});
+  ecs.AddComponent(bunny_entity, Spin{});
 
   _game.m_mesh = meshLoad("assets/meshes/compiled/bunny.bin");
 
