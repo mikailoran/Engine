@@ -46,6 +46,7 @@ template <class Component>
 void Ecs::AddComponent(Entity entity, Component component) {
   component_manager_.AddComponent(entity, component);
 
+  // Mark the entity's signature with the component's ID
   auto entity_signature = entity_manager_.signature(entity);
   auto signature_component_bit =
       component_manager_.GetComponentType<Component>();

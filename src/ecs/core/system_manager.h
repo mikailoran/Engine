@@ -35,5 +35,6 @@ template <class SystemClass> SystemClass &SystemManager::RegisterSystem() {
 }
 
 template <class SystemClass>
-void SystemManager::SetSignature(Signature signature) {}
-
+void SystemManager::SetSignature(Signature signature) {
+  // TODO: Do something
+}

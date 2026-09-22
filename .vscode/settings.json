@@ -33,9 +33,16 @@
 	// loadShader() resolves "shaders/<profile>/<name>.bin" relative to the
 	// process working directory, and CMake Tools otherwise launches from the
 	// build tree. This matches launch.json's cwd so F5 and Shift+F5 agree.
-	// "cmake.debugConfig": {
-	// 	"cwd": "${workspaceFolder}"
-	// },
+	"cmake.debugConfig": {
+		"cwd": "${workspaceFolder}",
+		"setupCommands": [
+			{
+				"description": "Enable pretty-printing for gdb",
+				"text": "-enable-pretty-printing",
+				"ignoreFailures": true
+			}
+		]
+	},
 	"[cpp]": {
 		"editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
 	},

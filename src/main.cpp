@@ -7,12 +7,12 @@
 #include "ecs/core/ecs.h"
 
 #include "ecs/components/camera.h"
-#include "ecs/components/gravity.h"
-#include "ecs/components/rigid_body.h"
 #include "ecs/components/transform.h"
 
 #include "common.h"
 #include "ecs/systems/camera_control.h"
+// TODO: Rename "physics_system.h" into "physics.h"
+#include "ecs/systems/physics_system.h"
 #include "entry/entry.h"
 #include <camera.h>
 
@@ -72,7 +72,10 @@ struct Game {
 
   Ecs m_ecs;
 
-  CameraControl m_camera_control;
+  CameraControl *m_camera_control = nullptr;
+  Physics *m_physics = nullptr;
+
+  Entity m_bunny_entity;
 
   uint32_t m_width = 1280;
   uint32_t m_height = 720;
@@ -104,24 +107,36 @@ struct Game {
  */
 void gameInit(Game &_game) {
   auto &ecs = _game.m_ecs;
-  auto &camera_control = _game.m_camera_control;
+  auto &bunny_entity = _game.m_bunny_entity;
   ecs.RegisterComponent<Camera>();
   ecs.RegisterComponent<Transform>();
 
-  camera_control = ecs.RegisterSystem<CameraControl>();
+  // auto &camera_control = _game.m_camera_control;
+  // camera_control = ecs.RegisterSystem<CameraControl>();
+  // {
+  //   // TODO: set system signature directly
+  //   Signature signature;
+  //   signature.set(ecs.GetComponentType<Camera>());
+  //   signature.set(ecs.GetComponentType<Transform>());
+  //   camera_control.signature = signature;
+  // }
+  // camera_control.Init();
+
+  _game.m_physics = &ecs.RegisterSystem<Physics>();
   {
     // TODO: set system signature directly
     Signature signature;
-    signature.set(ecs.GetComponentType<Camera>());
     signature.set(ecs.GetComponentType<Transform>());
-    camera_control.signature = signature;
+    _game.m_physics->signature = signature;
   }
+  _game.m_physics->Init();
 
-  camera_control.Init();
+  // auto camera_entity = ecs.CreateEntity();
+  // ecs.AddComponent(camera_entity, Transform{.position = {0.0f, 1.0f,
+  // -5.0f}}); ecs.AddComponent(camera_entity, Camera{});
 
-  auto camera_entity = ecs.CreateEntity();
-  ecs.AddComponent(camera_entity, Transform{.position = {0.0f, 1.0f, -5.0f}});
-  ecs.AddComponent(camera_entity, Camera{});
+  bunny_entity = ecs.CreateEntity();
+  ecs.AddComponent(bunny_entity, Transform{.position = {1.0f, 1.0f, 1.0f}});
 
   bgfx::Init init;
   init.type = bgfx::RendererType::Count; // auto-select backend
@@ -179,7 +194,8 @@ void gameInit(Game &_game) {
 void gameUpdate(Game &_game, [[maybe_unused]] float _dt) {
   _game.m_frameTime.frame();
   auto bx_dt = bx::toSeconds<float>(_game.m_frameTime.getDeltaTime());
-  _game.m_camera_control.Update(bx_dt);
+  // _game.m_camera_control.Update(bx_dt);
+  _game.m_physics->Update(_game.m_ecs, bx_dt);
   cameraUpdate(bx_dt, _game.m_mouseState);
 }
 
@@ -221,19 +237,22 @@ void gameRender(const Game &_game) {
                       static_cast<uint16_t>(_game.m_height));
   }
 
-  // Set rotation matrix for current model
-  std::array<float, 16> rotationMtx{};
-  bx::mtxRotateY(rotationMtx.data(), time * 2.f);
+  // Set rotation matrix for bunny
+  std::array<float, 16> bunny_rotation_mtx{};
+  bx::mtxIdentity(bunny_rotation_mtx.data());
+  const auto &ecs_transform =
+      _game.m_ecs.GetComponent<Transform>(_game.m_bunny_entity);
+
+  bx::mtxRotateY(bunny_rotation_mtx.data(), ecs_transform.rotation.y);
 
   // Ensure view 0 is cleared even though nothing else is submitted to it yet.
   // bgfx::touch(0);
 
   // bgfx::setState(Game::RENDER_STATE);
-  meshSubmit(_game.m_mesh, 0, _game.m_program, rotationMtx.data());
+  meshSubmit(_game.m_mesh, 0, _game.m_program, bunny_rotation_mtx.data());
   // bgfx::submit(0, _game.m_program);
 
-  // Floor: static, sits at the origin, so an identity transform is enough.
-  // Culling is disabled for this draw so winding order can't hide it.
+  // Floor ; Culling disabled
   std::array<float, 16> floorMtx{};
   bx::mtxIdentity(floorMtx.data());
   bgfx::setTransform(floorMtx.data());
