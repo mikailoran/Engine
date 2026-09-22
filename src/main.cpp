@@ -10,17 +10,12 @@
 #include "ecs/components/transform.h"
 
 #include "common.h"
-#include "ecs/systems/camera_control.h"
 // TODO: Rename "physics_system.h" into "physics.h"
 #include "ecs/systems/physics_system.h"
 #include "entry/entry.h"
 #include <camera.h>
 
 namespace {
-
-constexpr auto RED = 0xff0000ff;   // RGBA
-constexpr auto GREEN = 0xff00ff00; // RGBA
-constexpr auto BLUE = 0xffff0000;  // RGBA
 
 /**
  * @brief Position + normal vertex, laid out to match what vs.sc expects.
@@ -72,7 +67,6 @@ struct Game {
 
   Ecs m_ecs;
 
-  CameraControl *m_camera_control = nullptr;
   Physics *m_physics = nullptr;
 
   Entity m_bunny_entity;
@@ -93,8 +87,6 @@ struct Game {
 
   bgfx::VertexBufferHandle m_floorVbh;
   bgfx::IndexBufferHandle m_floorIbh;
-
-  static constexpr uint64_t RENDER_STATE = BGFX_STATE_DEFAULT;
 };
 
 /**
@@ -108,36 +100,16 @@ struct Game {
 void gameInit(Game &_game) {
   auto &ecs = _game.m_ecs;
   auto &bunny_entity = _game.m_bunny_entity;
-  ecs.RegisterComponent<Camera>();
-  ecs.RegisterComponent<Transform>();
 
-  // auto &camera_control = _game.m_camera_control;
-  // camera_control = ecs.RegisterSystem<CameraControl>();
-  // {
-  //   // TODO: set system signature directly
-  //   Signature signature;
-  //   signature.set(ecs.GetComponentType<Camera>());
-  //   signature.set(ecs.GetComponentType<Transform>());
-  //   camera_control.signature = signature;
-  // }
-  // camera_control.Init();
+  // --- Working directory -----------------------------------------------
+  // Must precede meshLoad/loadProgram: both resolve their paths against the
+  // process working directory.
+  // TODO: remove hardcoded path
+  entry::setCurrentDir("/home/mikail/Work/mygame/");
 
-  _game.m_physics = &ecs.RegisterSystem<Physics>();
-  {
-    // TODO: set system signature directly
-    Signature signature;
-    signature.set(ecs.GetComponentType<Transform>());
-    _game.m_physics->signature = signature;
-  }
-  _game.m_physics->Init();
-
-  // auto camera_entity = ecs.CreateEntity();
-  // ecs.AddComponent(camera_entity, Transform{.position = {0.0f, 1.0f,
-  // -5.0f}}); ecs.AddComponent(camera_entity, Camera{});
-
-  bunny_entity = ecs.CreateEntity();
-  ecs.AddComponent(bunny_entity, Transform{.position = {1.0f, 1.0f, 1.0f}});
-
+  // --- Platform / bgfx bring-up ----------------------------------------
+  // Hoisted above ECS setup so that systems creating GPU resources in their
+  // Init() can run against an initialised bgfx.
   bgfx::Init init;
   init.type = bgfx::RendererType::Count; // auto-select backend
   init.platformData.nwh =
@@ -156,12 +128,31 @@ void gameInit(Game &_game) {
   bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, DARK_GRAY, 1.0f,
                      0);
 
+  // --- Camera (temporary; moves into CameraControl) --------------------
   cameraCreate();
   cameraSetPosition({0.0f, 1.0f, -5.0f});
   cameraSetVerticalAngle(0.0f);
 
-  // TODO: remove hardcoded path
-  entry::setCurrentDir("/home/mikail/Work/mygame/");
+  // --- ECS: components --------------------------------------------------
+  ecs.RegisterComponent<Camera>();
+  ecs.RegisterComponent<Transform>();
+
+  // --- ECS: systems, signatures, Init -----------------------------------
+  // A system's signature must be set before any entity gains its components:
+  // EntitySignatureChanged is the only thing that fills System::entities, and
+  // it is never replayed for entities that already exist.
+  _game.m_physics = &ecs.RegisterSystem<Physics>();
+  {
+    // TODO: set system signature directly
+    Signature signature;
+    signature.set(ecs.GetComponentType<Transform>());
+    _game.m_physics->signature = signature;
+  }
+  _game.m_physics->Init();
+
+  // --- Assets and entities ----------------------------------------------
+  bunny_entity = ecs.CreateEntity();
+  ecs.AddComponent(bunny_entity, Transform{.position = {1.0f, 1.0f, 1.0f}});
 
   _game.m_mesh = meshLoad("assets/meshes/compiled/bunny.bin");
 
@@ -245,12 +236,7 @@ void gameRender(const Game &_game) {
 
   bx::mtxRotateY(bunny_rotation_mtx.data(), ecs_transform.rotation.y);
 
-  // Ensure view 0 is cleared even though nothing else is submitted to it yet.
-  // bgfx::touch(0);
-
-  // bgfx::setState(Game::RENDER_STATE);
   meshSubmit(_game.m_mesh, 0, _game.m_program, bunny_rotation_mtx.data());
-  // bgfx::submit(0, _game.m_program);
 
   // Floor ; Culling disabled
   std::array<float, 16> floorMtx{};
