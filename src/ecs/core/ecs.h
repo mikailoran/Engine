@@ -20,7 +20,9 @@ public:
 
   template <class Component> void RemoveComponent(Entity entity);
 
-  template <class Component> Component &GetComponent(Entity entity) const;
+  template <class Component> Component &GetComponent(Entity entity);
+
+  template <class Component> const Component &GetComponent(Entity entity) const;
 
   template <class Component> ComponentType GetComponentType() const;
 
@@ -65,7 +67,12 @@ template <class Component> void Ecs::RemoveComponent(Entity entity) {
   system_manager_.EntitySignatureChanged(entity, entity_signature);
 }
 
-template <class Component> Component &Ecs::GetComponent(Entity entity) const {
+template <class Component> Component &Ecs::GetComponent(Entity entity) {
+  return component_manager_.GetComponent<Component>(entity);
+}
+
+template <class Component>
+const Component &Ecs::GetComponent(Entity entity) const {
   return component_manager_.GetComponent<Component>(entity);
 }
 

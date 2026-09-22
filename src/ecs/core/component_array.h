@@ -22,6 +22,8 @@ public:
 
   void RemoveData(Entity entity);
 
+  const Component &GetData(Entity entity) const;
+
   Component &GetData(Entity entity);
 
   void EntityDestroyed(Entity entity) override {
@@ -73,6 +75,15 @@ template <class Type> void ComponentArray<Type>::RemoveData(Entity entity) {
 }
 
 template <class Type> Type &ComponentArray<Type>::GetData(Entity entity) {
+  assert(entity_to_index_.contains(entity) &&
+         "Trying to retrieve non-existent component.");
+
+  const auto entity_index = entity_to_index_.at(entity);
+  return components_.at(entity_index);
+}
+
+template <class Type>
+const Type &ComponentArray<Type>::GetData(Entity entity) const {
   assert(entity_to_index_.contains(entity) &&
          "Trying to retrieve non-existent component.");
 
