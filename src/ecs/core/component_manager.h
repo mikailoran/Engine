@@ -32,6 +32,8 @@ private:
       component_arrays_;
 };
 
+// Implementation
+
 template <class Component> void ComponentManager::RegisterComponent() {
   const auto type = TypeId::Get<Component>();
   assert(!component_arrays_.contains(type) &&
@@ -43,22 +45,24 @@ template <class Component> void ComponentManager::RegisterComponent() {
 
 template <class Component>
 ComponentType ComponentManager::GetComponentType() const {
+  // TODO: Possible bug if too many components or removing components
+  // The component's position in the signature bitset could be incorrect
   return TypeId::Get<Component>();
 }
 
 template <class Component>
 void ComponentManager::AddComponent(Entity entity, Component component) {
-  GetComponentArray<Component>().InsertComponent(entity, component);
+  GetComponentArray<Component>().InsertData(entity, component);
 }
 
 template <class Component>
 void ComponentManager::RemoveComponent(Entity entity) {
-  GetComponentArray<Component>().RemoveComponent(entity);
+  GetComponentArray<Component>().RemoveData(entity);
 }
 
 template <class Component>
 Component &ComponentManager::GetComponent(Entity entity) {
-  GetComponentArray<Component>().GetComponent(entity);
+  GetComponentArray<Component>().GetData(entity);
 }
 
 // void ComponentManager::EntityDestroyed(Entity entity) {}

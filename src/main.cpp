@@ -4,7 +4,15 @@
 
 #include <array>
 
+#include "ecs/core/ecs.h"
+
+#include "ecs/components/camera.h"
+#include "ecs/components/gravity.h"
+#include "ecs/components/rigid_body.h"
+#include "ecs/components/transform.h"
+
 #include "common.h"
+#include "ecs/systems/camera_control.h"
 #include "entry/entry.h"
 #include <camera.h>
 
@@ -61,6 +69,11 @@ constexpr std::array<uint16_t, 6> kFloorIndices{0, 1, 2, 0, 2, 3};
  * entry::AppI's init/update/shutdown if that is adopted later.
  */
 struct Game {
+
+  Ecs m_ecs;
+
+  CameraControl m_camera_control;
+
   uint32_t m_width = 1280;
   uint32_t m_height = 720;
   uint32_t m_debug = BGFX_DEBUG_TEXT;
@@ -90,6 +103,26 @@ struct Game {
  * @param _game Game state to initialise.
  */
 void gameInit(Game &_game) {
+  auto &ecs = _game.m_ecs;
+  auto &camera_control = _game.m_camera_control;
+  ecs.RegisterComponent<Camera>();
+  ecs.RegisterComponent<Transform>();
+
+  camera_control = ecs.RegisterSystem<CameraControl>();
+  {
+    // TODO: set system signature directly
+    Signature signature;
+    signature.set(ecs.GetComponentType<Camera>());
+    signature.set(ecs.GetComponentType<Transform>());
+    camera_control.signature = signature;
+  }
+
+  camera_control.Init();
+
+  auto camera_entity = ecs.CreateEntity();
+  ecs.AddComponent(camera_entity, Transform{.position = {0.0f, 1.0f, -5.0f}});
+  ecs.AddComponent(camera_entity, Camera{});
+
   bgfx::Init init;
   init.type = bgfx::RendererType::Count; // auto-select backend
   init.platformData.nwh =
@@ -145,8 +178,9 @@ void gameInit(Game &_game) {
  */
 void gameUpdate(Game &_game, [[maybe_unused]] float _dt) {
   _game.m_frameTime.frame();
-  cameraUpdate(bx::toSeconds<float>(_game.m_frameTime.getDeltaTime()),
-               _game.m_mouseState);
+  auto bx_dt = bx::toSeconds<float>(_game.m_frameTime.getDeltaTime());
+  _game.m_camera_control.Update(bx_dt);
+  cameraUpdate(bx_dt, _game.m_mouseState);
 }
 
 /**
