@@ -28,6 +28,7 @@ add_executable(mygame src/main.cpp
   src/ecs/core/types.h
   src/ecs/components/camera.h
   src/ecs/components/gravity.h
+  src/ecs/components/renderable.h
   src/ecs/components/rigid_body.h
   src/ecs/components/spin.h
   src/ecs/components/transform.h
