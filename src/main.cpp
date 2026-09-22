@@ -143,10 +143,9 @@ void gameInit(Game &_game) {
   // it is never replayed for entities that already exist.
   _game.m_physics = &ecs.RegisterSystem<Physics>();
   {
-    // TODO: set system signature directly
     Signature signature;
     signature.set(ecs.GetComponentType<Transform>());
-    _game.m_physics->signature = signature;
+    ecs.SetSystemSignature<Physics>(signature);
   }
   _game.m_physics->Init();
 

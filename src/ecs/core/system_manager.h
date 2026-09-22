@@ -12,7 +12,6 @@ public:
 
   template <class SystemClass> SystemClass &RegisterSystem();
 
-  // TODO: Not needed, signatures are stored in the System itself
   template <class SystemClass> void SetSignature(Signature signature);
 
   void EntityDestoyed(Entity entity);
@@ -24,7 +23,7 @@ private:
 };
 
 template <class SystemClass> SystemClass &SystemManager::RegisterSystem() {
-  const auto type_id = TypeId::Get<SystemClass>();
+  const auto type_id = SystemTypeId::Get<SystemClass>();
 
   assert(!systems_.contains(type_id) && "Trying to register more than once.");
 
@@ -34,7 +33,24 @@ template <class SystemClass> SystemClass &SystemManager::RegisterSystem() {
   return ref;
 }
 
+/**
+ * @brief Sets which components an entity must have for @p SystemClass to track
+ *        it.
+ *
+ * Must be called before any entity gains the components in @p signature:
+ * EntitySignatureChanged is the only thing that fills System::entities, and it
+ * is never replayed for entities that already exist. A signature set late
+ * leaves the system with an empty entity set and no diagnostic.
+ *
+ * @tparam SystemClass System to configure; must already be registered.
+ * @param signature Component mask the system requires.
+ */
 template <class SystemClass>
 void SystemManager::SetSignature(Signature signature) {
-  // TODO: Do something
+  const auto type_id = SystemTypeId::Get<SystemClass>();
+
+  assert(systems_.contains(type_id) &&
+         "Setting signature of unregistered system.");
+
+  systems_.at(type_id)->signature = signature;
 }

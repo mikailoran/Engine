@@ -40,11 +40,11 @@ private:
 // Implementation
 
 template <class Component> void ComponentManager::RegisterComponent() {
-  const auto type = TypeId::Get<Component>();
-  assert(!component_arrays_.contains(type) &&
+  const auto type_id = ComponentTypeId::Get<Component>();
+  assert(!component_arrays_.contains(type_id) &&
          "Registering component type more than once.");
 
-  component_arrays_.emplace(type,
+  component_arrays_.emplace(type_id,
                             std::make_unique<ComponentArray<Component>>());
 }
 
@@ -52,7 +52,7 @@ template <class Component>
 ComponentType ComponentManager::GetComponentType() const {
   // TODO: Possible bug if too many components or removing components
   // The component's position in the signature bitset could be incorrect
-  return TypeId::Get<Component>();
+  return ComponentTypeId::Get<Component>();
 }
 
 template <class Component>
@@ -79,20 +79,20 @@ const Component &ComponentManager::GetComponent(Entity entity) const {
 
 template <class Component>
 ComponentArray<Component> &ComponentManager::GetComponentArray() {
-  const auto type = TypeId::Get<Component>();
-  assert(component_arrays_.contains(type) &&
+  const auto type_id = ComponentTypeId::Get<Component>();
+  assert(component_arrays_.contains(type_id) &&
          "Component type used before being registered.");
 
   return *static_cast<ComponentArray<Component> *>(
-      component_arrays_.at(type).get());
+      component_arrays_.at(type_id).get());
 }
 
 template <class Component>
 const ComponentArray<Component> &ComponentManager::GetComponentArray() const {
-  const auto type = TypeId::Get<Component>();
-  assert(component_arrays_.contains(type) &&
+  const auto type_id = ComponentTypeId::Get<Component>();
+  assert(component_arrays_.contains(type_id) &&
          "Component type used before being registered.");
 
   return *static_cast<const ComponentArray<Component> *>(
-      component_arrays_.at(type).get());
+      component_arrays_.at(type_id).get());
 }
