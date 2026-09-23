@@ -5,6 +5,7 @@
 #include <bgfx/bgfx.h>
 
 class Ecs;
+class AssetRegistry;
 struct FrameContext;
 
 /**
@@ -22,8 +23,11 @@ public:
    *
    * Requires bgfx::init to have completed, and the working directory to be set,
    * since loadProgram resolves its paths relative to it.
+   *
+   * @param assets Registry to resolve mesh handles through. Must outlive this
+   * system.
    */
-  void Init();
+  void Init(const AssetRegistry &assets);
 
   /**
    * @brief Submits one frame.
@@ -34,14 +38,11 @@ public:
   void Update(Ecs &ecs, const FrameContext &ctx);
 
   /**
-   * @brief Destroys every GPU resource this system owns held by each tracked
-   * entity's Renderable.
+   * @brief Destroys every GPU resource this system owns.
    *
    * Must run before bgfx::shutdown.
-   *
-   * @param ecs World to find owned meshes.
    */
-  void Shutdown(Ecs &ecs);
+  void Shutdown();
 
   /**
    * @brief Nominates the entity supplying view and projection.
@@ -58,6 +59,9 @@ private:
   void SetupFloor();
 
   void SubmitFloor();
+
+  // TODO: figure out how to reinforce class invariants
+  const AssetRegistry *assets_{nullptr};
 
   // Used when a Renderable leaves its own program handle invalid.
   bgfx::ProgramHandle default_program_{bgfx::kInvalidHandle};

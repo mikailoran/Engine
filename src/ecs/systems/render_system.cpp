@@ -1,5 +1,6 @@
 #include "render_system.h"
 
+#include "../../assets/asset_registry.h"
 #include "../components/camera.h"
 #include "../components/renderable.h"
 #include "../components/transform.h"
@@ -55,7 +56,9 @@ constexpr std::array<uint16_t, 6> kFloorIndices{0, 1, 2, 0, 2, 3};
 
 } // namespace
 
-void RenderSystem::Init() {
+void RenderSystem::Init(const AssetRegistry &assets) {
+  assets_ = &assets;
+
   // View 0 clears the backbuffer each frame.
   bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, kClearColor, 1.0F,
                      0);
@@ -116,9 +119,9 @@ void RenderSystem::Update(Ecs &ecs, const FrameContext &ctx) {
 
     const auto program = bgfx::isValid(renderable.program) ? renderable.program
                                                            : default_program_;
+    const auto *mesh = assets_->Get(renderable.mesh_handle);
 
-    meshSubmit(renderable.mesh, renderable.view, program, mtx.data(),
-               renderable.state);
+    meshSubmit(mesh, renderable.view, program, mtx.data(), renderable.state);
   }
 
   SubmitFloor();
@@ -126,16 +129,7 @@ void RenderSystem::Update(Ecs &ecs, const FrameContext &ctx) {
   bgfx::frame();
 }
 
-void RenderSystem::Shutdown(Ecs &ecs) {
-  // Each Renderable owns its mesh.
-  for (const auto &entity : entities) {
-    auto &renderable = ecs.GetComponent<Renderable>(entity);
-    if (renderable.mesh != nullptr) {
-      meshUnload(renderable.mesh);
-      renderable.mesh = nullptr;
-    }
-  }
-
+void RenderSystem::Shutdown() {
   bgfx::destroy(floor_vbh_);
   bgfx::destroy(floor_ibh_);
   bgfx::destroy(u_time_);

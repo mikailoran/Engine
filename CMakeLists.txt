@@ -38,7 +38,10 @@ add_executable(mygame src/main.cpp
   src/ecs/systems/physics_system.h
   src/ecs/systems/physics_system.cpp
   src/ecs/systems/render_system.h
-  src/ecs/systems/render_system.cpp)
+  src/ecs/systems/render_system.cpp
+  src/assets/mesh_handle.h
+  src/assets/asset_registry.h
+  src/assets/asset_registry.cpp)
 
 # example-common publicly exposes examples/common plus bgfx, bx and bimg with
 # their include directories, which is what makes "entry/entry.h" resolve.

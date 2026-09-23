@@ -2,6 +2,8 @@
 #include <bgfx_utils.h>
 #include <bx/timer.h>
 
+#include "assets/asset_registry.h"
+
 #include "ecs/core/ecs.h"
 #include "ecs/core/frame_context.h"
 
@@ -29,6 +31,7 @@ namespace {
 struct Game {
 
   Ecs m_ecs;
+  AssetRegistry m_assets;
 
   // Non-owning; SystemManager owns the systems themselves.
   CameraControl *m_camera_control = nullptr;
@@ -112,7 +115,7 @@ void gameInit(Game &_game) {
     signature.set(ecs.GetComponentType<Renderable>());
     ecs.SetSystemSignature<RenderSystem>(signature);
   }
-  _game.m_render->Init();
+  _game.m_render->Init(_game.m_assets);
 
   // --- Assets and entities ----------------------------------------------
   const auto camera_entity = ecs.CreateEntity();
@@ -120,12 +123,12 @@ void gameInit(Game &_game) {
   ecs.AddComponent(camera_entity, Camera{});
   _game.m_render->SetCamera(camera_entity);
 
+  const MeshHandle bunny_mesh_handle =
+      _game.m_assets.LoadMesh("assets/meshes/compiled/bunny.bin");
   const auto bunny_entity = ecs.CreateEntity();
   ecs.AddComponent(bunny_entity, Transform{});
   ecs.AddComponent(bunny_entity, Spin{});
-  ecs.AddComponent(
-      bunny_entity,
-      Renderable{.mesh = meshLoad("assets/meshes/compiled/bunny.bin")});
+  ecs.AddComponent(bunny_entity, Renderable{.mesh_handle = bunny_mesh_handle});
 
   _game.m_frameTime.reset();
 }
@@ -135,8 +138,9 @@ void gameInit(Game &_game) {
  * @return Process exit code.
  */
 auto gameShutdown(Game &_game) -> int {
-  _game.m_render->Shutdown(_game.m_ecs);
+  _game.m_render->Shutdown();
   _game.m_camera_control->Shutdown();
+  _game.m_assets.UnloadAll();
   bgfx::shutdown();
   return 0;
 }
