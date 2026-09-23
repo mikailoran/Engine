@@ -50,8 +50,6 @@ template <class Component> void ComponentManager::RegisterComponent() {
 
 template <class Component>
 ComponentType ComponentManager::GetComponentType() const {
-  // TODO: Possible bug if too many components or removing components
-  // The component's position in the signature bitset could be incorrect
   return ComponentTypeId::Get<Component>();
 }
 

@@ -63,8 +63,7 @@ void gameInit(Game &_game) {
   entry::setCurrentDir("/home/mikail/Work/mygame/");
 
   // --- Platform / bgfx bring-up ----------------------------------------
-  // Hoisted above ECS setup so that systems creating GPU resources in their
-  // Init() can run against an initialised bgfx.
+  // Done before ECS setup to allow the creation of GPU resources in the systems
   bgfx::Init init;
   init.type = bgfx::RendererType::Count; // auto-select backend
   init.platformData.nwh =
@@ -77,8 +76,6 @@ void gameInit(Game &_game) {
   bgfx::init(init);
 
   bgfx::setDebug(_game.m_debug);
-
-  // View 0's clear state is set by RenderSystem::Init, which owns that view.
 
   // --- ECS: components --------------------------------------------------
   ecs.RegisterComponent<Camera>();
@@ -118,8 +115,6 @@ void gameInit(Game &_game) {
   _game.m_render->Init();
 
   // --- Assets and entities ----------------------------------------------
-  // Camera: position lives in the Transform, orientation in the Camera.
-  // CameraControl overwrites both every frame from the input-driven camera.
   const auto camera_entity = ecs.CreateEntity();
   ecs.AddComponent(camera_entity, Transform{.position = {0.0F, 1.0F, -5.0F}});
   ecs.AddComponent(camera_entity, Camera{});
@@ -149,7 +144,8 @@ auto gameShutdown(Game &_game) -> int {
 } // namespace
 
 /**
- * @brief Application entry point, called by entry on its own thread.
+ * @brief Application entry point, currently called by the examples' common on
+ * its own thread.
  *
  * entry defines the real main(): it keeps the OS thread on the platform message
  * pump and runs this on a secondary "Entry Thread". entry dispatches here
@@ -184,7 +180,7 @@ auto _main_(int /*_argc*/, char ** /*_argv*/) -> int {
         .mouse = &game.m_mouseState,
     };
 
-    // Order matters: the camera pose must settle before the renderer reads it.
+    // The camera pose must settle before the renderer reads it.
     game.m_camera_control->Update(game.m_ecs, ctx);
     game.m_physics->Update(game.m_ecs, ctx);
     game.m_render->Update(game.m_ecs, ctx);
