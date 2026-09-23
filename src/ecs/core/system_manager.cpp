@@ -1,0 +1,22 @@
+#include "system_manager.h"
+
+void SystemManager::EntityDestoyed(Entity entity) {
+  for (const auto &[id, system] : systems_) {
+    system->entities.erase(entity);
+  }
+}
+
+void SystemManager::EntitySignatureChanged(Entity entity,
+                                           Signature entity_signature) {
+  for (const auto &[type, system] : systems_) {
+    const auto system_signature = system->signature;
+
+    // Check if the entity has AT LEAST the same bits enabled as the system
+    // TODO: bug: if the system_signature is 0, it matches all entities
+    if ((entity_signature & system_signature) == system_signature) {
+      system->entities.insert(entity);
+    } else {
+      system->entities.erase(entity);
+    }
+  }
+}
