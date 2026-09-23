@@ -48,7 +48,7 @@ void Ecs::AddComponent(Entity entity, Component component) {
 
   // Mark the entity's signature with the component's ID
   auto entity_signature = entity_manager_.signature(entity);
-  auto signature_component_bit =
+  const auto signature_component_bit =
       component_manager_.GetComponentType<Component>();
   entity_signature.set(signature_component_bit, true);
   entity_manager_.SetSignature(entity, entity_signature);
@@ -60,7 +60,7 @@ template <class Component> void Ecs::RemoveComponent(Entity entity) {
   component_manager_.RemoveComponent<Component>(entity);
 
   auto entity_signature = entity_manager_.signature(entity);
-  auto signature_component_bit =
+  const auto signature_component_bit =
       component_manager_.GetComponentType<Component>();
   entity_signature.set(signature_component_bit, false);
   entity_manager_.SetSignature(entity, entity_signature);

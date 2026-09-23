@@ -4,7 +4,7 @@
 #include <set>
 
 struct System {
-  // TODO: figure it out bro
+  // TODO: Make System virtual
   virtual ~System() = default;
   System() = default;
   System(const System &) = delete;

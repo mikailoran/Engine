@@ -38,9 +38,8 @@ template <class SystemClass> SystemClass &SystemManager::RegisterSystem() {
  *        it.
  *
  * Must be called before any entity gains the components in @p signature:
- * EntitySignatureChanged is the only thing that fills System::entities, and it
- * is never replayed for entities that already exist. A signature set late
- * leaves the system with an empty entity set and no diagnostic.
+ * EntitySignatureChanged fills System::entities. Currently, a signature set
+ * late leaves the system with an empty entity set and no diagnostic.
  *
  * @tparam SystemClass System to configure; must already be registered.
  * @param signature Component mask the system requires.

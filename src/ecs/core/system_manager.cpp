@@ -12,6 +12,7 @@ void SystemManager::EntitySignatureChanged(Entity entity,
     const auto system_signature = system->signature;
 
     // Check if the entity has AT LEAST the same bits enabled as the system
+    // TODO: bug: if the system_signature is 0, it matches all entities
     if ((entity_signature & system_signature) == system_signature) {
       system->entities.insert(entity);
     } else {

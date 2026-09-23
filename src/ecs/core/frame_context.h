@@ -2,34 +2,26 @@
 
 #include <cstdint>
 
-// Forward declared rather than including entry/entry.h, to keep the examples
-// framework out of ecs/core. Systems that dereference the pointer include it
-// themselves.
 namespace entry {
 struct MouseState;
 } // namespace entry
 
 /**
- * @brief Per-frame inputs that are not per-entity state.
- *
- * Passed by const reference to every system's Update. Exists because systems
- * need things the ECS cannot supply from components alone: the backbuffer size,
- * elapsed time, and raw input.
+ * @brief Generic info used per-frame for rendering
  */
 struct FrameContext {
-  /// Backbuffer width in pixels; entry writes this back on resize.
+  // Backbuffer width in pixels.
   uint32_t width{1280};
 
-  /// Backbuffer height in pixels.
+  // Backbuffer height in pixels.
   uint32_t height{720};
 
-  /// Seconds elapsed since the previous frame.
+  // Seconds elapsed since the previous frame.
   float dt{0.0F};
 
-  /// Seconds elapsed since startup. Feeds the u_time shader uniform.
+  // Seconds elapsed since startup.
   float time{0.0F};
 
-  /// Current mouse position and button state. Never null in practice; owned by
-  /// the caller and only valid for the duration of the Update call.
+  // Current mouse position and button state.
   const entry::MouseState *mouse{nullptr};
 };
