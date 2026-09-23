@@ -1,5 +1,6 @@
 #include "render_system.h"
 
+#include "../components/camera.h"
 #include "../components/renderable.h"
 #include "../components/transform.h"
 #include "../core/ecs.h"
@@ -8,7 +9,6 @@
 #include <array>
 #include <bgfx_utils.h>
 #include <bx/math.h>
-#include <camera.h>
 
 namespace {
 
@@ -16,9 +16,10 @@ namespace {
 constexpr std::size_t kMtxSize = 16;
 
 constexpr uint32_t kClearColor = 0x303030ff; // RGBA
-constexpr float kFovDegrees = 60.0F;
-constexpr float kNearPlane = 0.1F;
-constexpr float kFarPlane = 100.0F;
+// Only used when no camera entity has been nominated.
+constexpr float kFallbackFovDegrees = 60.0F;
+constexpr float kFallbackNearPlane = 0.1F;
+constexpr float kFallbackFarPlane = 100.0F;
 
 /**
  * @brief Position + normal vertex, laid out to match what vs.sc expects.
@@ -91,18 +92,29 @@ void RenderSystem::Update(Ecs &ecs, const FrameContext &ctx) {
 
   bgfx::setFrameUniform(u_time_, &ctx.time);
 
-  // View and projection for view 0.
+  // View and projection for view 0, sourced from the camera entity's
+  // components. CameraControl writes those each frame; this system only reads
+  // them, so the two never reference each other directly.
   {
-    std::array<float, kMtxSize> view{};
-    // TODO(Phase 4): source this from the camera entity's Transform + Camera.
-    cameraGetViewMtx(view.data());
-
     const auto aspect =
         static_cast<float>(ctx.width) / static_cast<float>(ctx.height);
 
+    std::array<float, kMtxSize> view{};
     std::array<float, kMtxSize> proj{};
-    bx::mtxProj(proj.data(), kFovDegrees, aspect, kNearPlane, kFarPlane,
-                bgfx::getCaps()->homogeneousDepth);
+
+    if (has_camera_) {
+      const auto &transform = ecs.GetComponent<Transform>(camera_);
+      const auto &camera = ecs.GetComponent<Camera>(camera_);
+
+      bx::mtxLookAt(view.data(), transform.position, camera.target, camera.up);
+      bx::mtxProj(proj.data(), camera.fov_degrees, aspect, camera.near_plane,
+                  camera.far_plane, bgfx::getCaps()->homogeneousDepth);
+    } else {
+      // No camera set: view from the world origin with the stock projection.
+      bx::mtxIdentity(view.data());
+      bx::mtxProj(proj.data(), kFallbackFovDegrees, aspect, kFallbackNearPlane,
+                  kFallbackFarPlane, bgfx::getCaps()->homogeneousDepth);
+    }
 
     bgfx::setViewTransform(0, view.data(), proj.data());
     bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(ctx.width),
@@ -156,4 +168,9 @@ void RenderSystem::Shutdown(Ecs &ecs) {
   bgfx::destroy(floor_ibh_);
   bgfx::destroy(u_time_);
   bgfx::destroy(default_program_);
+}
+
+void RenderSystem::SetCamera(Entity camera) {
+  camera_ = camera;
+  has_camera_ = true;
 }

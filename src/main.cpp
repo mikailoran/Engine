@@ -13,11 +13,11 @@
 #include "ecs/components/transform.h"
 
 #include "common.h"
+#include "ecs/systems/camera_control.h"
 // TODO: Rename "physics_system.h" into "physics.h"
 #include "ecs/systems/physics_system.h"
 #include "ecs/systems/render_system.h"
 #include "entry/entry.h"
-#include <camera.h>
 
 namespace {
 
@@ -34,6 +34,7 @@ struct Game {
   Ecs m_ecs;
 
   // Non-owning; SystemManager owns the systems themselves.
+  CameraControl *m_camera_control = nullptr;
   Physics *m_physics = nullptr;
   RenderSystem *m_render = nullptr;
 
@@ -85,11 +86,6 @@ void gameInit(Game &_game) {
 
   // View 0's clear state is set by RenderSystem::Init, which owns that view.
 
-  // --- Camera (temporary; moves into CameraControl) --------------------
-  cameraCreate();
-  cameraSetPosition({0.0f, 1.0f, -5.0f});
-  cameraSetVerticalAngle(0.0f);
-
   // --- ECS: components --------------------------------------------------
   ecs.RegisterComponent<Camera>();
   ecs.RegisterComponent<Transform>();
@@ -100,6 +96,15 @@ void gameInit(Game &_game) {
   // A system's signature must be set before any entity gains its components:
   // EntitySignatureChanged is the only thing that fills System::entities, and
   // it is never replayed for entities that already exist.
+  _game.m_camera_control = &ecs.RegisterSystem<CameraControl>();
+  {
+    Signature signature;
+    signature.set(ecs.GetComponentType<Transform>());
+    signature.set(ecs.GetComponentType<Camera>());
+    ecs.SetSystemSignature<CameraControl>(signature);
+  }
+  _game.m_camera_control->Init();
+
   _game.m_physics = &ecs.RegisterSystem<Physics>();
   {
     Signature signature;
@@ -119,6 +124,13 @@ void gameInit(Game &_game) {
   _game.m_render->Init();
 
   // --- Assets and entities ----------------------------------------------
+  // Camera: position lives in the Transform, orientation in the Camera.
+  // CameraControl overwrites both every frame from the input-driven camera.
+  const auto camera_entity = ecs.CreateEntity();
+  ecs.AddComponent(camera_entity, Transform{.position = {0.0F, 1.0F, -5.0F}});
+  ecs.AddComponent(camera_entity, Camera{});
+  _game.m_render->SetCamera(camera_entity);
+
   bunny_entity = ecs.CreateEntity();
   ecs.AddComponent(bunny_entity, Transform{});
   ecs.AddComponent(bunny_entity, Spin{});
@@ -151,8 +163,8 @@ void gameUpdate(Game &_game, [[maybe_unused]] float _dt) {
       .mouse = &_game.m_mouseState,
   };
 
+  _game.m_camera_control->Update(_game.m_ecs, ctx);
   _game.m_physics->Update(_game.m_ecs, ctx);
-  cameraUpdate(ctx.dt, _game.m_mouseState);
 }
 
 /**
@@ -183,7 +195,7 @@ void gameRender(Game &_game) {
  */
 auto gameShutdown(Game &_game) -> int {
   _game.m_render->Shutdown(_game.m_ecs);
-  cameraDestroy();
+  _game.m_camera_control->Shutdown();
   bgfx::shutdown();
   return 0;
 }
