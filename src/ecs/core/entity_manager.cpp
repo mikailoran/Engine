@@ -30,6 +30,8 @@ void EntityManager::SetSignature(Entity entity, Signature signature) {
 void EntityManager::DestroyEntity(Entity entity) {
   assert(entity < MAX_ENTITIES && "Entity out of range.");
 
+  // TODO: bug when destroying same entity twice: id gets pushed twice and shit
+  // hits the fan
   available_entities_.push(entity);
   signatures_.at(entity).reset();
   --living_entity_count_;

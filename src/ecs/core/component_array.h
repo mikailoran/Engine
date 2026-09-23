@@ -24,10 +24,7 @@ public:
 
   Component &GetData(Entity entity);
 
-  void EntityDestroyed(Entity entity) override {
-    // TODO: Implement entity destruction
-    return;
-  }
+  void EntityDestroyed(Entity entity) override;
 
 private:
   std::array<Component, MAX_ENTITIES> components_{};
@@ -56,7 +53,6 @@ template <class Type> void ComponentArray<Type>::RemoveData(Entity entity) {
   // Swap deleted element with last element of component array
   const auto removed_entity_index = entity_to_index_.at(entity);
   const auto last_entity_index = current_size_ - 1;
-  // TODO: What happens if we swap an element with itself?
   std::swap(components_.at(removed_entity_index),
             components_.at(last_entity_index));
 
@@ -74,7 +70,7 @@ template <class Type> void ComponentArray<Type>::RemoveData(Entity entity) {
 
 template <class Type> Type &ComponentArray<Type>::GetData(Entity entity) {
   assert(entity_to_index_.contains(entity) &&
-         "Trying to retrieve non-existent component.");
+         "Trying to retrieve component data from non-existent entity.");
 
   const auto entity_index = entity_to_index_.at(entity);
   return components_.at(entity_index);
@@ -83,8 +79,15 @@ template <class Type> Type &ComponentArray<Type>::GetData(Entity entity) {
 template <class Type>
 const Type &ComponentArray<Type>::GetData(Entity entity) const {
   assert(entity_to_index_.contains(entity) &&
-         "Trying to retrieve non-existent component.");
+         "Trying to retrieve component data from non-existent entity.");
 
   const auto entity_index = entity_to_index_.at(entity);
   return components_.at(entity_index);
+}
+
+template <class Type>
+void ComponentArray<Type>::EntityDestroyed(Entity entity) {
+  if (entity_to_index_.contains(entity)) {
+    RemoveData(entity);
+  }
 }

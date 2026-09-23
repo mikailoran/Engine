@@ -25,7 +25,7 @@ public:
 
   template <class Component> const Component &GetComponent(Entity entity) const;
 
-  // void EntityDestroyed(Entity entity);
+  void EntityDestroyed(Entity entity);
 
 private:
   template <class Component> ComponentArray<Component> &GetComponentArray();
@@ -73,7 +73,11 @@ const Component &ComponentManager::GetComponent(Entity entity) const {
   return GetComponentArray<Component>().GetData(entity);
 }
 
-// void ComponentManager::EntityDestroyed(Entity entity) {}
+inline void ComponentManager::EntityDestroyed(Entity entity) {
+  for (const auto &[type, comp_array] : component_arrays_) {
+    comp_array->EntityDestroyed(entity);
+  }
+}
 
 template <class Component>
 ComponentArray<Component> &ComponentManager::GetComponentArray() {

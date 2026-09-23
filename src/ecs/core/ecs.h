@@ -11,6 +11,23 @@ public:
 
   Entity CreateEntity();
 
+  /**
+   * @brief Removes an entity: its components, its entry in every system, and
+   *        its id.
+   *
+   * @warning Unsafe to call from inside a system's Update on the entity
+   *          currently being iterated. SystemManager::EntityDestroyed erases
+   *          from System::entities, which invalidates the iterator a range-for
+   *          is holding, and the next ++ is undefined. Destroying a *different*
+   *          entity is fine: std::set only invalidates iterators to the erased
+   *          element. Until this is addressed, destroy only between system
+   *          Updates.
+   *
+   * @param entity Entity to destroy. Must be alive; destroying twice silently
+   *               corrupts the id pool, see EntityManager::DestroyEntity.
+   */
+  // TODO: deferred destruction (queue here, flush between Updates) would make
+  // this callable from anywhere, including from within a system's Update.
   void DestroyEntity(Entity entity);
 
   template <class Component> void RegisterComponent();

@@ -14,7 +14,7 @@ public:
 
   template <class SystemClass> void SetSignature(Signature signature);
 
-  void EntityDestoyed(Entity entity);
+  void EntityDestroyed(Entity entity);
 
   void EntitySignatureChanged(Entity entity, Signature entity_signature);
 

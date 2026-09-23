@@ -1,6 +1,6 @@
 #include "system_manager.h"
 
-void SystemManager::EntityDestoyed(Entity entity) {
+void SystemManager::EntityDestroyed(Entity entity) {
   for (const auto &[id, system] : systems_) {
     system->entities.erase(entity);
   }
