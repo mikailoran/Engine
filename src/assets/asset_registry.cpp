@@ -9,8 +9,13 @@ MeshHandle AssetRegistry::LoadMesh(const std::filesystem::path &path) {
     return it->second;
   }
 
-  const MeshHandle handle{static_cast<std::uint16_t>(meshes_.size())};
   auto *mesh = meshLoad(path.c_str());
+  // TODO: Handle mesh loading errors better: not silent
+  if (!mesh) {
+    return kInvalidMesh;
+  }
+
+  const MeshHandle handle{static_cast<std::uint16_t>(meshes_.size())};
   meshes_.push_back(mesh);
   by_path_.emplace(path, handle);
   return handle;
