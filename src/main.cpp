@@ -2,8 +2,6 @@
 #include <bgfx_utils.h>
 #include <bx/timer.h>
 
-#include <array>
-
 #include "ecs/core/ecs.h"
 #include "ecs/core/frame_context.h"
 
@@ -25,9 +23,8 @@ namespace {
  * @brief Whole game state: window/reset parameters plus everything the
  *        simulation owns.
  *
- * Kept as one struct so the init/update/render/shutdown phases below pass a
- * single reference around, and so those phases map directly onto
- * entry::AppI's init/update/shutdown if that is adopted later.
+ * Holds only what outlives a single frame: the world, non-owning handles to
+ * the systems, and the window/timing state entry writes back into.
  */
 struct Game {
 
@@ -37,8 +34,6 @@ struct Game {
   CameraControl *m_camera_control = nullptr;
   Physics *m_physics = nullptr;
   RenderSystem *m_render = nullptr;
-
-  Entity m_bunny_entity{0};
 
   uint32_t m_width = 1280;
   uint32_t m_height = 720;
@@ -60,7 +55,6 @@ struct Game {
  */
 void gameInit(Game &_game) {
   auto &ecs = _game.m_ecs;
-  auto &bunny_entity = _game.m_bunny_entity;
 
   // --- Working directory -----------------------------------------------
   // Must precede meshLoad/loadProgram: both resolve their paths against the
@@ -131,62 +125,14 @@ void gameInit(Game &_game) {
   ecs.AddComponent(camera_entity, Camera{});
   _game.m_render->SetCamera(camera_entity);
 
-  bunny_entity = ecs.CreateEntity();
+  const auto bunny_entity = ecs.CreateEntity();
   ecs.AddComponent(bunny_entity, Transform{});
   ecs.AddComponent(bunny_entity, Spin{});
-  ecs.AddComponent(bunny_entity,
-                   Renderable{.mesh =
-                                  meshLoad("assets/meshes/compiled/bunny.bin")});
+  ecs.AddComponent(
+      bunny_entity,
+      Renderable{.mesh = meshLoad("assets/meshes/compiled/bunny.bin")});
 
   _game.m_frameTime.reset();
-}
-
-/**
- * @brief Advances the simulation by exactly one fixed step.
- *
- * Called zero or more times per rendered frame. Because @p _dt never varies,
- * simulation behaviour is independent of framerate and reproducible.
- *
- * @param _game Game state to advance.
- * @param _dt   Step duration in seconds; always kFixedDt.
- */
-void gameUpdate(Game &_game, [[maybe_unused]] float _dt) {
-  _game.m_frameTime.frame();
-
-  // Built here for now; Phase 5 hoists construction into the main loop so
-  // rendering can share the same context.
-  const FrameContext ctx{
-      .width = _game.m_width,
-      .height = _game.m_height,
-      .dt = bx::toSeconds<float>(_game.m_frameTime.getDeltaTime()),
-      .time = bx::toSeconds<float>(_game.m_frameTime.getDurationTime()),
-      .mouse = &_game.m_mouseState,
-  };
-
-  _game.m_camera_control->Update(_game.m_ecs, ctx);
-  _game.m_physics->Update(_game.m_ecs, ctx);
-}
-
-/**
- * @brief Submits one frame.
- *
- * @param _game  Game state to draw.
- * @param _alpha Fraction of a fixed step left unconsumed in the accumulator,
- *               in [0,1). Used to interpolate between the previous and current
- *               simulation states so rendering stays smooth when the frame rate
- *               is not a multiple of the fixed rate. Unused until there is
- *               something to interpolate.
- */
-void gameRender(Game &_game) {
-  const FrameContext ctx{
-      .width = _game.m_width,
-      .height = _game.m_height,
-      .dt = bx::toSeconds<float>(_game.m_frameTime.getDeltaTime()),
-      .time = bx::toSeconds<float>(_game.m_frameTime.getDurationTime()),
-      .mouse = &_game.m_mouseState,
-  };
-
-  _game.m_render->Update(_game.m_ecs, ctx);
 }
 
 /**
@@ -227,9 +173,21 @@ auto _main_(int /*_argc*/, char ** /*_argv*/) -> int {
   // asks to close; it also writes back width/height and handles reset.
   while (!entry::processEvents(game.m_width, game.m_height, game.m_debug,
                                game.m_reset, &game.m_mouseState)) {
-    gameUpdate(game, 0.0f);
+    game.m_frameTime.frame();
 
-    gameRender(game);
+    // One context per frame, shared by every system.
+    const FrameContext ctx{
+        .width = game.m_width,
+        .height = game.m_height,
+        .dt = bx::toSeconds<float>(game.m_frameTime.getDeltaTime()),
+        .time = bx::toSeconds<float>(game.m_frameTime.getDurationTime()),
+        .mouse = &game.m_mouseState,
+    };
+
+    // Order matters: the camera pose must settle before the renderer reads it.
+    game.m_camera_control->Update(game.m_ecs, ctx);
+    game.m_physics->Update(game.m_ecs, ctx);
+    game.m_render->Update(game.m_ecs, ctx);
   }
 
   return gameShutdown(game);
