@@ -5,8 +5,6 @@
 #include <cassert>
 #include <unordered_map>
 
-// TODO: Can any of the member functions be separated into a cpp file?
-
 class ComponentArrayInterface {
 public:
   virtual ~ComponentArrayInterface() = default;
@@ -27,7 +25,7 @@ public:
   Component &GetData(Entity entity);
 
   void EntityDestroyed(Entity entity) override {
-    // TODO: figure ts out
+    // TODO: Implement entity destruction
     return;
   }
 
