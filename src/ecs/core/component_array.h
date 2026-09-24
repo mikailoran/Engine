@@ -24,6 +24,8 @@ public:
 
   Component &GetData(Entity entity);
 
+  [[nodiscard]] bool Has(Entity entity) const;
+
   void EntityDestroyed(Entity entity) override;
 
 private:
@@ -83,6 +85,19 @@ const Type &ComponentArray<Type>::GetData(Entity entity) const {
 
   const auto entity_index = entity_to_index_.at(entity);
   return components_.at(entity_index);
+}
+
+/**
+ * @brief Tests whether @p entity currently has a component in this array.
+ *
+ * Unlike GetData this has no precondition: absence is a normal answer, not a
+ * caller error.
+ *
+ * @param entity Entity to test.
+ * @return True if the entity has a component of this type.
+ */
+template <class Type> bool ComponentArray<Type>::Has(Entity entity) const {
+  return entity_to_index_.contains(entity);
 }
 
 template <class Type>

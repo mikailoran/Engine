@@ -23,6 +23,9 @@ public:
 
   template <class Component> const Component &GetComponent(Entity entity) const;
 
+  template <class Component>
+  [[nodiscard]] bool HasComponent(Entity entity) const;
+
   void EntityDestroyed(Entity entity);
 
 private:
@@ -81,6 +84,22 @@ Component &ComponentManager::GetComponent(Entity entity) {
 template <class Component>
 const Component &ComponentManager::GetComponent(Entity entity) const {
   return GetComponentArray<Component>().GetData(entity);
+}
+
+/**
+ * @brief Tests whether @p entity has a component of type @p Component.
+ *
+ * @p Component must already be registered: this answers "does this entity have
+ * one", not "is this type known". An unregistered type trips GetComponentArray's
+ * assert.
+ *
+ * @tparam Component Registered component type to look for.
+ * @param entity Entity to test.
+ * @return True if the entity has that component.
+ */
+template <class Component>
+bool ComponentManager::HasComponent(Entity entity) const {
+  return GetComponentArray<Component>().Has(entity);
 }
 
 inline void ComponentManager::EntityDestroyed(Entity entity) {
