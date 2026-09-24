@@ -41,6 +41,19 @@ public:
 
   template <class Component> const Component &GetComponent(Entity entity) const;
 
+  /**
+   * @brief Tests whether @p entity has a component of type @p Component.
+   *
+   * The way to check for absence: GetComponent asserts when the component is
+   * missing, so it cannot answer this question.
+   *
+   * @tparam Component Registered component type to look for.
+   * @param entity Entity to test.
+   * @return True if the entity has that component.
+   */
+  template <class Component>
+  [[nodiscard]] bool HasComponent(Entity entity) const;
+
   template <class Component> ComponentBit GetComponentBit() const;
 
   template <class SystemClass> SystemClass &RegisterSystem();
@@ -92,6 +105,10 @@ template <class Component> Component &Ecs::GetComponent(Entity entity) {
 template <class Component>
 const Component &Ecs::GetComponent(Entity entity) const {
   return component_manager_.GetComponent<Component>(entity);
+}
+
+template <class Component> bool Ecs::HasComponent(Entity entity) const {
+  return component_manager_.HasComponent<Component>(entity);
 }
 
 template <class Component> ComponentBit Ecs::GetComponentBit() const {
