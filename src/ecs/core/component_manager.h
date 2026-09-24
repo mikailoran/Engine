@@ -12,7 +12,7 @@ public:
 
   template <class Component> void RegisterComponent();
 
-  template <class Component> ComponentType GetComponentType() const;
+  template <class Component> ComponentBit GetComponentBit() const;
 
   template <class Component>
   void AddComponent(Entity entity, Component component);
@@ -27,7 +27,9 @@ public:
 
 private:
   struct ComponentEntry {
-    ComponentType id{0};
+    /// Represents the position of the bit in the signature bitset that
+    /// represents a component
+    ComponentBit bit{0};
     std::unique_ptr<ComponentArrayInterface> array;
   };
   template <class Component> ComponentArray<Component> &GetComponentArray();
@@ -36,7 +38,7 @@ private:
   const ComponentArray<Component> &GetComponentArray() const;
 
   std::unordered_map<TypeKey, ComponentEntry> component_arrays_;
-  ComponentType next_id_{0};
+  ComponentBit next_bit_{0};
 };
 
 // Implementation
@@ -45,20 +47,20 @@ template <class Component> void ComponentManager::RegisterComponent() {
   const auto type_key = TypeKeyOf<Component>();
   assert(!component_arrays_.contains(type_key) &&
          "Registering component type more than once.");
-  assert(next_id_ < MAX_COMPONENTS && "Too many component types registered.");
+  assert(next_bit_ < MAX_COMPONENTS && "Too many component types registered.");
 
-  component_arrays_.try_emplace(type_key, next_id_,
+  component_arrays_.try_emplace(type_key, next_bit_,
                                 std::make_unique<ComponentArray<Component>>());
-  ++next_id_;
+  ++next_bit_;
 }
 
 template <class Component>
-ComponentType ComponentManager::GetComponentType() const {
+ComponentBit ComponentManager::GetComponentBit() const {
   const auto type_key = TypeKeyOf<Component>();
   assert(component_arrays_.contains(type_key) &&
          "Getting component type of unregistered component.");
 
-  return component_arrays_.at(type_key).id;
+  return component_arrays_.at(type_key).bit;
 }
 
 template <class Component>
