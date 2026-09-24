@@ -15,17 +15,32 @@ set(BGFX_BUILD_EXAMPLE_COMMON ON CACHE BOOL "" FORCE)
 set(BGFX_BUILD_TOOLS ON CACHE BOOL "" FORCE)
 add_subdirectory(third_party/bgfx.cmake)
 
-add_executable(mygame src/main.cpp
+# --- ECS core ---------------------------------------------------------------
+add_library(ecs_core STATIC
+  src/ecs/core/ecs.cpp
+  src/ecs/core/entity_manager.cpp
+  src/ecs/core/system_manager.cpp
   src/ecs/core/component_array.h
   src/ecs/core/component_manager.h
-  src/ecs/core/ecs.cpp
   src/ecs/core/ecs.h
-  src/ecs/core/frame_context.h
-  src/ecs/core/entity_manager.cpp
   src/ecs/core/entity_manager.h
+  src/ecs/core/frame_context.h
   src/ecs/core/system_manager.h
   src/ecs/core/system.h
-  src/ecs/core/types.h
+  src/ecs/core/types.h)
+
+# PUBLIC so both mygame and the tests can say #include "ecs/core/ecs.h".
+target_include_directories(ecs_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+target_compile_options(ecs_core PRIVATE -Wall -Wextra -Wpedantic)
+
+set_target_properties(ecs_core PROPERTIES
+  CXX_STANDARD 20
+  CXX_STANDARD_REQUIRED ON
+  CXX_EXTENSIONS OFF
+)
+
+add_executable(mygame src/main.cpp
   src/ecs/components/camera.h
   src/ecs/components/gravity.h
   src/ecs/components/renderable.h
@@ -34,7 +49,6 @@ add_executable(mygame src/main.cpp
   src/ecs/components/transform.h
   src/ecs/systems/camera_control.cpp
   src/ecs/systems/camera_control.h
-  src/ecs/core/system_manager.cpp
   src/ecs/systems/physics_system.h
   src/ecs/systems/physics_system.cpp
   src/ecs/systems/render_system.h
@@ -45,7 +59,7 @@ add_executable(mygame src/main.cpp
 
 # example-common publicly exposes examples/common plus bgfx, bx and bimg with
 # their include directories, which is what makes "entry/entry.h" resolve.
-target_link_libraries(mygame PRIVATE example-common)
+target_link_libraries(mygame PRIVATE example-common ecs_core)
 
 target_compile_options(mygame PRIVATE -Wall -Wextra -Wpedantic)
 
