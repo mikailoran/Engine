@@ -3,7 +3,6 @@
 #include <bx/timer.h>
 
 #include "common.h"
-#include "entry/entry.h"
 
 #include "platform/asset_root.h"
 #include "resource/asset_registry.h"
@@ -132,7 +131,7 @@ void gameInit(Game &_game) {
     signature.set(ecs.GetComponentBit<Spin>());
     ecs.SetSystemSignature<UiSystem>(signature);
   }
-  _game.m_ui->Init();
+  _game.m_ui->Init(_game.m_assets);
 
   // --- Assets and entities ----------------------------------------------
   const auto camera_entity = ecs.CreateEntity();
@@ -147,13 +146,6 @@ void gameInit(Game &_game) {
   ecs.AddComponent(bunny_entity, Spin{});
   ecs.AddComponent(bunny_entity, Configurable{});
   ecs.AddComponent(bunny_entity, Renderable{.mesh_handle = bunny_mesh_handle});
-
-  const auto bunny_entity2 = ecs.CreateEntity();
-  ecs.AddComponent(bunny_entity2, Transform{.position = {2.0F, 0.0F, 0.0F}});
-  ecs.AddComponent(bunny_entity2, Spin{});
-  ecs.AddComponent(bunny_entity2, Configurable{});
-  ecs.AddComponent(bunny_entity2, Renderable{.mesh_handle = bunny_mesh_handle});
-  _game.m_frameTime.reset();
 }
 
 /**

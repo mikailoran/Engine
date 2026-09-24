@@ -6,14 +6,43 @@
 #include "../core/frame_context.h"
 
 #include "../components/configurable.h"
+#include "../components/renderable.h"
 #include "../components/spin.h"
 #include "../components/transform.h"
 
+#include "../../resource/asset_registry.h"
+
 #include "entry/entry.h"
 
-void UiSystem::Init() { imguiCreate(); }
+void UiSystem::Init(AssetRegistry &asset_registry) {
+  imguiCreate();
+  asset_registry_ = &asset_registry;
+}
 
 void UiSystem::Shutdown() { imguiDestroy(); }
+
+Entity UiSystem::SpawnEntity(Ecs &ecs) {
+  // TODO: remove paths
+  const MeshHandle mesh_handle =
+      asset_registry_->LoadMesh("assets/meshes/bunny.bin");
+  const auto entity = ecs.CreateEntity();
+  ecs.AddComponent(entity, Transform{});
+  ecs.AddComponent(entity, Spin{});
+  ecs.AddComponent(entity, Configurable{});
+  ecs.AddComponent(entity, Renderable{.mesh_handle = mesh_handle});
+
+  entities_.push_back(entity);
+
+  return entity;
+}
+
+void UiSystem::DestroyAllSpawnedEntities(Ecs &ecs) {
+  for (const auto &entity : entities_) {
+    ecs.DestroyEntity(entity);
+  }
+
+  entities_.clear();
+}
 
 void UiSystem::Update(Ecs &ecs, const FrameContext &ctx) {
   const auto &mouse = *ctx.mouse;
@@ -30,6 +59,14 @@ void UiSystem::Update(Ecs &ecs, const FrameContext &ctx) {
   ImGui::SetNextWindowSize(ImVec2(ctx.width / 5.0f, ctx.height / 3.5f),
                            ImGuiCond_FirstUseEver);
   ImGui::Begin("Settings", nullptr, 0);
+
+  if (ImGui::Button("Spawn Entity")) {
+    SpawnEntity(ecs);
+  }
+
+  if (ImGui::Button("Destroy All Spawned Entities")) {
+    DestroyAllSpawnedEntities(ecs);
+  }
 
   // Sliders of transforms of entities
   for (const auto &entity : entities) {
