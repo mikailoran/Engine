@@ -43,6 +43,7 @@ template <class Component> void ComponentManager::RegisterComponent() {
   const auto type_id = ComponentTypeId::Get<Component>();
   assert(!component_arrays_.contains(type_id) &&
          "Registering component type more than once.");
+  assert(type_id < MAX_COMPONENTS && "Too many component types registered.");
 
   component_arrays_.emplace(type_id,
                             std::make_unique<ComponentArray<Component>>());
