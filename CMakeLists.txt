@@ -121,3 +121,11 @@ bgfx_compile_geometry(
 )
 add_custom_target(meshes DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/assets/meshes/compiled/bunny.bin)
 add_dependencies(mygame meshes)
+
+# --- Tests ------------------------------------------------------------------
+# Off-switch so a plain game build never triggers googletest's network fetch.
+option(MYGAME_BUILD_TESTS "Build the ECS unit tests" ON)
+if(MYGAME_BUILD_TESTS)
+  enable_testing()
+  add_subdirectory(tests)
+endif()
