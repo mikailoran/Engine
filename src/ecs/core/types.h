@@ -42,10 +42,16 @@ private:
   static inline std::size_t next_ = 0;
 };
 
-// Tag selecting the component id sequence; these ids index Signature.
-struct ComponentDomain {};
 // Tag selecting the system id sequence; these ids are only map keys.
 struct SystemDomain {};
 
-using ComponentTypeId = TypeIdGen<ComponentDomain>;
 using SystemTypeId = TypeIdGen<SystemDomain>;
+
+/// Distinct, stable address per type T used as map key.
+namespace detail {
+template <class T> inline constexpr char kTypeKey = 0;
+}
+using TypeKey = const void *;
+template <class T> constexpr TypeKey TypeKeyOf() {
+  return &detail::kTypeKey<T>;
+}
