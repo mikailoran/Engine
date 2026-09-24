@@ -19,17 +19,17 @@ public:
   void EntitySignatureChanged(Entity entity, Signature entity_signature);
 
 private:
-  std::unordered_map<std::size_t, std::unique_ptr<System>> systems_;
+  std::unordered_map<TypeKey, std::unique_ptr<System>> systems_;
 };
 
 template <class SystemClass> SystemClass &SystemManager::RegisterSystem() {
-  const auto type_id = SystemTypeId::Get<SystemClass>();
+  const auto type_key = TypeKeyOf<SystemClass>();
 
-  assert(!systems_.contains(type_id) && "Trying to register more than once.");
+  assert(!systems_.contains(type_key) && "Trying to register more than once.");
 
   auto system = std::make_unique<SystemClass>();
   auto &ref = *system;
-  systems_.emplace(type_id, std::move(system));
+  systems_.emplace(type_key, std::move(system));
   return ref;
 }
 
@@ -46,10 +46,10 @@ template <class SystemClass> SystemClass &SystemManager::RegisterSystem() {
  */
 template <class SystemClass>
 void SystemManager::SetSignature(Signature signature) {
-  const auto type_id = SystemTypeId::Get<SystemClass>();
+  const auto type_key = TypeKeyOf<SystemClass>();
 
-  assert(systems_.contains(type_id) &&
+  assert(systems_.contains(type_key) &&
          "Setting signature of unregistered system.");
 
-  systems_.at(type_id)->signature = signature;
+  systems_.at(type_key)->signature = signature;
 }

@@ -2,50 +2,39 @@
 
 #include <bitset>
 #include <cstddef>
+#include <source_location>
+#include <string_view>
 
 // TODO: Figure out Entity vs EntityType
 using EntityType = std::size_t;
 using Entity = std::size_t;
 constexpr const EntityType MAX_ENTITIES = 5000;
 
-using ComponentType = std::size_t;
-constexpr const ComponentType MAX_COMPONENTS = 32;
+using ComponentBit = std::size_t;
+constexpr const ComponentBit MAX_COMPONENTS = 32;
 
 using Signature = std::bitset<MAX_COMPONENTS>;
 
-// TODO: Create a persistable ID system
 /**
- * @brief Hands out a unique, monotonically increasing id per type @p T.
+ * @brief Compile-time identity for a type, used to key the manager maps.
  *
- * One counter exists per @p Domain, so ids from different domains are
- * independent sequences both starting at zero.
+ * The value is the compiler's own signature for this function with @p T
+ * substituted in, so it is distinct for every @p T. It points into static
+ * storage and stays valid for the life of the program.
  *
- * Ids are assigned on first use and stable for the life of the program, but
- * they depend on first-use order at runtime, so they must not be persisted or
- * compared across builds.
+ * Per-build only: the exact text is implementation-defined, so it differs
+ * between compilers and must not be persisted or compared across builds.
  *
- * @tparam Domain Tag type selecting which counter to draw from.
+ * The key is the whole function signature (around 100 characters), so hashing
+ * it costs more than hashing a pointer. Irrelevant at present entity counts;
+ * if it ever shows up in a profile, hash the string into a std::size_t here
+ * and nothing else has to change.
+ *
+ * @tparam T Type to identify.
+ * @return Key unique to @p T within this build.
  */
-template <class Domain> class TypeIdGen {
-public:
-  /**
-   * @brief Returns the id for @p T within this domain.
-   * @tparam T Type to identify.
-   * @return Stable id, assigned on first call for @p T.
-   */
-  template <class T> static std::size_t Get() {
-    static const std::size_t id = next_++;
-    return id;
-  }
+using TypeKey = std::string_view;
 
-private:
-  static inline std::size_t next_ = 0;
-};
-
-// Tag selecting the component id sequence; these ids index Signature.
-struct ComponentDomain {};
-// Tag selecting the system id sequence; these ids are only map keys.
-struct SystemDomain {};
-
-using ComponentTypeId = TypeIdGen<ComponentDomain>;
-using SystemTypeId = TypeIdGen<SystemDomain>;
+template <class T> consteval TypeKey TypeKeyOf() {
+  return std::source_location::current().function_name();
+}

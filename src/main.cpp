@@ -93,8 +93,8 @@ void gameInit(Game &_game) {
   _game.m_camera_control = &ecs.RegisterSystem<CameraControl>();
   {
     Signature signature;
-    signature.set(ecs.GetComponentType<Transform>());
-    signature.set(ecs.GetComponentType<Camera>());
+    signature.set(ecs.GetComponentBit<Transform>());
+    signature.set(ecs.GetComponentBit<Camera>());
     ecs.SetSystemSignature<CameraControl>(signature);
   }
   _game.m_camera_control->Init();
@@ -102,8 +102,8 @@ void gameInit(Game &_game) {
   _game.m_physics = &ecs.RegisterSystem<Physics>();
   {
     Signature signature;
-    signature.set(ecs.GetComponentType<Transform>());
-    signature.set(ecs.GetComponentType<Spin>());
+    signature.set(ecs.GetComponentBit<Transform>());
+    signature.set(ecs.GetComponentBit<Spin>());
     ecs.SetSystemSignature<Physics>(signature);
   }
   _game.m_physics->Init();
@@ -111,8 +111,8 @@ void gameInit(Game &_game) {
   _game.m_render = &ecs.RegisterSystem<RenderSystem>();
   {
     Signature signature;
-    signature.set(ecs.GetComponentType<Transform>());
-    signature.set(ecs.GetComponentType<Renderable>());
+    signature.set(ecs.GetComponentBit<Transform>());
+    signature.set(ecs.GetComponentBit<Renderable>());
     ecs.SetSystemSignature<RenderSystem>(signature);
   }
   _game.m_render->Init(_game.m_assets);

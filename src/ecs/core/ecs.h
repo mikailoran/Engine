@@ -41,7 +41,7 @@ public:
 
   template <class Component> const Component &GetComponent(Entity entity) const;
 
-  template <class Component> ComponentType GetComponentType() const;
+  template <class Component> ComponentBit GetComponentBit() const;
 
   template <class SystemClass> SystemClass &RegisterSystem();
 
@@ -66,7 +66,7 @@ void Ecs::AddComponent(Entity entity, Component component) {
   // Mark the entity's signature with the component's ID
   auto entity_signature = entity_manager_.signature(entity);
   const auto signature_component_bit =
-      component_manager_.GetComponentType<Component>();
+      component_manager_.GetComponentBit<Component>();
   entity_signature.set(signature_component_bit, true);
   entity_manager_.SetSignature(entity, entity_signature);
 
@@ -78,7 +78,7 @@ template <class Component> void Ecs::RemoveComponent(Entity entity) {
 
   auto entity_signature = entity_manager_.signature(entity);
   const auto signature_component_bit =
-      component_manager_.GetComponentType<Component>();
+      component_manager_.GetComponentBit<Component>();
   entity_signature.set(signature_component_bit, false);
   entity_manager_.SetSignature(entity, entity_signature);
 
@@ -94,8 +94,8 @@ const Component &Ecs::GetComponent(Entity entity) const {
   return component_manager_.GetComponent<Component>(entity);
 }
 
-template <class Component> ComponentType Ecs::GetComponentType() const {
-  return component_manager_.GetComponentType<Component>();
+template <class Component> ComponentBit Ecs::GetComponentBit() const {
+  return component_manager_.GetComponentBit<Component>();
 }
 
 template <class SystemClass> SystemClass &Ecs::RegisterSystem() {
