@@ -18,6 +18,7 @@
 #include "ecs/systems/physics_system.h"
 #include "ecs/systems/render_system.h"
 #include "entry/entry.h"
+#include "platform/asset_root.h"
 
 namespace {
 
@@ -59,11 +60,10 @@ struct Game {
 void gameInit(Game &_game) {
   auto &ecs = _game.m_ecs;
 
-  // --- Working directory -----------------------------------------------
-  // Must precede meshLoad/loadProgram: both resolve their paths against the
-  // process working directory.
-  // TODO: remove hardcoded path
-  entry::setCurrentDir("/home/mikail/Work/mygame/");
+  // --- Asset root -------------------------------------------------------
+  // Must precede meshLoad/loadProgram: entry prepends this to every path its
+  // FileReader is handed, so both resolve against it.
+  entry::setCurrentDir(AssetRoot().c_str());
 
   // --- Platform / bgfx bring-up ----------------------------------------
   // Done before ECS setup to allow the creation of GPU resources in the systems

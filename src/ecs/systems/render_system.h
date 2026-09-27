@@ -21,8 +21,8 @@ public:
   /**
    * @brief Creates the shared GPU resources.
    *
-   * Requires bgfx::init to have completed, and the working directory to be set,
-   * since loadProgram resolves its paths relative to it.
+   * Requires bgfx::init to have completed, and the asset root to be set via
+   * entry::setCurrentDir, since loadProgram resolves its paths against it.
    *
    * @param assets Registry to resolve mesh handles through. Must outlive this
    * system.

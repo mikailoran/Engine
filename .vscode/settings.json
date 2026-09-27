@@ -30,11 +30,7 @@
 	// keeps working regardless of which variant is selected.
 	"cmake.copyCompileCommands": "${workspaceFolder}/build/compile_commands.json",
 	"cmake.configureOnOpen": true,
-	// loadShader() resolves "shaders/<profile>/<name>.bin" relative to the
-	// process working directory, and CMake Tools otherwise launches from the
-	// build tree. This matches launch.json's cwd so F5 and Shift+F5 agree.
 	"cmake.debugConfig": {
-		"cwd": "${workspaceFolder}",
 		"setupCommands": [
 			{
 				"description": "Enable pretty-printing for gdb",
