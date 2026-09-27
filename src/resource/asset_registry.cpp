@@ -10,10 +10,7 @@ MeshHandle AssetRegistry::LoadMesh(const std::filesystem::path &path) {
   }
 
   auto *mesh = meshLoad(path.c_str());
-  // TODO: Handle mesh loading errors better: not silent
-  if (!mesh) {
-    return kInvalidMesh;
-  }
+  assert(mesh && "Trying to load invalid mesh.");
 
   const MeshHandle handle{static_cast<std::uint16_t>(meshes_.size())};
   meshes_.push_back(mesh);

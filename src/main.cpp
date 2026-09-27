@@ -2,7 +2,7 @@
 #include <bgfx_utils.h>
 #include <bx/timer.h>
 
-#include "assets/asset_registry.h"
+#include "resource/asset_registry.h"
 
 #include "ecs/core/ecs.h"
 #include "ecs/core/frame_context.h"
@@ -18,6 +18,7 @@
 #include "ecs/systems/physics_system.h"
 #include "ecs/systems/render_system.h"
 #include "entry/entry.h"
+#include "platform/asset_root.h"
 
 namespace {
 
@@ -59,11 +60,10 @@ struct Game {
 void gameInit(Game &_game) {
   auto &ecs = _game.m_ecs;
 
-  // --- Working directory -----------------------------------------------
-  // Must precede meshLoad/loadProgram: both resolve their paths against the
-  // process working directory.
-  // TODO: remove hardcoded path
-  entry::setCurrentDir("/home/mikail/Work/mygame/");
+  // --- Asset root -------------------------------------------------------
+  // Must precede meshLoad/loadProgram: entry prepends this to every path its
+  // FileReader is handed, so both resolve against it.
+  entry::setCurrentDir(AssetRoot().c_str());
 
   // --- Platform / bgfx bring-up ----------------------------------------
   // Done before ECS setup to allow the creation of GPU resources in the systems
@@ -124,7 +124,7 @@ void gameInit(Game &_game) {
   _game.m_render->SetCamera(camera_entity);
 
   const MeshHandle bunny_mesh_handle =
-      _game.m_assets.LoadMesh("assets/meshes/compiled/bunny.bin");
+      _game.m_assets.LoadMesh("assets/meshes/bunny.bin");
   const auto bunny_entity = ecs.CreateEntity();
   ecs.AddComponent(bunny_entity, Transform{});
   ecs.AddComponent(bunny_entity, Spin{});

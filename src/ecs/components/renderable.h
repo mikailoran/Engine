@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../assets/mesh_handle.h"
+#include "../../resource/mesh_handle.h"
 
 #include <bgfx/bgfx.h>
 #include <cstdint>

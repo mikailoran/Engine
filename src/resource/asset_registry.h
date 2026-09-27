@@ -29,7 +29,8 @@ public:
    *
    * Idempotent per path: repeated calls with the same path perform a single
    * load and return equal handles. Requires bgfx::init to have completed and
-   * the working directory to be set, since the path resolves against it.
+   * the asset root to be set via entry::setCurrentDir, since the path resolves
+   * against it.
    *
    * @param path Compiled mesh file, e.g. "assets/meshes/compiled/bunny.bin".
    * @return Handle to the mesh.
