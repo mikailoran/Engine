@@ -124,7 +124,7 @@ void gameInit(Game &_game) {
   _game.m_render->SetCamera(camera_entity);
 
   const MeshHandle bunny_mesh_handle =
-      _game.m_assets.LoadMesh("assets/meshes/compiled/bunny.bin");
+      _game.m_assets.LoadMesh("assets/meshes/bunny.bin");
   const auto bunny_entity = ecs.CreateEntity();
   ecs.AddComponent(bunny_entity, Transform{});
   ecs.AddComponent(bunny_entity, Spin{});

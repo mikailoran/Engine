@@ -65,7 +65,7 @@ void RenderSystem::Init(const AssetRegistry &assets) {
 
   u_time_ = bgfx::createUniform("u_time", bgfx::UniformFreq::Frame,
                                 bgfx::UniformType::Vec4);
-  default_program_ = loadProgram("vs.sc", "fs.sc");
+  default_program_ = loadProgram("vs_mesh.sc", "fs_mesh.sc");
 
   SetupFloor();
 }

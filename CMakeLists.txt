@@ -115,7 +115,7 @@ set(BGFX_SHADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/bgfx.cmake/bgfx/src)
 # asset root points. bgfx_compile_shaders mkdirs each profile directory itself.
 bgfx_compile_shaders(
   TYPE VERTEX
-  SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/vs.sc
+  SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/vs_mesh.sc
   VARYING_DEF ${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/varying.def.sc
   OUTPUT_DIR ${ENGINE_RUNTIME_DIR}/shaders
   INCLUDE_DIRS ${BGFX_SHADER_DIR}
@@ -124,7 +124,7 @@ bgfx_compile_shaders(
 
 bgfx_compile_shaders(
   TYPE FRAGMENT
-  SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/fs.sc
+  SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/fs_mesh.sc
   VARYING_DEF ${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/varying.def.sc
   OUTPUT_DIR ${ENGINE_RUNTIME_DIR}/shaders
   INCLUDE_DIRS ${BGFX_SHADER_DIR}
