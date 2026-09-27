@@ -71,9 +71,9 @@ add_executable(engine src/main.cpp
   src/ecs/systems/physics_system.cpp
   src/ecs/systems/render_system.h
   src/ecs/systems/render_system.cpp
-  src/assets/mesh_handle.h
-  src/assets/asset_registry.h
-  src/assets/asset_registry.cpp
+  src/resource/mesh_handle.h
+  src/resource/asset_registry.h
+  src/resource/asset_registry.cpp
   src/platform/asset_root.h
   src/platform/asset_root.cpp)
 
@@ -115,8 +115,8 @@ set(BGFX_SHADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/bgfx.cmake/bgfx/src)
 # asset root points. bgfx_compile_shaders mkdirs each profile directory itself.
 bgfx_compile_shaders(
   TYPE VERTEX
-  SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/src/vs.sc
-  VARYING_DEF ${CMAKE_CURRENT_SOURCE_DIR}/src/varying.def.sc
+  SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/vs.sc
+  VARYING_DEF ${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/varying.def.sc
   OUTPUT_DIR ${ENGINE_RUNTIME_DIR}/shaders
   INCLUDE_DIRS ${BGFX_SHADER_DIR}
   OUT_FILES_VAR VS_OUTPUTS
@@ -124,8 +124,8 @@ bgfx_compile_shaders(
 
 bgfx_compile_shaders(
   TYPE FRAGMENT
-  SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/src/fs.sc
-  VARYING_DEF ${CMAKE_CURRENT_SOURCE_DIR}/src/varying.def.sc
+  SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/fs.sc
+  VARYING_DEF ${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/varying.def.sc
   OUTPUT_DIR ${ENGINE_RUNTIME_DIR}/shaders
   INCLUDE_DIRS ${BGFX_SHADER_DIR}
   OUT_FILES_VAR FS_OUTPUTS
@@ -140,7 +140,7 @@ add_dependencies(engine shaders)
 # with no mkdir, and geometryc will not create the directory either -- so create
 # it at configure time. The build tree persists from configure to build, so once
 # is enough.
-set(ENGINE_MESH_DIR ${ENGINE_RUNTIME_DIR}/assets/meshes/compiled)
+set(ENGINE_MESH_DIR ${ENGINE_RUNTIME_DIR}/assets/meshes)
 file(MAKE_DIRECTORY ${ENGINE_MESH_DIR})
 
 bgfx_compile_geometry(

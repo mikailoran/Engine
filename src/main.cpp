@@ -2,7 +2,7 @@
 #include <bgfx_utils.h>
 #include <bx/timer.h>
 
-#include "assets/asset_registry.h"
+#include "resource/asset_registry.h"
 
 #include "ecs/core/ecs.h"
 #include "ecs/core/frame_context.h"

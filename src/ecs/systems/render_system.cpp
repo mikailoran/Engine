@@ -1,6 +1,6 @@
 #include "render_system.h"
 
-#include "../../assets/asset_registry.h"
+#include "../../resource/asset_registry.h"
 #include "../components/camera.h"
 #include "../components/renderable.h"
 #include "../components/transform.h"
