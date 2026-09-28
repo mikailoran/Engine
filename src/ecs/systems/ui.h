@@ -3,8 +3,6 @@
 #include "../core/system.h"
 #include "../core/types.h"
 
-#include <vector>
-
 class Ecs;
 struct FrameContext;
 struct AssetRegistry;

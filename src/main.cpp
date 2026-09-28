@@ -13,6 +13,7 @@
 #include "ecs/components/camera.h"
 #include "ecs/components/configurable.h"
 #include "ecs/components/renderable.h"
+#include "ecs/components/rigid_body.h"
 #include "ecs/components/spin.h"
 #include "ecs/components/transform.h"
 
@@ -86,6 +87,7 @@ void gameInit(Game &_game) {
   // --- ECS: components --------------------------------------------------
   ecs.RegisterComponent<Camera>();
   ecs.RegisterComponent<Transform>();
+  ecs.RegisterComponent<RigidBody>();
   ecs.RegisterComponent<Spin>();
   ecs.RegisterComponent<Renderable>();
   ecs.RegisterComponent<Configurable>();
@@ -107,6 +109,7 @@ void gameInit(Game &_game) {
   {
     Signature signature;
     signature.set(ecs.GetComponentBit<Transform>());
+    signature.set(ecs.GetComponentBit<RigidBody>());
     signature.set(ecs.GetComponentBit<Spin>());
     ecs.SetSystemSignature<Physics>(signature);
   }
@@ -138,14 +141,6 @@ void gameInit(Game &_game) {
   ecs.AddComponent(camera_entity, Transform{.position = {0.0F, 1.0F, -5.0F}});
   ecs.AddComponent(camera_entity, Camera{});
   _game.m_render->SetCamera(camera_entity);
-
-  const MeshHandle bunny_mesh_handle =
-      _game.m_assets.LoadMesh("assets/meshes/bunny.bin");
-  const auto bunny_entity = ecs.CreateEntity();
-  ecs.AddComponent(bunny_entity, Transform{});
-  ecs.AddComponent(bunny_entity, Spin{});
-  ecs.AddComponent(bunny_entity, Configurable{});
-  ecs.AddComponent(bunny_entity, Renderable{.mesh_handle = bunny_mesh_handle});
 }
 
 /**

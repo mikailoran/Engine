@@ -39,4 +39,10 @@ private:
 
   /// Unsimulated seconds carried between frames.
   float accumulator_{0.0F};
+
+  static constexpr float kGravity = -9.81F;
+  /// Restitution factor when bouncing on the floor.
+  static constexpr float kRestitutionFactor = 0.6F;
+  /// Rest threshold to avoid jitters.
+  static constexpr float kRestThreshold = 0.2F;
 };
