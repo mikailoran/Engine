@@ -7,6 +7,7 @@
 
 #include "../components/configurable.h"
 #include "../components/renderable.h"
+#include "../components/rigid_body.h"
 #include "../components/spin.h"
 #include "../components/transform.h"
 
@@ -26,7 +27,8 @@ Entity UiSystem::SpawnEntity(Ecs &ecs) {
   const MeshHandle mesh_handle =
       asset_registry_->LoadMesh("assets/meshes/bunny.bin");
   const auto entity = ecs.CreateEntity();
-  ecs.AddComponent(entity, Transform{});
+  ecs.AddComponent(entity, Transform{.position = {0.0F, 3.0F, 0.0F}});
+  ecs.AddComponent(entity, RigidBody{});
   ecs.AddComponent(entity, Spin{});
   ecs.AddComponent(entity, Configurable{});
   ecs.AddComponent(entity, Renderable{.mesh_handle = mesh_handle});
@@ -57,7 +59,6 @@ void UiSystem::Update(Ecs &ecs, const FrameContext &ctx) {
   // Sliders of transforms of entities
   for (const auto &entity : entities) {
     auto &transform = ecs.GetComponent<Transform>(entity);
-    // TODO: bug: ui system doesn't have the Spin signature
     auto &spin = ecs.GetComponent<Spin>(entity);
     // auto &configurable = ecs.GetComponent<Configurable>(entity);
     ImGui::PushID(static_cast<int>(entity));
@@ -67,7 +68,7 @@ void UiSystem::Update(Ecs &ecs, const FrameContext &ctx) {
       ecs.DestroyEntity(entity);
     }
     ImGui::SliderFloat("x", &transform.position.x, -10.0F, 10.0F);
-    ImGui::SliderFloat("y", &transform.position.y, -10.0F, 10.0F);
+    ImGui::SliderFloat("y", &transform.position.y, 0.0F, 10.0F);
     ImGui::SliderFloat("Scale", &transform.scale.x, 0.1F, 10.0F);
     ImGui::Checkbox("Spin", &spin.should_spin);
     ImGui::NewLine();
