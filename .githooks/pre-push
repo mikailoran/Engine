@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Run the unit tests before this operation; see .githooks/run-tests.
+exec "$(dirname "$0")/run-tests" pre-push
