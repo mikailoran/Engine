@@ -1,5 +1,6 @@
-// DestroyEntity must reach all three managers: components, systems, and the id
-// pool.
+// A flushed DestroyEntity must reach all three managers: components, systems,
+// and the id pool. Deferral itself is covered in deferred_destruction_test.cpp;
+// these tests flush immediately and only assert the teardown is complete.
 
 #include "ecs/core/ecs.h"
 
@@ -29,6 +30,7 @@ TEST(Destruction, RemovesEveryComponentOfTheEntity) {
   ecs.AddComponent(entity, Health{});
 
   ecs.DestroyEntity(entity);
+  ecs.Flush();
 
   EXPECT_FALSE(ecs.HasComponent<Position>(entity));
   EXPECT_FALSE(ecs.HasComponent<Health>(entity));
@@ -45,6 +47,7 @@ TEST(Destruction, ToleratesComponentsTheEntityNeverHad) {
   ecs.AddComponent(entity, Position{});
 
   ecs.DestroyEntity(entity);
+  ecs.Flush();
 
   EXPECT_FALSE(ecs.HasComponent<Position>(entity));
 }
@@ -63,6 +66,7 @@ TEST(Destruction, UntracksTheEntityFromEverySystem) {
   ASSERT_TRUE(mover.entities.contains(entity));
 
   ecs.DestroyEntity(entity);
+  ecs.Flush();
 
   EXPECT_FALSE(mover.entities.contains(entity));
 }
@@ -84,6 +88,7 @@ TEST(Destruction, LeavesOtherEntitiesUntouched) {
   ecs.AddComponent(last, Position{3.0F});
 
   ecs.DestroyEntity(middle);
+  ecs.Flush();
 
   EXPECT_EQ(mover.entities.size(), 2U);
   EXPECT_TRUE(mover.entities.contains(first));

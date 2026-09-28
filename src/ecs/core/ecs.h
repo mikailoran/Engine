@@ -5,6 +5,8 @@
 #include "system_manager.h"
 #include "types.h"
 
+#include <vector>
+
 class Ecs {
 public:
   Ecs() = default;
@@ -12,23 +14,29 @@ public:
   Entity CreateEntity();
 
   /**
-   * @brief Removes an entity: its components, its entry in every system, and
-   *        its id.
+   * @brief Requests removal of an entity: its components, its entry in every
+   *        system, and its id.
    *
-   * @warning Unsafe to call from inside a system's Update on the entity
-   *          currently being iterated. SystemManager::EntityDestroyed erases
-   *          from System::entities, which invalidates the iterator a range-for
-   *          is holding, and the next ++ is undefined. Destroying a *different*
-   *          entity is fine: std::set only invalidates iterators to the erased
-   *          element. Until this is addressed, destroy only between system
-   *          Updates.
+   * Uses deffered destruction. Flush() is run after system updates to run the
+   * destruction process on all entities marked for deletion.
    *
-   * @param entity Entity to destroy. Must be alive; destroying twice silently
-   *               corrupts the id pool, see EntityManager::DestroyEntity.
+   * Idempotent: queueing an entity twice, or naming one that is already dead,
+   * destroys it once and is otherwise a no-op.
+   *
+   * @param entity Entity to destroy. Must be < MAX_ENTITIES; the id need not
+   *               be alive.
    */
-  // TODO: deferred destruction (queue here, flush between Updates) would make
-  // this callable from anywhere, including from within a system's Update.
+  // TODO: rename to RequestDestroyEntity?
   void DestroyEntity(Entity entity);
+
+  /**
+   * @brief Applies every queued destruction, then empties the queue.
+   *
+   * The single sync point for structural change. Call it between system
+   * Updates, never during one, so that no system observes the world
+   * mid-teardown and every system sees the same entity set for a whole frame.
+   */
+  void Flush();
 
   template <class Component> void RegisterComponent();
 
@@ -64,6 +72,7 @@ private:
   EntityManager entity_manager_;
   ComponentManager component_manager_;
   SystemManager system_manager_;
+  std::vector<Entity> pending_destroy_;
 };
 
 // Implementation

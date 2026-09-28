@@ -14,25 +14,34 @@ Entity EntityManager::CreateEntity() {
   auto id = available_entities_.front();
   available_entities_.pop();
   ++living_entity_count_;
+  alive_.at(id) = true;
   return id;
 }
 
-Signature EntityManager::signature(Entity entity) {
+Signature EntityManager::signature(Entity entity) const {
   return signatures_.at(entity);
 }
 
 void EntityManager::SetSignature(Entity entity, Signature signature) {
-  assert(entity < MAX_ENTITIES && "Entity out of range.");
+  assert(entity < MAX_ENTITIES &&
+         "Trying to set signature of entity out of range.");
 
   signatures_.at(entity) = signature;
 }
 
-void EntityManager::DestroyEntity(Entity entity) {
-  assert(entity < MAX_ENTITIES && "Entity out of range.");
+bool EntityManager::IsAlive(Entity entity) const {
+  return entity < MAX_ENTITIES && alive_.at(entity);
+}
 
-  // TODO: bug when destroying same entity twice: id gets pushed twice and shit
-  // hits the fan
+void EntityManager::DestroyEntity(Entity entity) {
+  assert(entity < MAX_ENTITIES && "Trying to destroy entity out of range.");
+  // A guard rather than an assert to allow repeat requests
+  if (!IsAlive(entity)) {
+    return;
+  }
+
   available_entities_.push(entity);
   signatures_.at(entity).reset();
   --living_entity_count_;
+  alive_.at(entity) = false;
 }
