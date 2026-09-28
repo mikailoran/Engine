@@ -33,6 +33,7 @@ TEST(EntityLifecycle, DestroyedIdIsNotImmediatelyReused) {
   const auto second = ecs.CreateEntity();
 
   ecs.DestroyEntity(second);
+  ecs.Flush();
   const auto third = ecs.CreateEntity();
 
   EXPECT_NE(third, second);
