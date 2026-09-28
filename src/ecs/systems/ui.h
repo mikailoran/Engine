@@ -15,13 +15,10 @@ public:
 
   Entity SpawnEntity(Ecs &ecs);
 
-  void DestroyAllSpawnedEntities(Ecs &ecs);
-
   void Update(Ecs &ecs, const FrameContext &ctx);
 
   void Shutdown();
 
 private:
   AssetRegistry *asset_registry_{nullptr};
-  std::vector<Entity> entities_;
 };

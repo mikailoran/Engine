@@ -31,17 +31,7 @@ Entity UiSystem::SpawnEntity(Ecs &ecs) {
   ecs.AddComponent(entity, Configurable{});
   ecs.AddComponent(entity, Renderable{.mesh_handle = mesh_handle});
 
-  entities_.push_back(entity);
-
   return entity;
-}
-
-void UiSystem::DestroyAllSpawnedEntities(Ecs &ecs) {
-  for (const auto &entity : entities_) {
-    ecs.DestroyEntity(entity);
-  }
-
-  entities_.clear();
 }
 
 void UiSystem::Update(Ecs &ecs, const FrameContext &ctx) {
@@ -64,10 +54,6 @@ void UiSystem::Update(Ecs &ecs, const FrameContext &ctx) {
     SpawnEntity(ecs);
   }
 
-  if (ImGui::Button("Destroy All Spawned Entities")) {
-    DestroyAllSpawnedEntities(ecs);
-  }
-
   // Sliders of transforms of entities
   for (const auto &entity : entities) {
     auto &transform = ecs.GetComponent<Transform>(entity);
@@ -77,6 +63,9 @@ void UiSystem::Update(Ecs &ecs, const FrameContext &ctx) {
     ImGui::PushID(static_cast<int>(entity));
 
     ImGui::Text("Entity %zu", entity);
+    if (ImGui::Button("Destroy")) {
+      ecs.DestroyEntity(entity);
+    }
     ImGui::SliderFloat("x", &transform.position.x, -10.0F, 10.0F);
     ImGui::SliderFloat("y", &transform.position.y, -10.0F, 10.0F);
     ImGui::SliderFloat("Scale", &transform.scale.x, 0.1F, 10.0F);
