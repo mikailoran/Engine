@@ -160,3 +160,47 @@ if(ENGINE_BUILD_TESTS)
   enable_testing()
   add_subdirectory(tests)
 endif()
+
+# --- Git hooks --------------------------------------------------------------
+option(ENGINE_INSTALL_GIT_HOOKS "Point git's core.hooksPath at .githooks" ON)
+
+# Skipped outside a git checkout (a tarball export, say) and when this project
+# is consumed as a subproject -- neither has hooks to install. The top-level
+# test is spelled out rather than using PROJECT_IS_TOP_LEVEL, which needs 3.21.
+if(ENGINE_INSTALL_GIT_HOOKS
+  AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.git
+  AND CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+  find_package(Git QUIET)
+  if(NOT GIT_FOUND)
+    message(STATUS "git not found -- leaving core.hooksPath unset")
+  else()
+    # Read the current hooksPath value first so an explicit local override is not 
+    # rewritten on every reconfigure.
+    execute_process(
+      COMMAND ${GIT_EXECUTABLE} config --get core.hooksPath
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+      OUTPUT_VARIABLE ENGINE_CURRENT_HOOKS_PATH
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      ERROR_QUIET)
+
+    if(ENGINE_CURRENT_HOOKS_PATH STREQUAL ".githooks")
+      message(STATUS "git hooks already active (core.hooksPath=.githooks)")
+    elseif(NOT ENGINE_CURRENT_HOOKS_PATH STREQUAL "")
+      message(WARNING
+        "core.hooksPath is set to '${ENGINE_CURRENT_HOOKS_PATH}', not "
+        ".githooks -- leaving it alone. The unit-test hooks will not run. "
+        "Set it manually or configure with -DENGINE_INSTALL_GIT_HOOKS=OFF to "
+        "silence this.")
+    else()
+      execute_process(
+        COMMAND ${GIT_EXECUTABLE} config core.hooksPath .githooks
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        RESULT_VARIABLE ENGINE_HOOKS_RESULT)
+      if(ENGINE_HOOKS_RESULT EQUAL 0)
+        message(STATUS "git hooks installed: core.hooksPath=.githooks")
+      else()
+        message(WARNING "failed to set core.hooksPath -- hooks will not run")
+      endif()
+    endif()
+  endif()
+endif()

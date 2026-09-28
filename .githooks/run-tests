@@ -4,7 +4,7 @@
 # them. Exits non-zero to abort the git operation that invoked it.
 #
 # Build directory defaults to build/Debug (see CLAUDE.md); override with
-# MYGAME_HOOK_BUILD_DIR. Set MYGAME_SKIP_HOOK_TESTS=1 to bypass entirely --
+# ENGINE_HOOK_BUILD_DIR. Set ENGINE_SKIP_HOOK_TESTS=1 to bypass entirely --
 # needed for `git rebase`, which has no --no-verify.
 #
 # Hooks run with the working directory at the top level of the worktree, so the
@@ -13,11 +13,11 @@
 set -o errexit -o nounset -o pipefail
 
 readonly HOOK_NAME="${1:-hook}"
-readonly BUILD_DIR="${MYGAME_HOOK_BUILD_DIR:-build/Debug}"
+readonly BUILD_DIR="${ENGINE_HOOK_BUILD_DIR:-build/Debug}"
 
 # Explicit opt-out, checked before anything expensive happens.
-if [[ -n "${MYGAME_SKIP_HOOK_TESTS:-}" ]]; then
-    echo "[${HOOK_NAME}] MYGAME_SKIP_HOOK_TESTS set -- skipping unit tests."
+if [[ -n "${ENGINE_SKIP_HOOK_TESTS:-}" ]]; then
+    echo "[${HOOK_NAME}] ENGINE_SKIP_HOOK_TESTS set -- skipping unit tests."
     exit 0
 fi
 
@@ -26,7 +26,7 @@ fi
 if [[ ! -f "${BUILD_DIR}/CMakeCache.txt" ]]; then
     echo "[${HOOK_NAME}] No configured build tree at ${BUILD_DIR}." >&2
     echo "[${HOOK_NAME}] Run: cmake -S . -B ${BUILD_DIR} -DCMAKE_BUILD_TYPE=Debug" >&2
-    echo "[${HOOK_NAME}] Or set MYGAME_SKIP_HOOK_TESTS=1 to bypass." >&2
+    echo "[${HOOK_NAME}] Or set ENGINE_SKIP_HOOK_TESTS=1 to bypass." >&2
     exit 1
 fi
 
