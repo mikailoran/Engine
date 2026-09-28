@@ -10,13 +10,33 @@ public:
   void Init();
 
   /**
-   * @brief Handles tracked entities' physics.
+   * @brief Advances tracked entities' physics at a fixed rate.
+   *
+   * Accumulates @p ctx.dt and drains it in whole @ref kFixedDt steps, so this
+   * may run Step() zero or many times per frame. The remainder carries over.
    *
    * @param ecs World to read and write components through.
-   * @param ctx Per-frame inputs.
+   * @param ctx Per-frame inputs; only its variable @c dt is consumed.
    */
   // TODO: Switch from passing ECS directly, to Views (apparently a lot of work)
   void Update(Ecs &ecs, const FrameContext &ctx);
 
 private:
+  /**
+   * @brief Simulates exactly one step.
+   *
+   * @param ecs World to read and write components through.
+   * @param fixed_dt Seconds to advance by; always @ref kFixedDt.
+   */
+  void Step(Ecs &ecs, float fixed_dt);
+
+  /// Simulation step length, in seconds (60 Hz).
+  static constexpr float kFixedDt = 1.0F / 60.0F;
+
+  /// Upper bound on a frame's delta, in seconds. Caps how many steps one hitch
+  /// can queue, trading dropped simulated time for a bounded frame cost.
+  static constexpr float kMaxFrameDt = 0.25F;
+
+  /// Unsimulated seconds carried between frames.
+  float accumulator_{0.0F};
 };
