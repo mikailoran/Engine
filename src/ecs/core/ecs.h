@@ -14,18 +14,28 @@ public:
   Entity CreateEntity();
 
   /**
-   * @brief Requests to remove an entity: its components, its entry in every
-   * system, and its id.
+   * @brief Requests removal of an entity: its components, its entry in every
+   *        system, and its id.
    *
    * Uses deffered destruction. Flush() is run after system updates to run the
    * destruction process on all entities marked for deletion.
    *
-   * @param entity Entity to destroy. Must be alive; destroying twice silently
-   *               corrupts the id pool, see EntityManager::DestroyEntity.
+   * Idempotent: queueing an entity twice, or naming one that is already dead,
+   * destroys it once and is otherwise a no-op.
+   *
+   * @param entity Entity to destroy. Must be < MAX_ENTITIES; the id need not
+   *               be alive.
    */
   // TODO: rename to RequestDestroyEntity?
   void DestroyEntity(Entity entity);
 
+  /**
+   * @brief Applies every queued destruction, then empties the queue.
+   *
+   * The single sync point for structural change. Call it between system
+   * Updates, never during one, so that no system observes the world
+   * mid-teardown and every system sees the same entity set for a whole frame.
+   */
   void Flush();
 
   template <class Component> void RegisterComponent();

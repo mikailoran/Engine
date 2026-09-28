@@ -29,10 +29,13 @@ void EntityManager::SetSignature(Entity entity, Signature signature) {
   signatures_.at(entity) = signature;
 }
 
-bool EntityManager::IsAlive(Entity entity) const { return alive_.at(entity); }
+bool EntityManager::IsAlive(Entity entity) const {
+  return entity < MAX_ENTITIES && alive_.at(entity);
+}
 
 void EntityManager::DestroyEntity(Entity entity) {
   assert(entity < MAX_ENTITIES && "Trying to destroy entity out of range.");
+  // A guard rather than an assert to allow repeat requests
   if (!IsAlive(entity)) {
     return;
   }
