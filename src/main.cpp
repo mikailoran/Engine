@@ -141,6 +141,7 @@ auto gameShutdown(Game &_game) -> int {
   _game.m_render->Shutdown();
   _game.m_camera_control->Shutdown();
   _game.m_assets.UnloadAll();
+  _game.m_ecs.Flush();
   bgfx::shutdown();
   return 0;
 }
@@ -188,6 +189,8 @@ auto _main_(int /*_argc*/, char ** /*_argv*/) -> int {
     game.m_camera_control->Update(game.m_ecs, ctx);
     game.m_physics->Update(game.m_ecs, ctx);
     game.m_render->Update(game.m_ecs, ctx);
+
+    game.m_ecs.Flush();
   }
 
   return gameShutdown(game);
