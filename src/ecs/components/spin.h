@@ -6,4 +6,5 @@
 struct Spin {
   // Positive is counter-clockwise looking down towards -Y.
   float radians_per_second{2.0F};
+  bool should_spin{true};
 };

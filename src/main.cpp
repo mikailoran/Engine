@@ -2,23 +2,25 @@
 #include <bgfx_utils.h>
 #include <bx/timer.h>
 
+#include "common.h"
+
+#include "platform/asset_root.h"
 #include "resource/asset_registry.h"
 
 #include "ecs/core/ecs.h"
 #include "ecs/core/frame_context.h"
 
 #include "ecs/components/camera.h"
+#include "ecs/components/configurable.h"
 #include "ecs/components/renderable.h"
 #include "ecs/components/spin.h"
 #include "ecs/components/transform.h"
 
-#include "common.h"
 #include "ecs/systems/camera_control.h"
 // TODO: Rename "physics_system.h" into "physics.h"
 #include "ecs/systems/physics_system.h"
 #include "ecs/systems/render_system.h"
-#include "entry/entry.h"
-#include "platform/asset_root.h"
+#include "ecs/systems/ui.h"
 
 namespace {
 
@@ -38,6 +40,7 @@ struct Game {
   CameraControl *m_camera_control = nullptr;
   Physics *m_physics = nullptr;
   RenderSystem *m_render = nullptr;
+  UiSystem *m_ui = nullptr;
 
   uint32_t m_width = 1280;
   uint32_t m_height = 720;
@@ -85,6 +88,7 @@ void gameInit(Game &_game) {
   ecs.RegisterComponent<Transform>();
   ecs.RegisterComponent<Spin>();
   ecs.RegisterComponent<Renderable>();
+  ecs.RegisterComponent<Configurable>();
 
   // --- ECS: systems, signatures, Init -----------------------------------
   // A system's signature must be set before any entity gains its components:
@@ -117,6 +121,18 @@ void gameInit(Game &_game) {
   }
   _game.m_render->Init(_game.m_assets);
 
+  _game.m_ui = &ecs.RegisterSystem<UiSystem>();
+  {
+    Signature signature;
+    // TODO: Find a way not to explicit all component types.
+    // Would be useful especially with this configurable system.
+    signature.set(ecs.GetComponentBit<Configurable>());
+    signature.set(ecs.GetComponentBit<Transform>());
+    signature.set(ecs.GetComponentBit<Spin>());
+    ecs.SetSystemSignature<UiSystem>(signature);
+  }
+  _game.m_ui->Init(_game.m_assets);
+
   // --- Assets and entities ----------------------------------------------
   const auto camera_entity = ecs.CreateEntity();
   ecs.AddComponent(camera_entity, Transform{.position = {0.0F, 1.0F, -5.0F}});
@@ -128,9 +144,8 @@ void gameInit(Game &_game) {
   const auto bunny_entity = ecs.CreateEntity();
   ecs.AddComponent(bunny_entity, Transform{});
   ecs.AddComponent(bunny_entity, Spin{});
+  ecs.AddComponent(bunny_entity, Configurable{});
   ecs.AddComponent(bunny_entity, Renderable{.mesh_handle = bunny_mesh_handle});
-
-  _game.m_frameTime.reset();
 }
 
 /**
@@ -138,6 +153,7 @@ void gameInit(Game &_game) {
  * @return Process exit code.
  */
 auto gameShutdown(Game &_game) -> int {
+  _game.m_ui->Shutdown();
   _game.m_render->Shutdown();
   _game.m_camera_control->Shutdown();
   _game.m_assets.UnloadAll();
@@ -189,6 +205,7 @@ auto _main_(int /*_argc*/, char ** /*_argv*/) -> int {
     game.m_camera_control->Update(game.m_ecs, ctx);
     game.m_physics->Update(game.m_ecs, ctx);
     game.m_render->Update(game.m_ecs, ctx);
+    game.m_ui->Update(game.m_ecs, ctx);
 
     game.m_ecs.Flush();
   }

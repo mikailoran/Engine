@@ -12,6 +12,8 @@ void Physics::Update(Ecs &ecs, const FrameContext &ctx) {
     auto &transform = ecs.GetComponent<Transform>(entity);
     const auto &spin = ecs.GetComponent<Spin>(entity);
 
-    transform.rotation.y += spin.radians_per_second * ctx.dt;
+    if (spin.should_spin) {
+      transform.rotation.y += spin.radians_per_second * ctx.dt;
+    }
   }
 }

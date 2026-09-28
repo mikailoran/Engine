@@ -65,12 +65,15 @@ add_executable(engine src/main.cpp
   src/ecs/components/rigid_body.h
   src/ecs/components/spin.h
   src/ecs/components/transform.h
+  src/ecs/components/configurable.h
   src/ecs/systems/camera_control.cpp
   src/ecs/systems/camera_control.h
   src/ecs/systems/physics_system.h
   src/ecs/systems/physics_system.cpp
   src/ecs/systems/render_system.h
   src/ecs/systems/render_system.cpp
+  src/ecs/systems/ui.h
+  src/ecs/systems/ui.cpp
   src/resource/mesh_handle.h
   src/resource/asset_registry.h
   src/resource/asset_registry.cpp
