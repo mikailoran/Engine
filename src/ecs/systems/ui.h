@@ -4,8 +4,8 @@
 #include "../core/types.h"
 
 class Ecs;
+class AssetRegistry;
 struct FrameContext;
-struct AssetRegistry;
 
 class UiSystem : public System {
 public:
