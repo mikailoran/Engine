@@ -46,6 +46,14 @@ set_target_properties(ecs_core PROPERTIES
   CXX_EXTENSIONS OFF
 )
 
+# --- nlohmann/json ----------------------------------------------------------
+include(FetchContent)
+FetchContent_Declare(nlohmann_json
+  URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz
+  URL_HASH SHA256=42f6e95cad6ec532fd372391373363b62a14af6d771056dbfc86160e6dfff7aa
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+FetchContent_MakeAvailable(nlohmann_json)
+
 # --- Runtime layout ---------------------------------------------------------
 # Everything loaded at runtime is generated, and it is emitted here, beside the
 # executable. The app then derives its asset root from its own location
@@ -77,11 +85,16 @@ add_executable(engine src/main.cpp
   src/resource/asset_registry.h
   src/resource/asset_registry.cpp
   src/platform/asset_root.h
-  src/platform/asset_root.cpp)
+  src/platform/asset_root.cpp
+  src/scene/scene_loader.h
+  src/scene/scene_loader.cpp
+  src/scene/builtin_loaders.h
+  src/scene/builtin_loaders.cpp)
 
 # example-common publicly exposes examples/common plus bgfx, bx and bimg with
 # their include directories, which is what makes "entry/entry.h" resolve.
-target_link_libraries(engine PRIVATE example-common ecs_core)
+target_link_libraries(engine PRIVATE example-common ecs_core
+  nlohmann_json::nlohmann_json)
 
 target_compile_options(engine PRIVATE -Wall -Wextra -Wpedantic)
 
@@ -168,6 +181,30 @@ foreach(mesh IN LISTS ENGINE_MESHES)
 endforeach()
 add_custom_target(meshes DEPENDS ${ENGINE_MESH_OUTPUTS})
 add_dependencies(engine meshes)
+
+# --- Scenes -----------------------------------------------------------------
+# Scene files are copied beside the executable; edits recopy on build.
+set(ENGINE_SCENE_DIR ${ENGINE_RUNTIME_DIR}/assets/scenes)
+
+# Base names of the scene files to copy
+set(ENGINE_SCENES
+  debug
+)
+
+set(ENGINE_SCENE_OUTPUTS "")
+foreach(scene IN LISTS ENGINE_SCENES)
+  set(scene_src ${CMAKE_CURRENT_SOURCE_DIR}/assets/scenes/${scene}.json)
+  set(scene_out ${ENGINE_SCENE_DIR}/${scene}.json)
+  add_custom_command(
+    OUTPUT ${scene_out}
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${ENGINE_SCENE_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${scene_src} ${scene_out}
+    MAIN_DEPENDENCY ${scene_src}
+  )
+  list(APPEND ENGINE_SCENE_OUTPUTS ${scene_out})
+endforeach()
+add_custom_target(scenes DEPENDS ${ENGINE_SCENE_OUTPUTS})
+add_dependencies(engine scenes)
 
 # --- Tests ------------------------------------------------------------------
 # Off-switch so a plain game build never triggers googletest's network fetch.
