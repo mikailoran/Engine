@@ -37,6 +37,11 @@ Entity UiSystem::SpawnEntity(Ecs &ecs) {
 }
 
 void UiSystem::Update(Ecs &ecs, const FrameContext &ctx) {
+  // Wait for windowing set up to finish
+  if (ctx.width <= 1 || ctx.height <= 1) {
+    return;
+  }
+
   const auto &mouse = *ctx.mouse;
   imguiBeginFrame(
       mouse.m_mx, mouse.m_my,
