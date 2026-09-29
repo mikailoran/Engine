@@ -6,6 +6,8 @@
 
 #include "platform/asset_root.h"
 #include "resource/asset_registry.h"
+#include "scene/builtin_loaders.h"
+#include "scene/scene_loader.h"
 
 #include "ecs/core/ecs.h"
 #include "ecs/core/frame_context.h"
@@ -141,6 +143,12 @@ void gameInit(Game &_game) {
   ecs.AddComponent(camera_entity, Transform{.position = {0.0F, 1.0F, -5.0F}});
   ecs.AddComponent(camera_entity, Camera{});
   _game.m_render->SetCamera(camera_entity);
+
+  // Load the debug scene's decor as ordinary entities
+  SceneLoader scene_loader;
+  RegisterBuiltinLoaders(scene_loader);
+  SceneLoadContext scene_ctx{.ecs = ecs, .assets = _game.m_assets};
+  scene_loader.Load("assets/scenes/debug.json", scene_ctx);
 }
 
 /**
