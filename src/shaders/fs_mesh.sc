@@ -1,8 +1,10 @@
-$input v_pos, v_view, v_normal, v_color0
+$input v_pos, v_view, v_normal
 
 #include <bgfx_shader.sh>
 
 uniform vec4 u_time;
+// Linear RGBA surface color, set per draw by RenderSystem.
+uniform vec4 u_color;
 
 vec2 blinn(vec3 _lightDir, vec3 _normal, vec3 _viewDir)
 {
@@ -34,7 +36,7 @@ void main()
 	vec4 lc = lit(bln.x, bln.y, 1.0);
 	float fres = fresnel(bln.x, 0.2, 5.0);
 
-	vec3 color = v_color0.xyz;
+	vec3 color = u_color.xyz;
 
 	gl_FragColor.xyz = pow(vec3(0.07, 0.06, 0.08) + color*lc.y + fres*pow(lc.z, 128.0), vec3_splat(1.0/2.2) );
 	gl_FragColor.w = 1.0;

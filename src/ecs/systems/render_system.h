@@ -13,8 +13,7 @@ struct FrameContext;
  *        floor.
  *
  * Owns view 0 and the resources shared across entities: the default shader
- * program, the u_time uniform, and the floor's geometry. The floor is not an
- * entity. It has no Transform and never moves
+ * program, the u_time and u_color uniforms, and the floor's geometry.
  */
 class RenderSystem : public System {
 public:
@@ -67,6 +66,9 @@ private:
   bgfx::ProgramHandle default_program_{bgfx::kInvalidHandle};
 
   bgfx::UniformHandle u_time_{bgfx::kInvalidHandle};
+
+  // Per-draw surface color, set from Renderable::color before each submit.
+  bgfx::UniformHandle u_color_{bgfx::kInvalidHandle};
 
   bgfx::VertexBufferHandle floor_vbh_{bgfx::kInvalidHandle};
   bgfx::IndexBufferHandle floor_ibh_{bgfx::kInvalidHandle};

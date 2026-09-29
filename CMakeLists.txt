@@ -148,6 +148,7 @@ file(MAKE_DIRECTORY ${ENGINE_MESH_DIR})
 bgfx_compile_geometry(
   FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/meshes/bunny.obj
   OUTPUT ${ENGINE_MESH_DIR}/bunny.bin
+  PACKNORMAL 1
 )
 add_custom_target(meshes DEPENDS ${ENGINE_MESH_DIR}/bunny.bin)
 add_dependencies(engine meshes)

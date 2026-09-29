@@ -22,6 +22,9 @@ constexpr float kFallbackFovDegrees = 60.0F;
 constexpr float kFallbackNearPlane = 0.1F;
 constexpr float kFallbackFarPlane = 100.0F;
 
+// Linear RGBA for the floor quad, which has no Renderable to carry a color.
+constexpr std::array<float, 4> kFloorColor{0.35F, 0.35F, 0.38F, 1.0F};
+
 /**
  * @brief Position + normal vertex, matching what the vertex shader expects.
  *
@@ -65,6 +68,7 @@ void RenderSystem::Init(const AssetRegistry &assets) {
 
   u_time_ = bgfx::createUniform("u_time", bgfx::UniformFreq::Frame,
                                 bgfx::UniformType::Vec4);
+  u_color_ = bgfx::createUniform("u_color", bgfx::UniformType::Vec4);
   default_program_ = loadProgram("vs_mesh.sc", "fs_mesh.sc");
 
   SetupFloor();
@@ -121,6 +125,9 @@ void RenderSystem::Update(Ecs &ecs, const FrameContext &ctx) {
                                                            : default_program_;
     const auto *mesh = assets_->Get(renderable.mesh_handle);
 
+    // meshSubmit only discards state after its last group, so the color holds
+    // for every group of the mesh.
+    bgfx::setUniform(u_color_, renderable.color.data());
     meshSubmit(mesh, renderable.view, program, mtx.data(), renderable.state);
   }
 
@@ -133,6 +140,7 @@ void RenderSystem::Shutdown() {
   bgfx::destroy(floor_vbh_);
   bgfx::destroy(floor_ibh_);
   bgfx::destroy(u_time_);
+  bgfx::destroy(u_color_);
   bgfx::destroy(default_program_);
 }
 
@@ -160,6 +168,7 @@ void RenderSystem::SubmitFloor() {
   std::array<float, kMtxSize> floor_mtx{};
   bx::mtxIdentity(floor_mtx.data());
   bgfx::setTransform(floor_mtx.data());
+  bgfx::setUniform(u_color_, kFloorColor.data());
   bgfx::setVertexBuffer(0, floor_vbh_);
   bgfx::setIndexBuffer(floor_ibh_);
   bgfx::setState(BGFX_STATE_DEFAULT & ~BGFX_STATE_CULL_MASK);
