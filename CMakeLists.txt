@@ -145,12 +145,28 @@ add_dependencies(engine shaders)
 set(ENGINE_MESH_DIR ${ENGINE_RUNTIME_DIR}/assets/meshes)
 file(MAKE_DIRECTORY ${ENGINE_MESH_DIR})
 
-bgfx_compile_geometry(
-  FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/meshes/bunny.obj
-  OUTPUT ${ENGINE_MESH_DIR}/bunny.bin
-  PACKNORMAL 1
+# Base names of the meshes to compile
+set(ENGINE_MESHES
+  plane
+  cube
+  sphere
+  cylinder
+  cone
+  torus
+  bunny
 )
-add_custom_target(meshes DEPENDS ${ENGINE_MESH_DIR}/bunny.bin)
+
+# One geometryc command per mesh
+set(ENGINE_MESH_OUTPUTS "")
+foreach(mesh IN LISTS ENGINE_MESHES)
+  bgfx_compile_geometry(
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/meshes/${mesh}.obj
+    OUTPUT ${ENGINE_MESH_DIR}/${mesh}.bin
+    PACKNORMAL 1
+  )
+  list(APPEND ENGINE_MESH_OUTPUTS ${ENGINE_MESH_DIR}/${mesh}.bin)
+endforeach()
+add_custom_target(meshes DEPENDS ${ENGINE_MESH_OUTPUTS})
 add_dependencies(engine meshes)
 
 # --- Tests ------------------------------------------------------------------
