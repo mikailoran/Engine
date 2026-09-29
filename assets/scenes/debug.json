@@ -1,0 +1,504 @@
+{
+  "version": 1,
+  "entities": [
+    {
+      "name": "floor",
+      "components": {
+        "transform": {
+          "position": [
+            0,
+            -0.1,
+            0
+          ],
+          "scale": [
+            40,
+            0.2,
+            40
+          ]
+        },
+        "renderable": {
+          "mesh": "assets/meshes/cube.bin",
+          "color": [
+            0.35,
+            0.35,
+            0.38,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "name": "spawn_pad",
+      "components": {
+        "transform": {
+          "position": [
+            0,
+            0.01,
+            0
+          ],
+          "scale": [
+            3,
+            1,
+            3
+          ]
+        },
+        "renderable": {
+          "mesh": "assets/meshes/plane.bin",
+          "color": [
+            0.85,
+            0.75,
+            0.2,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "name": "wall_north",
+      "components": {
+        "transform": {
+          "position": [
+            0,
+            2,
+            20
+          ],
+          "scale": [
+            40,
+            4,
+            0.5
+          ]
+        },
+        "renderable": {
+          "mesh": "assets/meshes/cube.bin",
+          "color": [
+            0.5,
+            0.5,
+            0.55,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "name": "wall_south",
+      "components": {
+        "transform": {
+          "position": [
+            0,
+            2,
+            -20
+          ],
+          "scale": [
+            40,
+            4,
+            0.5
+          ]
+        },
+        "renderable": {
+          "mesh": "assets/meshes/cube.bin",
+          "color": [
+            0.5,
+            0.5,
+            0.55,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "name": "wall_east",
+      "components": {
+        "transform": {
+          "position": [
+            20,
+            2,
+            0
+          ],
+          "scale": [
+            0.5,
+            4,
+            40
+          ]
+        },
+        "renderable": {
+          "mesh": "assets/meshes/cube.bin",
+          "color": [
+            0.45,
+            0.45,
+            0.5,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "name": "wall_west",
+      "components": {
+        "transform": {
+          "position": [
+            -20,
+            2,
+            0
+          ],
+          "scale": [
+            0.5,
+            4,
+            40
+          ]
+        },
+        "renderable": {
+          "mesh": "assets/meshes/cube.bin",
+          "color": [
+            0.45,
+            0.45,
+            0.5,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "name": "pillar_ne",
+      "components": {
+        "transform": {
+          "position": [
+            8,
+            2,
+            8
+          ],
+          "scale": [
+            1,
+            4,
+            1
+          ]
+        },
+        "renderable": {
+          "mesh": "assets/meshes/cylinder.bin",
+          "color": [
+            0.7,
+            0.7,
+            0.65,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "name": "pillar_nw",
+      "components": {
+        "transform": {
+          "position": [
+            -8,
+            2,
+            8
+          ],
+          "scale": [
+            1,
+            4,
+            1
+          ]
+        },
+        "renderable": {
+          "mesh": "assets/meshes/cylinder.bin",
+          "color": [
+            0.7,
+            0.7,
+            0.65,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "name": "pillar_se",
+      "components": {
+        "transform": {
+          "position": [
+            8,
+            2,
+            -8
+          ],
+          "scale": [
+            1,
+            4,
+            1
+          ]
+        },
+        "renderable": {
+          "mesh": "assets/meshes/cylinder.bin",
+          "color": [
+            0.7,
+            0.7,
+            0.65,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "name": "pillar_sw",
+      "components": {
+        "transform": {
+          "position": [
+            -8,
+            2,
+            -8
+          ],
+          "scale": [
+            1,
+            4,
+            1
+          ]
+        },
+        "renderable": {
+          "mesh": "assets/meshes/cylinder.bin",
+          "color": [
+            0.7,
+            0.7,
+            0.65,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "name": "box_stack_bottom",
+      "components": {
+        "transform": {
+          "position": [
+            5,
+            0.5,
+            4
+          ]
+        },
+        "renderable": {
+          "mesh": "assets/meshes/cube.bin",
+          "color": [
+            0.8,
+            0.45,
+            0.2,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "name": "box_stack_top",
+      "components": {
+        "transform": {
+          "position": [
+            5,
+            1.5,
+            4
+          ],
+          "rotation_deg": [
+            0,
+            20,
+            0
+          ]
+        },
+        "renderable": {
+          "mesh": "assets/meshes/cube.bin",
+          "color": [
+            0.9,
+            0.6,
+            0.3,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "name": "big_box",
+      "components": {
+        "transform": {
+          "position": [
+            -6,
+            1,
+            12
+          ],
+          "rotation_deg": [
+            0,
+            30,
+            0
+          ],
+          "scale": [
+            2,
+            2,
+            2
+          ]
+        },
+        "renderable": {
+          "mesh": "assets/meshes/cube.bin",
+          "color": [
+            0.3,
+            0.45,
+            0.8,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "name": "ramp",
+      "components": {
+        "transform": {
+          "position": [
+            0,
+            1,
+            14
+          ],
+          "rotation_deg": [
+            -15,
+            0,
+            0
+          ],
+          "scale": [
+            6,
+            0.3,
+            8
+          ]
+        },
+        "renderable": {
+          "mesh": "assets/meshes/cube.bin",
+          "color": [
+            0.55,
+            0.4,
+            0.3,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "name": "sphere_small",
+      "components": {
+        "transform": {
+          "position": [
+            -3,
+            0.5,
+            6
+          ]
+        },
+        "renderable": {
+          "mesh": "assets/meshes/sphere.bin",
+          "color": [
+            0.8,
+            0.25,
+            0.25,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "name": "sphere_floating",
+      "components": {
+        "transform": {
+          "position": [
+            3,
+            2.5,
+            8
+          ],
+          "scale": [
+            1.5,
+            1.5,
+            1.5
+          ]
+        },
+        "renderable": {
+          "mesh": "assets/meshes/sphere.bin",
+          "color": [
+            0.25,
+            0.7,
+            0.35,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "name": "sphere_large",
+      "components": {
+        "transform": {
+          "position": [
+            -12,
+            1,
+            4
+          ],
+          "scale": [
+            2,
+            2,
+            2
+          ]
+        },
+        "renderable": {
+          "mesh": "assets/meshes/sphere.bin",
+          "color": [
+            0.6,
+            0.3,
+            0.7,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "name": "cone",
+      "components": {
+        "transform": {
+          "position": [
+            11,
+            1,
+            12
+          ],
+          "scale": [
+            2,
+            2,
+            2
+          ]
+        },
+        "renderable": {
+          "mesh": "assets/meshes/cone.bin",
+          "color": [
+            0.2,
+            0.7,
+            0.75,
+            1
+          ]
+        }
+      }
+    },
+    {
+      "name": "torus",
+      "components": {
+        "transform": {
+          "position": [
+            -3,
+            1.25,
+            16
+          ],
+          "rotation_deg": [
+            90,
+            0,
+            0
+          ],
+          "scale": [
+            2,
+            2,
+            2
+          ]
+        },
+        "renderable": {
+          "mesh": "assets/meshes/torus.bin",
+          "color": [
+            0.9,
+            0.8,
+            0.3,
+            1
+          ]
+        }
+      }
+    }
+  ]
+}

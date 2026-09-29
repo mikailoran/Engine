@@ -9,11 +9,10 @@ class AssetRegistry;
 struct FrameContext;
 
 /**
- * @brief Draws every entity carrying {Transform, Renderable}, plus the static
- *        floor.
+ * @brief Draws every entity carrying {Transform, Renderable}.
  *
  * Owns view 0 and the resources shared across entities: the default shader
- * program, the u_time and u_color uniforms, and the floor's geometry.
+ * program and the u_time and u_color uniforms.
  */
 class RenderSystem : public System {
 public:
@@ -55,10 +54,6 @@ public:
   void SetCamera(Entity camera);
 
 private:
-  void SetupFloor();
-
-  void SubmitFloor();
-
   // TODO: figure out how to reinforce class invariants
   const AssetRegistry *assets_{nullptr};
 
@@ -69,9 +64,6 @@ private:
 
   // Per-draw surface color, set from Renderable::color before each submit.
   bgfx::UniformHandle u_color_{bgfx::kInvalidHandle};
-
-  bgfx::VertexBufferHandle floor_vbh_{bgfx::kInvalidHandle};
-  bgfx::IndexBufferHandle floor_ibh_{bgfx::kInvalidHandle};
 
   // Entity supplying view and projection; only read when has_camera_ is set.
   Entity camera_{0};
