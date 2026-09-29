@@ -65,7 +65,8 @@ void UiSystem::Update(Ecs &ecs, const FrameContext &ctx) {
   for (const auto &entity : entities) {
     auto &transform = ecs.GetComponent<Transform>(entity);
     auto &spin = ecs.GetComponent<Spin>(entity);
-    // auto &configurable = ecs.GetComponent<Configurable>(entity);
+    auto &rigid_body = ecs.GetComponent<RigidBody>(entity);
+    auto &renderable = ecs.GetComponent<Renderable>(entity);
     ImGui::PushID(static_cast<int>(entity));
 
     ImGui::Text("Entity %zu", entity);
@@ -75,6 +76,11 @@ void UiSystem::Update(Ecs &ecs, const FrameContext &ctx) {
     ImGui::SliderFloat("x", &transform.position.x, -10.0F, 10.0F);
     ImGui::SliderFloat("y", &transform.position.y, 0.0F, 10.0F);
     ImGui::SliderFloat("Scale", &transform.scale.x, 0.1F, 10.0F);
+    if (ImGui::CollapsingHeader("Color Picker")) {
+      ImGui::ColorPicker3(renderable.color.data());
+    }
+    ImGui::Checkbox("Gravity", &rigid_body.has_gravity_);
+    ImGui::SameLine();
     ImGui::Checkbox("Spin", &spin.should_spin);
     ImGui::NewLine();
 
