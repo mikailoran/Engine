@@ -22,41 +22,6 @@ constexpr float kFallbackFovDegrees = 60.0F;
 constexpr float kFallbackNearPlane = 0.1F;
 constexpr float kFallbackFarPlane = 100.0F;
 
-// Linear RGBA for the floor quad, which has no Renderable to carry a color.
-constexpr std::array<float, 4> kFloorColor{0.35F, 0.35F, 0.38F, 1.0F};
-
-/**
- * @brief Position + normal vertex, matching what the vertex shader expects.
- *
- */
-struct FloorVertex {
-  float m_x;
-  float m_y;
-  float m_z;
-  float m_nx;
-  float m_ny;
-  float m_nz;
-
-  static void init() {
-    ms_layout.begin()
-        .add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float)
-        .add(bgfx::Attrib::Normal, 3, bgfx::AttribType::Float)
-        .end();
-  }
-
-  static bgfx::VertexLayout ms_layout;
-};
-bgfx::VertexLayout FloorVertex::ms_layout;
-
-// A flat quad in the XZ plane representing the floor.
-constexpr std::array<FloorVertex, 4> kFloorVertices{{
-    {-10.0F, 0.0F, -10.0F, 0.5F, 1.0F, 0.5F},
-    {10.0F, 0.0F, -10.0F, 0.5F, 1.0F, 0.5F},
-    {10.0F, 0.0F, 10.0F, 0.5F, 1.0F, 0.5F},
-    {-10.0F, 0.0F, 10.0F, 0.5F, 1.0F, 0.5F},
-}};
-constexpr std::array<uint16_t, 6> kFloorIndices{0, 1, 2, 0, 2, 3};
-
 } // namespace
 
 void RenderSystem::Init(const AssetRegistry &assets) {
@@ -71,7 +36,6 @@ void RenderSystem::Init(const AssetRegistry &assets) {
   u_color_ = bgfx::createUniform("u_color", bgfx::UniformType::Vec4);
   default_program_ = loadProgram("vs_mesh.sc", "fs_mesh.sc");
 
-  SetupFloor();
 }
 
 void RenderSystem::Update(Ecs &ecs, const FrameContext &ctx) {
@@ -131,14 +95,10 @@ void RenderSystem::Update(Ecs &ecs, const FrameContext &ctx) {
     meshSubmit(mesh, renderable.view, program, mtx.data(), renderable.state);
   }
 
-  SubmitFloor();
-
   bgfx::frame();
 }
 
 void RenderSystem::Shutdown() {
-  bgfx::destroy(floor_vbh_);
-  bgfx::destroy(floor_ibh_);
   bgfx::destroy(u_time_);
   bgfx::destroy(u_color_);
   bgfx::destroy(default_program_);
@@ -147,30 +107,4 @@ void RenderSystem::Shutdown() {
 void RenderSystem::SetCamera(Entity camera) {
   camera_ = camera;
   has_camera_ = true;
-}
-
-void RenderSystem::SetupFloor() {
-  // bgfx::copy rather than makeRef: makeRef would require the source arrays to
-  // outlive the buffers, which is fragile now that they are function-local to
-  // this translation unit.
-  FloorVertex::init();
-  floor_vbh_ = bgfx::createVertexBuffer(
-      bgfx::copy(kFloorVertices.data(),
-                 kFloorVertices.size() * sizeof(FloorVertex)),
-      FloorVertex::ms_layout);
-  floor_ibh_ = bgfx::createIndexBuffer(bgfx::copy(
-      kFloorIndices.data(), kFloorIndices.size() * sizeof(uint16_t)));
-}
-
-void RenderSystem::SubmitFloor() {
-  // Culling is disabled so winding order cannot hide it.
-  // Using identity matrix explicitly.
-  std::array<float, kMtxSize> floor_mtx{};
-  bx::mtxIdentity(floor_mtx.data());
-  bgfx::setTransform(floor_mtx.data());
-  bgfx::setUniform(u_color_, kFloorColor.data());
-  bgfx::setVertexBuffer(0, floor_vbh_);
-  bgfx::setIndexBuffer(floor_ibh_);
-  bgfx::setState(BGFX_STATE_DEFAULT & ~BGFX_STATE_CULL_MASK);
-  bgfx::submit(0, default_program_);
 }
