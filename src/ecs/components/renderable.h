@@ -2,6 +2,7 @@
 
 #include "../../resource/mesh_handle.h"
 
+#include <array>
 #include <bgfx/bgfx.h>
 #include <cstdint>
 
@@ -21,4 +22,6 @@ struct Renderable {
 
   // Which bgfx view to submit into.
   bgfx::ViewId view{0};
+
+  std::array<float, 4> color{0.8F, 0.8F, 0.8F, 1.0F};
 };
