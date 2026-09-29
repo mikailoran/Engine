@@ -16,8 +16,10 @@ void Physics::Step(Ecs &ecs, const float fixed_dt) {
     auto &rigid_body = ecs.GetComponent<RigidBody>(entity);
     const auto &spin = ecs.GetComponent<Spin>(entity);
 
-    const bx::Vec3 acceleration =
-        bx::add(rigid_body.acceleration_, {0.0F, kGravity, 0.0F});
+    bx::Vec3 acceleration = rigid_body.acceleration_;
+    if (rigid_body.has_gravity_) {
+      acceleration = bx::add(acceleration, {0.0F, kGravity, 0.0F});
+    }
 
     rigid_body.velocity_ =
         bx::add(rigid_body.velocity_, bx::mul(acceleration, fixed_dt));
