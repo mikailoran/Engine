@@ -53,16 +53,6 @@ public:
    */
   void SetCamera(Entity camera);
 
-  /**
-   * @brief Nominates the entity supplying the sun and ambient lighting.
-   *
-   * The entity must carry a DirectionalLight. Until this is called a
-   * default-constructed DirectionalLight is used.
-   *
-   * @param light Entity to read the light from.
-   */
-  void SetLight(Entity light);
-
 private:
   // TODO: figure out how to reinforce class invariants
   const AssetRegistry *assets_{nullptr};
@@ -75,18 +65,10 @@ private:
   // Per-draw surface color, set from Renderable::color before each submit.
   bgfx::UniformHandle u_color_{bgfx::kInvalidHandle};
 
-  // Per-frame camera position and sun/ambient lighting.
+  // Per-frame camera world position.
   bgfx::UniformHandle u_eye_pos_{bgfx::kInvalidHandle};
-  bgfx::UniformHandle u_light_dir_{bgfx::kInvalidHandle};
-  bgfx::UniformHandle u_light_color_{bgfx::kInvalidHandle};
-  bgfx::UniformHandle u_sky_color_{bgfx::kInvalidHandle};
-  bgfx::UniformHandle u_ground_color_{bgfx::kInvalidHandle};
 
   // Entity supplying view and projection; only read when has_camera_ is set.
   Entity camera_{0};
   bool has_camera_{false};
-
-  // Entity supplying the light; only read when has_light_ is set.
-  Entity light_{0};
-  bool has_light_{false};
 };

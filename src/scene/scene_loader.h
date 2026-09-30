@@ -5,7 +5,6 @@
 #include <filesystem>
 #include <functional>
 #include <nlohmann/json_fwd.hpp>
-#include <optional>
 #include <string>
 #include <unordered_map>
 
@@ -16,9 +15,6 @@ class AssetRegistry;
 struct SceneLoadContext {
   Ecs &ecs;
   AssetRegistry &assets;
-
-  // Output: the entity carrying the scene's DirectionalLight, if any.
-  std::optional<Entity> light{};
 };
 
 /** @brief Reads one component's JSON block and adds it to @p entity. */

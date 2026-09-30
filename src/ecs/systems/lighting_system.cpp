@@ -1,0 +1,53 @@
+#include "lighting_system.h"
+
+#include "../components/directional_light.h"
+#include "../core/ecs.h"
+#include "../core/frame_context.h"
+
+#include <array>
+#include <cassert>
+#include <bx/math.h>
+
+namespace {
+
+/** @brief Packs a Vec3 into a vec4 uniform value with w = 0. */
+auto ToVec4(const bx::Vec3 &v) -> std::array<float, 4> {
+  return {v.x, v.y, v.z, 0.0F};
+}
+
+} // namespace
+
+void LightingSystem::Init() {
+  u_light_dir_ = bgfx::createUniform("u_lightDir", bgfx::UniformFreq::Frame,
+                                     bgfx::UniformType::Vec4);
+  u_light_color_ = bgfx::createUniform(
+      "u_lightColor", bgfx::UniformFreq::Frame, bgfx::UniformType::Vec4);
+  u_sky_color_ = bgfx::createUniform("u_skyColor", bgfx::UniformFreq::Frame,
+                                     bgfx::UniformType::Vec4);
+  u_ground_color_ = bgfx::createUniform(
+      "u_groundColor", bgfx::UniformFreq::Frame, bgfx::UniformType::Vec4);
+}
+
+void LightingSystem::Update(Ecs &ecs, const FrameContext & /*ctx*/) {
+  // Release builds use the lowest entity id if several lights exist.
+  assert(entities.size() <= 1 && "at most one DirectionalLight per scene");
+  const DirectionalLight light =
+      entities.empty() ? DirectionalLight{}
+                       : ecs.GetComponent<DirectionalLight>(*entities.begin());
+
+  const auto light_dir = ToVec4(bx::normalize(light.direction));
+  const auto light_color = ToVec4(bx::mul(light.color, light.intensity));
+  const auto sky_color = ToVec4(light.sky_color);
+  const auto ground_color = ToVec4(light.ground_color);
+  bgfx::setFrameUniform(u_light_dir_, light_dir.data());
+  bgfx::setFrameUniform(u_light_color_, light_color.data());
+  bgfx::setFrameUniform(u_sky_color_, sky_color.data());
+  bgfx::setFrameUniform(u_ground_color_, ground_color.data());
+}
+
+void LightingSystem::Shutdown() {
+  bgfx::destroy(u_light_dir_);
+  bgfx::destroy(u_light_color_);
+  bgfx::destroy(u_sky_color_);
+  bgfx::destroy(u_ground_color_);
+}

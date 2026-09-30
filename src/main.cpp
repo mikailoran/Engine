@@ -21,6 +21,7 @@
 #include "ecs/components/transform.h"
 
 #include "ecs/systems/camera_control.h"
+#include "ecs/systems/lighting_system.h"
 // TODO: Rename "physics_system.h" into "physics.h"
 #include "ecs/systems/physics_system.h"
 #include "ecs/systems/render_system.h"
@@ -43,6 +44,7 @@ struct Game {
   // Non-owning; SystemManager owns the systems themselves.
   CameraControl *m_camera_control = nullptr;
   Physics *m_physics = nullptr;
+  LightingSystem *m_lighting = nullptr;
   RenderSystem *m_render = nullptr;
   UiSystem *m_ui = nullptr;
 
@@ -119,6 +121,14 @@ void gameInit(Game &_game) {
   }
   _game.m_physics->Init();
 
+  _game.m_lighting = &ecs.RegisterSystem<LightingSystem>();
+  {
+    Signature signature;
+    signature.set(ecs.GetComponentBit<DirectionalLight>());
+    ecs.SetSystemSignature<LightingSystem>(signature);
+  }
+  _game.m_lighting->Init();
+
   _game.m_render = &ecs.RegisterSystem<RenderSystem>();
   {
     Signature signature;
@@ -151,9 +161,6 @@ void gameInit(Game &_game) {
   RegisterBuiltinLoaders(scene_loader);
   SceneLoadContext scene_ctx{.ecs = ecs, .assets = _game.m_assets};
   scene_loader.Load("assets/scenes/debug.json", scene_ctx);
-  if (scene_ctx.light.has_value()) {
-    _game.m_render->SetLight(*scene_ctx.light);
-  }
 }
 
 /**
@@ -163,6 +170,7 @@ void gameInit(Game &_game) {
 auto gameShutdown(Game &_game) -> int {
   _game.m_ui->Shutdown();
   _game.m_render->Shutdown();
+  _game.m_lighting->Shutdown();
   _game.m_camera_control->Shutdown();
   _game.m_assets.UnloadAll();
   _game.m_ecs.Flush();
@@ -212,6 +220,8 @@ auto _main_(int /*_argc*/, char ** /*_argv*/) -> int {
     // The camera pose must settle before the renderer reads it.
     game.m_camera_control->Update(game.m_ecs, ctx);
     game.m_physics->Update(game.m_ecs, ctx);
+    // Frame uniforms must be set before the renderer submits.
+    game.m_lighting->Update(game.m_ecs, ctx);
     game.m_render->Update(game.m_ecs, ctx);
     game.m_ui->Update(game.m_ecs, ctx);
 

@@ -11,7 +11,6 @@
 
 #include <bx/math.h>
 #include <nlohmann/json.hpp>
-#include <stdexcept>
 #include <string>
 
 namespace {
@@ -49,18 +48,11 @@ void LoadRenderable(const json &data, Entity entity, SceneLoadContext &ctx) {
   ctx.ecs.AddComponent(entity, renderable);
 }
 
-/**
- * @brief Adds a DirectionalLight; every field is optional. Records the entity
- * in ctx.light. @throws std::runtime_error If the scene already has one.
- */
+/** @brief Adds a DirectionalLight; every field is optional. */
 void LoadDirectionalLight(const json &data, Entity entity,
                           SceneLoadContext &ctx) {
   CheckKeys(data, {"direction", "color", "intensity", "sky_color",
                    "ground_color"});
-  if (ctx.light.has_value()) {
-    throw std::runtime_error("scene already has a directional light");
-  }
-
   DirectionalLight light{};
   if (data.contains("direction")) {
     light.direction = ReadVec3(data.at("direction"));
@@ -78,7 +70,6 @@ void LoadDirectionalLight(const json &data, Entity entity,
     light.ground_color = ReadVec3(data.at("ground_color"));
   }
   ctx.ecs.AddComponent(entity, light);
-  ctx.light = entity;
 }
 
 } // namespace

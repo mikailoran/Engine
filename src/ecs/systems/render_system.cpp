@@ -2,7 +2,6 @@
 
 #include "../../resource/asset_registry.h"
 #include "../components/camera.h"
-#include "../components/directional_light.h"
 #include "../components/renderable.h"
 #include "../components/transform.h"
 #include "../core/ecs.h"
@@ -23,11 +22,6 @@ constexpr float kFallbackFovDegrees = 60.0F;
 constexpr float kFallbackNearPlane = 0.1F;
 constexpr float kFallbackFarPlane = 100.0F;
 
-/** @brief Packs a Vec3 into a vec4 uniform value with w = 0. */
-auto ToVec4(const bx::Vec3 &v) -> std::array<float, 4> {
-  return {v.x, v.y, v.z, 0.0F};
-}
-
 } // namespace
 
 void RenderSystem::Init(const AssetRegistry &assets) {
@@ -42,14 +36,6 @@ void RenderSystem::Init(const AssetRegistry &assets) {
   u_color_ = bgfx::createUniform("u_color", bgfx::UniformType::Vec4);
   u_eye_pos_ = bgfx::createUniform("u_eyePos", bgfx::UniformFreq::Frame,
                                    bgfx::UniformType::Vec4);
-  u_light_dir_ = bgfx::createUniform("u_lightDir", bgfx::UniformFreq::Frame,
-                                     bgfx::UniformType::Vec4);
-  u_light_color_ = bgfx::createUniform(
-      "u_lightColor", bgfx::UniformFreq::Frame, bgfx::UniformType::Vec4);
-  u_sky_color_ = bgfx::createUniform("u_skyColor", bgfx::UniformFreq::Frame,
-                                     bgfx::UniformType::Vec4);
-  u_ground_color_ = bgfx::createUniform(
-      "u_groundColor", bgfx::UniformFreq::Frame, bgfx::UniformType::Vec4);
   default_program_ = loadProgram("vs_mesh.sc", "fs_mesh.sc");
 
 }
@@ -66,21 +52,6 @@ void RenderSystem::Update(Ecs &ecs, const FrameContext &ctx) {
                       ctx.dt * 1000.0F, fps);
 
   bgfx::setFrameUniform(u_time_, &ctx.time);
-
-  // Sun and ambient from the light entity, or the component's defaults.
-  {
-    const DirectionalLight light = has_light_
-                                       ? ecs.GetComponent<DirectionalLight>(light_)
-                                       : DirectionalLight{};
-    const auto light_dir = ToVec4(bx::normalize(light.direction));
-    const auto light_color = ToVec4(bx::mul(light.color, light.intensity));
-    const auto sky_color = ToVec4(light.sky_color);
-    const auto ground_color = ToVec4(light.ground_color);
-    bgfx::setFrameUniform(u_light_dir_, light_dir.data());
-    bgfx::setFrameUniform(u_light_color_, light_color.data());
-    bgfx::setFrameUniform(u_sky_color_, sky_color.data());
-    bgfx::setFrameUniform(u_ground_color_, ground_color.data());
-  }
 
   // View and projection for view 0 taken from the camera entity's components.
   // The CameraControl system writes those each frame.
@@ -141,19 +112,10 @@ void RenderSystem::Shutdown() {
   bgfx::destroy(u_time_);
   bgfx::destroy(u_color_);
   bgfx::destroy(u_eye_pos_);
-  bgfx::destroy(u_light_dir_);
-  bgfx::destroy(u_light_color_);
-  bgfx::destroy(u_sky_color_);
-  bgfx::destroy(u_ground_color_);
   bgfx::destroy(default_program_);
 }
 
 void RenderSystem::SetCamera(Entity camera) {
   camera_ = camera;
   has_camera_ = true;
-}
-
-void RenderSystem::SetLight(Entity light) {
-  light_ = light;
-  has_light_ = true;
 }
