@@ -11,8 +11,8 @@ struct FrameContext;
 /**
  * @brief Draws every entity carrying {Transform, Renderable}.
  *
- * Owns view 0 and the resources shared across entities: the default shader
- * program and the u_time and u_color uniforms.
+ * Owns view 0 and the resources shared across entities (shader program and
+ * uniforms)
  */
 class RenderSystem : public System {
 public:
@@ -64,6 +64,13 @@ private:
 
   // Per-draw surface color, set from Renderable::color before each submit.
   bgfx::UniformHandle u_color_{bgfx::kInvalidHandle};
+
+  // Per-frame camera position and sun/ambient lighting.
+  bgfx::UniformHandle u_eye_pos_{bgfx::kInvalidHandle};
+  bgfx::UniformHandle u_light_dir_{bgfx::kInvalidHandle};
+  bgfx::UniformHandle u_light_color_{bgfx::kInvalidHandle};
+  bgfx::UniformHandle u_sky_color_{bgfx::kInvalidHandle};
+  bgfx::UniformHandle u_ground_color_{bgfx::kInvalidHandle};
 
   // Entity supplying view and projection; only read when has_camera_ is set.
   Entity camera_{0};
