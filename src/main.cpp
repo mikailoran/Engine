@@ -14,6 +14,7 @@
 
 #include "ecs/components/camera.h"
 #include "ecs/components/configurable.h"
+#include "ecs/components/directional_light.h"
 #include "ecs/components/renderable.h"
 #include "ecs/components/rigid_body.h"
 #include "ecs/components/spin.h"
@@ -93,6 +94,7 @@ void gameInit(Game &_game) {
   ecs.RegisterComponent<Spin>();
   ecs.RegisterComponent<Renderable>();
   ecs.RegisterComponent<Configurable>();
+  ecs.RegisterComponent<DirectionalLight>();
 
   // --- ECS: systems, signatures, Init -----------------------------------
   // A system's signature must be set before any entity gains its components:

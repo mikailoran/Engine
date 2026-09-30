@@ -53,6 +53,16 @@ public:
    */
   void SetCamera(Entity camera);
 
+  /**
+   * @brief Nominates the entity supplying the sun and ambient lighting.
+   *
+   * The entity must carry a DirectionalLight. Until this is called a
+   * default-constructed DirectionalLight is used.
+   *
+   * @param light Entity to read the light from.
+   */
+  void SetLight(Entity light);
+
 private:
   // TODO: figure out how to reinforce class invariants
   const AssetRegistry *assets_{nullptr};
@@ -75,4 +85,8 @@ private:
   // Entity supplying view and projection; only read when has_camera_ is set.
   Entity camera_{0};
   bool has_camera_{false};
+
+  // Entity supplying the light; only read when has_light_ is set.
+  Entity light_{0};
+  bool has_light_{false};
 };
