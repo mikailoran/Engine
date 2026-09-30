@@ -37,7 +37,6 @@ void RenderSystem::Init(const AssetRegistry &assets) {
   u_eye_pos_ = bgfx::createUniform("u_eyePos", bgfx::UniformFreq::Frame,
                                    bgfx::UniformType::Vec4);
   default_program_ = loadProgram("vs_mesh.sc", "fs_mesh.sc");
-
 }
 
 void RenderSystem::Update(Ecs &ecs, const FrameContext &ctx) {
@@ -48,8 +47,8 @@ void RenderSystem::Update(Ecs &ecs, const FrameContext &ctx) {
                       stats->height);
   // First frame has dt == 0.
   const float fps = ctx.dt > 0.0F ? 1.0F / ctx.dt : 0.0F;
-  bgfx::dbgTextPrintf(0, 4, 0x0f, "Frame %.2f ms (%.0f fps)",
-                      ctx.dt * 1000.0F, fps);
+  bgfx::dbgTextPrintf(0, 4, 0x0f, "Frame %.2f ms (%.0f fps)", ctx.dt * 1000.0F,
+                      fps);
 
   bgfx::setFrameUniform(u_time_, &ctx.time);
 
@@ -97,7 +96,7 @@ void RenderSystem::Update(Ecs &ecs, const FrameContext &ctx) {
 
     const auto program = bgfx::isValid(renderable.program) ? renderable.program
                                                            : default_program_;
-    const auto *mesh = assets_->Get(renderable.mesh_handle);
+    const auto *mesh = assets_->GetMesh(renderable.mesh_handle);
 
     // meshSubmit only discards state after its last group, so the color holds
     // for every group of the mesh.

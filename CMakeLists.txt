@@ -85,6 +85,7 @@ add_executable(engine src/main.cpp
   src/ecs/systems/ui.h
   src/ecs/systems/ui.cpp
   src/resource/mesh_handle.h
+  src/resource/texture_handle.h
   src/resource/asset_registry.h
   src/resource/asset_registry.cpp
   src/platform/asset_root.h
