@@ -186,6 +186,30 @@ endforeach()
 add_custom_target(meshes DEPENDS ${ENGINE_MESH_OUTPUTS})
 add_dependencies(engine meshes)
 
+# --- Textures ---------------------------------------------------------------
+# bgfx_compile_texture is a bare custom command like geometry: create the
+# output directory at configure time.
+set(ENGINE_TEXTURE_DIR ${ENGINE_RUNTIME_DIR}/assets/textures)
+file(MAKE_DIRECTORY ${ENGINE_TEXTURE_DIR})
+
+# Base names of the textures to compile
+set(ENGINE_TEXTURES
+  debug_grid
+)
+
+# One texturec command per texture, with a full mip chain
+set(ENGINE_TEXTURE_OUTPUTS "")
+foreach(texture IN LISTS ENGINE_TEXTURES)
+  bgfx_compile_texture(
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/textures/${texture}.png
+    OUTPUT ${ENGINE_TEXTURE_DIR}/${texture}.dds
+    MIPS
+  )
+  list(APPEND ENGINE_TEXTURE_OUTPUTS ${ENGINE_TEXTURE_DIR}/${texture}.dds)
+endforeach()
+add_custom_target(textures DEPENDS ${ENGINE_TEXTURE_OUTPUTS})
+add_dependencies(engine textures)
+
 # --- Scenes -----------------------------------------------------------------
 # Scene files are copied beside the executable; edits recopy on build.
 set(ENGINE_SCENE_DIR ${ENGINE_RUNTIME_DIR}/assets/scenes)
