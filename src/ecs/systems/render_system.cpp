@@ -36,7 +36,14 @@ void RenderSystem::Init(const AssetRegistry &assets) {
   u_color_ = bgfx::createUniform("u_color", bgfx::UniformType::Vec4);
   u_eye_pos_ = bgfx::createUniform("u_eyePos", bgfx::UniformFreq::Frame,
                                    bgfx::UniformType::Vec4);
+  s_albedo_ = bgfx::createUniform("s_albedo", bgfx::UniformType::Sampler);
+  u_tex_params_ = bgfx::createUniform("u_texParams", bgfx::UniformType::Vec4);
   default_program_ = loadProgram("vs_mesh.sc", "fs_mesh.sc");
+
+  constexpr uint32_t kWhite = 0xffffffff;
+  default_texture_ = bgfx::createTexture2D(
+      1, 1, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_NONE,
+      bgfx::copy(&kWhite, sizeof(kWhite)));
 }
 
 void RenderSystem::Update(Ecs &ecs, const FrameContext &ctx) {
@@ -98,9 +105,17 @@ void RenderSystem::Update(Ecs &ecs, const FrameContext &ctx) {
                                                            : default_program_;
     const auto *mesh = assets_->GetMesh(renderable.mesh_handle);
 
-    // meshSubmit only discards state after its last group, so the color holds
-    // for every group of the mesh.
+    const auto texture = isValid(renderable.texture)
+                             ? assets_->GetTexture(renderable.texture)
+                             : default_texture_;
+    const std::array<float, 4> tex_params{1.0F / renderable.texture_scale,
+                                          0.0F, 0.0F, 0.0F};
+
+    // meshSubmit only discards state after its last group, so the color and
+    // texture hold for every group of the mesh.
     bgfx::setUniform(u_color_, renderable.color.data());
+    bgfx::setUniform(u_tex_params_, tex_params.data());
+    bgfx::setTexture(0, s_albedo_, texture);
     meshSubmit(mesh, renderable.view, program, mtx.data(), renderable.state);
   }
 
@@ -111,6 +126,9 @@ void RenderSystem::Shutdown() {
   bgfx::destroy(u_time_);
   bgfx::destroy(u_color_);
   bgfx::destroy(u_eye_pos_);
+  bgfx::destroy(s_albedo_);
+  bgfx::destroy(u_tex_params_);
+  bgfx::destroy(default_texture_);
   bgfx::destroy(default_program_);
 }
 

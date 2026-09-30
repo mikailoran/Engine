@@ -11,8 +11,8 @@ struct FrameContext;
 /**
  * @brief Draws every entity carrying {Transform, Renderable}.
  *
- * Owns view 0 and the resources shared across entities (shader program and
- * uniforms)
+ * Owns view 0 and the resources shared across entities (shader program,
+ * uniforms and the fallback white texture)
  */
 class RenderSystem : public System {
 public:
@@ -67,6 +67,15 @@ private:
 
   // Per-frame camera world position.
   bgfx::UniformHandle u_eye_pos_{bgfx::kInvalidHandle};
+
+  // Albedo sampler, stage 0.
+  bgfx::UniformHandle s_albedo_{bgfx::kInvalidHandle};
+
+  // Per-draw texture tiling, set from Renderable::texture_scale.
+  bgfx::UniformHandle u_tex_params_{bgfx::kInvalidHandle};
+
+  // 1x1 white, bound for untextured entities so they keep their plain color.
+  bgfx::TextureHandle default_texture_{bgfx::kInvalidHandle};
 
   // Entity supplying view and projection; only read when has_camera_ is set.
   Entity camera_{0};
