@@ -151,6 +151,9 @@ void gameInit(Game &_game) {
   RegisterBuiltinLoaders(scene_loader);
   SceneLoadContext scene_ctx{.ecs = ecs, .assets = _game.m_assets};
   scene_loader.Load("assets/scenes/debug.json", scene_ctx);
+  if (scene_ctx.light.has_value()) {
+    _game.m_render->SetLight(*scene_ctx.light);
+  }
 }
 
 /**

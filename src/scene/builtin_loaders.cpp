@@ -3,6 +3,7 @@
 #include "json_read.h"
 #include "scene_loader.h"
 
+#include "../ecs/components/directional_light.h"
 #include "../ecs/components/renderable.h"
 #include "../ecs/components/transform.h"
 #include "../ecs/core/ecs.h"
@@ -10,6 +11,7 @@
 
 #include <bx/math.h>
 #include <nlohmann/json.hpp>
+#include <stdexcept>
 #include <string>
 
 namespace {
@@ -47,9 +49,42 @@ void LoadRenderable(const json &data, Entity entity, SceneLoadContext &ctx) {
   ctx.ecs.AddComponent(entity, renderable);
 }
 
+/**
+ * @brief Adds a DirectionalLight; every field is optional. Records the entity
+ * in ctx.light. @throws std::runtime_error If the scene already has one.
+ */
+void LoadDirectionalLight(const json &data, Entity entity,
+                          SceneLoadContext &ctx) {
+  CheckKeys(data, {"direction", "color", "intensity", "sky_color",
+                   "ground_color"});
+  if (ctx.light.has_value()) {
+    throw std::runtime_error("scene already has a directional light");
+  }
+
+  DirectionalLight light{};
+  if (data.contains("direction")) {
+    light.direction = ReadVec3(data.at("direction"));
+  }
+  if (data.contains("color")) {
+    light.color = ReadVec3(data.at("color"));
+  }
+  if (data.contains("intensity")) {
+    light.intensity = data.at("intensity").get<float>();
+  }
+  if (data.contains("sky_color")) {
+    light.sky_color = ReadVec3(data.at("sky_color"));
+  }
+  if (data.contains("ground_color")) {
+    light.ground_color = ReadVec3(data.at("ground_color"));
+  }
+  ctx.ecs.AddComponent(entity, light);
+  ctx.light = entity;
+}
+
 } // namespace
 
 void RegisterBuiltinLoaders(SceneLoader &loader) {
   loader.Register("transform", LoadTransform);
   loader.Register("renderable", LoadRenderable);
+  loader.Register("directional_light", LoadDirectionalLight);
 }
