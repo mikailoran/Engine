@@ -60,6 +60,10 @@ void RenderSystem::Update(Ecs &ecs, const FrameContext &ctx) {
   bgfx::dbgTextClear();
   bgfx::dbgTextPrintf(0, 3, 0x0f, "Backbuffer %dW x %dH", stats->width,
                       stats->height);
+  // First frame has dt == 0.
+  const float fps = ctx.dt > 0.0F ? 1.0F / ctx.dt : 0.0F;
+  bgfx::dbgTextPrintf(0, 4, 0x0f, "Frame %.2f ms (%.0f fps)",
+                      ctx.dt * 1000.0F, fps);
 
   bgfx::setFrameUniform(u_time_, &ctx.time);
 
