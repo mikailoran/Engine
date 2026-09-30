@@ -2,6 +2,34 @@
   "version": 1,
   "entities": [
     {
+      "name": "sun",
+      "components": {
+        "directional_light": {
+          "direction": [
+            -0.4,
+            1,
+            -0.3
+          ],
+          "color": [
+            1,
+            0.95,
+            0.85
+          ],
+          "intensity": 1,
+          "sky_color": [
+            0.22,
+            0.25,
+            0.3
+          ],
+          "ground_color": [
+            0.08,
+            0.07,
+            0.06
+          ]
+        }
+      }
+    },
+    {
       "name": "floor",
       "components": {
         "transform": {

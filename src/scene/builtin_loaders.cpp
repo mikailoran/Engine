@@ -3,6 +3,7 @@
 #include "json_read.h"
 #include "scene_loader.h"
 
+#include "../ecs/components/directional_light.h"
 #include "../ecs/components/renderable.h"
 #include "../ecs/components/transform.h"
 #include "../ecs/core/ecs.h"
@@ -47,9 +48,34 @@ void LoadRenderable(const json &data, Entity entity, SceneLoadContext &ctx) {
   ctx.ecs.AddComponent(entity, renderable);
 }
 
+/** @brief Adds a DirectionalLight; every field is optional. */
+void LoadDirectionalLight(const json &data, Entity entity,
+                          SceneLoadContext &ctx) {
+  CheckKeys(data, {"direction", "color", "intensity", "sky_color",
+                   "ground_color"});
+  DirectionalLight light{};
+  if (data.contains("direction")) {
+    light.direction = ReadVec3(data.at("direction"));
+  }
+  if (data.contains("color")) {
+    light.color = ReadVec3(data.at("color"));
+  }
+  if (data.contains("intensity")) {
+    light.intensity = data.at("intensity").get<float>();
+  }
+  if (data.contains("sky_color")) {
+    light.sky_color = ReadVec3(data.at("sky_color"));
+  }
+  if (data.contains("ground_color")) {
+    light.ground_color = ReadVec3(data.at("ground_color"));
+  }
+  ctx.ecs.AddComponent(entity, light);
+}
+
 } // namespace
 
 void RegisterBuiltinLoaders(SceneLoader &loader) {
   loader.Register("transform", LoadTransform);
   loader.Register("renderable", LoadRenderable);
+  loader.Register("directional_light", LoadDirectionalLight);
 }

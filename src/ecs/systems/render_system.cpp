@@ -34,6 +34,8 @@ void RenderSystem::Init(const AssetRegistry &assets) {
   u_time_ = bgfx::createUniform("u_time", bgfx::UniformFreq::Frame,
                                 bgfx::UniformType::Vec4);
   u_color_ = bgfx::createUniform("u_color", bgfx::UniformType::Vec4);
+  u_eye_pos_ = bgfx::createUniform("u_eyePos", bgfx::UniformFreq::Frame,
+                                   bgfx::UniformType::Vec4);
   default_program_ = loadProgram("vs_mesh.sc", "fs_mesh.sc");
 
 }
@@ -44,6 +46,10 @@ void RenderSystem::Update(Ecs &ecs, const FrameContext &ctx) {
   bgfx::dbgTextClear();
   bgfx::dbgTextPrintf(0, 3, 0x0f, "Backbuffer %dW x %dH", stats->width,
                       stats->height);
+  // First frame has dt == 0.
+  const float fps = ctx.dt > 0.0F ? 1.0F / ctx.dt : 0.0F;
+  bgfx::dbgTextPrintf(0, 4, 0x0f, "Frame %.2f ms (%.0f fps)",
+                      ctx.dt * 1000.0F, fps);
 
   bgfx::setFrameUniform(u_time_, &ctx.time);
 
@@ -55,10 +61,13 @@ void RenderSystem::Update(Ecs &ecs, const FrameContext &ctx) {
 
     std::array<float, kMtxSize> view{};
     std::array<float, kMtxSize> proj{};
+    std::array<float, 4> eye_pos{0.0F, 0.0F, 0.0F, 0.0F};
 
     if (has_camera_) {
       const auto &transform = ecs.GetComponent<Transform>(camera_);
       const auto &camera = ecs.GetComponent<Camera>(camera_);
+      eye_pos = {transform.position.x, transform.position.y,
+                 transform.position.z, 0.0F};
 
       bx::mtxLookAt(view.data(), transform.position, camera.target, camera.up);
       bx::mtxProj(proj.data(), camera.fov_degrees, aspect, camera.near_plane,
@@ -71,6 +80,7 @@ void RenderSystem::Update(Ecs &ecs, const FrameContext &ctx) {
     }
 
     bgfx::setViewTransform(0, view.data(), proj.data());
+    bgfx::setFrameUniform(u_eye_pos_, eye_pos.data());
     bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(ctx.width),
                       static_cast<uint16_t>(ctx.height));
   }
@@ -101,6 +111,7 @@ void RenderSystem::Update(Ecs &ecs, const FrameContext &ctx) {
 void RenderSystem::Shutdown() {
   bgfx::destroy(u_time_);
   bgfx::destroy(u_color_);
+  bgfx::destroy(u_eye_pos_);
   bgfx::destroy(default_program_);
 }
 
