@@ -198,12 +198,14 @@ set(ENGINE_TEXTURES
   debug_grid
 )
 
-# One texturec command per texture, with a full mip chain
+# One texturec command per texture, with a full mip chain. RGBA8 because
+# Vulkan cannot sample RGB8 as sRGB, which bgfx treats as fatal.
 set(ENGINE_TEXTURE_OUTPUTS "")
 foreach(texture IN LISTS ENGINE_TEXTURES)
   bgfx_compile_texture(
     FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/textures/${texture}.png
     OUTPUT ${ENGINE_TEXTURE_DIR}/${texture}.dds
+    FORMAT RGBA8
     MIPS
   )
   list(APPEND ENGINE_TEXTURE_OUTPUTS ${ENGINE_TEXTURE_DIR}/${texture}.dds)
