@@ -20,7 +20,7 @@ TEST(EntityLifecycle, IdsStayInRange) {
   Ecs ecs;
 
   for (int i = 0; i < 100; ++i) {
-    EXPECT_LT(ecs.CreateEntity(), MAX_ENTITIES);
+    EXPECT_LT(ecs.CreateEntity(), kMaxEntities);
   }
 }
 

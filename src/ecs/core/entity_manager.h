@@ -73,7 +73,7 @@ public:
 
 private:
   std::queue<Entity> available_entities_;
-  std::array<Signature, MAX_ENTITIES> signatures_{};
+  std::array<Signature, kMaxEntities> signatures_{};
   EntityType living_entity_count_{0};
-  std::array<bool, MAX_ENTITIES> alive_{};
+  std::array<bool, kMaxEntities> alive_{};
 };

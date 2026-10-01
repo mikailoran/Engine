@@ -50,7 +50,7 @@ template <class Component> void ComponentManager::RegisterComponent() {
   const auto type_key = TypeKeyOf<Component>();
   assert(!component_arrays_.contains(type_key) &&
          "Registering component type more than once.");
-  assert(next_bit_ < MAX_COMPONENTS && "Too many component types registered.");
+  assert(next_bit_ < kMaxComponents && "Too many component types registered.");
 
   component_arrays_.try_emplace(type_key, next_bit_,
                                 std::make_unique<ComponentArray<Component>>());
@@ -90,8 +90,8 @@ const Component &ComponentManager::GetComponent(Entity entity) const {
  * @brief Tests whether @p entity has a component of type @p Component.
  *
  * @p Component must already be registered: this answers "does this entity have
- * one", not "is this type known". An unregistered type trips GetComponentArray's
- * assert.
+ * one", not "is this type known". An unregistered type trips
+ * GetComponentArray's assert.
  *
  * @tparam Component Registered component type to look for.
  * @param entity Entity to test.

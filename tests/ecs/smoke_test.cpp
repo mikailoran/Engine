@@ -19,7 +19,7 @@ TEST(EcsSmoke, CreatesAnEntityInRange) {
 
   const auto entity = ecs.CreateEntity();
 
-  EXPECT_LT(entity, MAX_ENTITIES);
+  EXPECT_LT(entity, kMaxEntities);
 }
 
 TEST(EcsSmoke, StoresAndReadsBackAComponent) {

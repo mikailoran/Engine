@@ -8,12 +8,12 @@
 // TODO: Figure out Entity vs EntityType
 using EntityType = std::size_t;
 using Entity = std::size_t;
-constexpr const EntityType MAX_ENTITIES = 5000;
+constexpr const EntityType kMaxEntities = 5000;
 
 using ComponentBit = std::size_t;
-constexpr const ComponentBit MAX_COMPONENTS = 32;
+constexpr const ComponentBit kMaxComponents = 32;
 
-using Signature = std::bitset<MAX_COMPONENTS>;
+using Signature = std::bitset<kMaxComponents>;
 
 /**
  * @brief Compile-time identity for a type, used to key the manager maps.
