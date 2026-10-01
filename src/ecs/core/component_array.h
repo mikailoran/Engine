@@ -29,26 +29,30 @@ public:
   void EntityDestroyed(Entity entity) override;
 
 private:
+  // TODO: Replace maps i->e and e->i by sparse sets and compare performance
   std::array<Component, MAX_ENTITIES> components_{};
   std::unordered_map<std::size_t, Entity> index_to_entity_;
   std::unordered_map<Entity, std::size_t> entity_to_index_;
   std::size_t current_size_{0};
 };
 
-template <class Type>
-void ComponentArray<Type>::InsertData(Entity entity, Type component) {
+// Implementation
+
+template <class Component>
+void ComponentArray<Component>::InsertData(Entity entity, Component component) {
   assert(!entity_to_index_.contains(entity) &&
          "Component added to same entity more than once.");
 
   components_.at(current_size_) = component;
-  // TODO: is this the most optimal way?
+  // TODO: is this the most optimal way? Answer: No, arrays are
   entity_to_index_[entity] = current_size_;
   index_to_entity_[current_size_] = entity;
 
   ++current_size_;
 }
 
-template <class Type> void ComponentArray<Type>::RemoveData(Entity entity) {
+template <class Component>
+void ComponentArray<Component>::RemoveData(Entity entity) {
   assert(entity_to_index_.contains(entity) &&
          "Trying to remove non-existant component.");
 
@@ -70,7 +74,8 @@ template <class Type> void ComponentArray<Type>::RemoveData(Entity entity) {
   --current_size_;
 }
 
-template <class Type> Type &ComponentArray<Type>::GetData(Entity entity) {
+template <class Component>
+Component &ComponentArray<Component>::GetData(Entity entity) {
   assert(entity_to_index_.contains(entity) &&
          "Trying to retrieve component data from non-existent entity.");
 
@@ -78,8 +83,8 @@ template <class Type> Type &ComponentArray<Type>::GetData(Entity entity) {
   return components_.at(entity_index);
 }
 
-template <class Type>
-const Type &ComponentArray<Type>::GetData(Entity entity) const {
+template <class Component>
+const Component &ComponentArray<Component>::GetData(Entity entity) const {
   assert(entity_to_index_.contains(entity) &&
          "Trying to retrieve component data from non-existent entity.");
 
@@ -96,12 +101,12 @@ const Type &ComponentArray<Type>::GetData(Entity entity) const {
  * @param entity Entity to test.
  * @return True if the entity has a component of this type.
  */
-template <class Type> bool ComponentArray<Type>::Has(Entity entity) const {
+template <class Component> bool ComponentArray<Component>::Has(Entity entity) const {
   return entity_to_index_.contains(entity);
 }
 
-template <class Type>
-void ComponentArray<Type>::EntityDestroyed(Entity entity) {
+template <class Component>
+void ComponentArray<Component>::EntityDestroyed(Entity entity) {
   if (entity_to_index_.contains(entity)) {
     RemoveData(entity);
   }
