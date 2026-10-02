@@ -34,13 +34,11 @@ void CameraControl::Update(Ecs &ecs, const FrameContext &ctx) {
   const auto position = cameraGetPosition();
   const auto at = cameraGetAt();
 
-  for (const auto &entity : entities) {
-    auto &transform = ecs.GetComponent<Transform>(entity);
-    auto &camera = ecs.GetComponent<Camera>(entity);
-
-    transform.position = position;
-    camera.target = at;
-  }
+  ecs.View<Transform, Camera>().ForEach(
+      [&position, &at](Entity, Transform &transform, Camera &camera) {
+        transform.position = position;
+        camera.target = at;
+      });
 }
 
 void CameraControl::Shutdown() { cameraDestroy(); }

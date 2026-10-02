@@ -91,33 +91,33 @@ void RenderSystem::Update(Ecs &ecs, const FrameContext &ctx) {
                       static_cast<uint16_t>(ctx.height));
   }
 
-  for (const auto &entity : entities) {
-    const auto &transform = ecs.GetComponent<Transform>(entity);
-    const auto &renderable = ecs.GetComponent<Renderable>(entity);
+  ecs.View<Transform, Renderable>().ForEach(
+      [this](Entity, const Transform &transform, const Renderable &renderable) {
+        std::array<float, kMtxSize> mtx{};
+        bx::mtxSRT(
+            mtx.data(), transform.scale.x, transform.scale.y, transform.scale.z,
+            transform.rotation.x, transform.rotation.y, transform.rotation.z,
+            transform.position.x, transform.position.y, transform.position.z);
 
-    std::array<float, kMtxSize> mtx{};
-    bx::mtxSRT(mtx.data(), transform.scale.x, transform.scale.y,
-               transform.scale.z, transform.rotation.x, transform.rotation.y,
-               transform.rotation.z, transform.position.x, transform.position.y,
-               transform.position.z);
+        const auto program = bgfx::isValid(renderable.program)
+                                 ? renderable.program
+                                 : default_program_;
+        const auto *mesh = assets_->GetMesh(renderable.mesh_handle);
 
-    const auto program = bgfx::isValid(renderable.program) ? renderable.program
-                                                           : default_program_;
-    const auto *mesh = assets_->GetMesh(renderable.mesh_handle);
+        const auto texture = isValid(renderable.texture)
+                                 ? assets_->GetTexture(renderable.texture)
+                                 : default_texture_;
+        const std::array<float, 4> tex_params{1.0F / renderable.texture_scale,
+                                              0.0F, 0.0F, 0.0F};
 
-    const auto texture = isValid(renderable.texture)
-                             ? assets_->GetTexture(renderable.texture)
-                             : default_texture_;
-    const std::array<float, 4> tex_params{1.0F / renderable.texture_scale,
-                                          0.0F, 0.0F, 0.0F};
-
-    // meshSubmit only discards state after its last group, so the color and
-    // texture hold for every group of the mesh.
-    bgfx::setUniform(u_color_, renderable.color.data());
-    bgfx::setUniform(u_tex_params_, tex_params.data());
-    bgfx::setTexture(0, s_albedo_, texture);
-    meshSubmit(mesh, renderable.view, program, mtx.data(), renderable.state);
-  }
+        // meshSubmit only discards state after its last group, so the color and
+        // texture hold for every group of the mesh.
+        bgfx::setUniform(u_color_, renderable.color.data());
+        bgfx::setUniform(u_tex_params_, tex_params.data());
+        bgfx::setTexture(0, s_albedo_, texture);
+        meshSubmit(mesh, renderable.view, program, mtx.data(),
+                   renderable.state);
+      });
 
   bgfx::frame();
 }

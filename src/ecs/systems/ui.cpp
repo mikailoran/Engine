@@ -62,31 +62,29 @@ void UiSystem::Update(Ecs &ecs, const FrameContext &ctx) {
   }
 
   // Sliders of transforms of entities
-  for (const auto &entity : entities) {
-    auto &transform = ecs.GetComponent<Transform>(entity);
-    auto &spin = ecs.GetComponent<Spin>(entity);
-    auto &rigid_body = ecs.GetComponent<RigidBody>(entity);
-    auto &renderable = ecs.GetComponent<Renderable>(entity);
-    ImGui::PushID(static_cast<int>(entity));
+  ecs.View<Configurable, Transform, Spin, RigidBody, Renderable>().ForEach(
+      [&ecs](Entity entity, Configurable &, Transform &transform, Spin &spin,
+             RigidBody &rigid_body, Renderable &renderable) {
+        ImGui::PushID(static_cast<int>(entity));
 
-    ImGui::Text("Entity %zu", entity);
-    if (ImGui::Button("Destroy")) {
-      ecs.DestroyEntity(entity);
-    }
-    ImGui::SliderFloat("x", &transform.position.x, -10.0F, 10.0F);
-    ImGui::SliderFloat("y", &transform.position.y, 0.0F, 10.0F);
-    ImGui::SliderFloat("Scale", &transform.scale.x, 0.1F, 10.0F);
-    if (ImGui::CollapsingHeader("Color Picker")) {
-      ImGui::ColorPicker3(renderable.color.data());
-    }
-    ImGui::Checkbox("Gravity", &rigid_body.has_gravity_);
-    ImGui::SameLine();
-    ImGui::Checkbox("Spin", &spin.should_spin);
-    ImGui::NewLine();
+        ImGui::Text("Entity %zu", entity);
+        if (ImGui::Button("Destroy")) {
+          ecs.DestroyEntity(entity);
+        }
+        ImGui::SliderFloat("x", &transform.position.x, -10.0F, 10.0F);
+        ImGui::SliderFloat("y", &transform.position.y, 0.0F, 10.0F);
+        ImGui::SliderFloat("Scale", &transform.scale.x, 0.1F, 10.0F);
+        if (ImGui::CollapsingHeader("Color Picker")) {
+          ImGui::ColorPicker3(renderable.color.data());
+        }
+        ImGui::Checkbox("Gravity", &rigid_body.has_gravity_);
+        ImGui::SameLine();
+        ImGui::Checkbox("Spin", &spin.should_spin);
+        ImGui::NewLine();
 
-    ImGui::PopID();
-    transform.scale.z = transform.scale.y = transform.scale.x;
-  }
+        ImGui::PopID();
+        transform.scale.z = transform.scale.y = transform.scale.x;
+      });
 
   ImGui::End();
 

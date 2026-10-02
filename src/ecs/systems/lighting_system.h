@@ -10,7 +10,7 @@ struct FrameContext;
 /**
  * @brief Publishes the scene's DirectionalLight as per-frame shader uniforms.
  *
- * Tracks entities carrying a DirectionalLight; at most one is expected. Only
+ * Reads the entity carrying a DirectionalLight; at most one is expected. Only
  * sets uniforms, so it must run before RenderSystem submits the frame.
  */
 class LightingSystem : public System {
