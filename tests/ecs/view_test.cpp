@@ -184,3 +184,20 @@ TEST(ViewDeathTest, AddingAViewedComponentDuringForEachAsserts) {
                "added or removed during ForEach");
 #endif
 }
+
+// Two entities, so the loop reaches the check after the first callback removes.
+TEST(ViewDeathTest, RemovingAViewedComponentDuringForEachAsserts) {
+#ifdef NDEBUG
+  GTEST_SKIP() << "asserts are compiled out";
+#else
+  Ecs ecs;
+  ecs.RegisterComponent<Position>();
+  ecs.AddComponent(ecs.CreateEntity(), Position{});
+  ecs.AddComponent(ecs.CreateEntity(), Position{});
+
+  EXPECT_DEATH(ecs.View<Position>().ForEach([&ecs](Entity entity, Position &) {
+    ecs.RemoveComponent<Position>(entity);
+  }),
+               "added or removed during ForEach");
+#endif
+}
