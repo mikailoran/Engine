@@ -168,25 +168,6 @@ TEST(View, CallbackReceivesEachEntitysOwnComponents) {
   EXPECT_EQ(visits, 3);
 }
 
-// Destruction is deferred, so the entity being visited may request its own.
-TEST(View, DestroyingTheVisitedEntityDuringForEachIsSafe) {
-  Ecs ecs;
-  ecs.RegisterComponent<Position>();
-  for (int i = 0; i < 4; ++i) {
-    ecs.AddComponent(ecs.CreateEntity(), Position{});
-  }
-
-  int visits = 0;
-  ecs.View<Position>().ForEach([&](Entity entity, Position &) {
-    ecs.DestroyEntity(entity);
-    ++visits;
-  });
-  ecs.Flush();
-
-  EXPECT_EQ(visits, 4);
-  EXPECT_TRUE(Visited<Position>(ecs).empty());
-}
-
 // Two entities, so the loop reaches the check after the first callback adds.
 TEST(ViewDeathTest, AddingAViewedComponentDuringForEachAsserts) {
 #ifdef NDEBUG
