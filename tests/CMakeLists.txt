@@ -10,11 +10,9 @@ add_executable(ecs_tests
   ecs/smoke_test.cpp
   ecs/entity_test.cpp
   ecs/component_test.cpp
-  ecs/system_test.cpp
   ecs/view_test.cpp
   ecs/destruction_test.cpp
-  ecs/deferred_destruction_test.cpp
-  ecs/registration_test.cpp)
+  ecs/deferred_destruction_test.cpp)
 
 target_link_libraries(ecs_tests PRIVATE ecs_core GTest::gtest_main)
 

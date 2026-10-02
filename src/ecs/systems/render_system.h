@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../core/system.h"
+#include "../core/types.h"
 
 #include <bgfx/bgfx.h>
 

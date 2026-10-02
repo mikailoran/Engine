@@ -98,56 +98,20 @@ void gameInit(Game &_game) {
   ecs.RegisterComponent<Configurable>();
   ecs.RegisterComponent<DirectionalLight>();
 
-  // --- ECS: systems, signatures, Init -----------------------------------
-  // A system's signature must be set before any entity gains its components:
-  // EntitySignatureChanged is the only thing that fills System::entities, and
-  // it is never replayed for entities that already exist.
+  // --- ECS: systems, Init -----------------------------------------------
   _game.m_camera_control = &ecs.RegisterSystem<CameraControl>();
-  {
-    Signature signature;
-    signature.set(ecs.GetComponentBit<Transform>());
-    signature.set(ecs.GetComponentBit<Camera>());
-    ecs.SetSystemSignature<CameraControl>(signature);
-  }
   _game.m_camera_control->Init();
 
   _game.m_physics = &ecs.RegisterSystem<Physics>();
-  {
-    Signature signature;
-    signature.set(ecs.GetComponentBit<Transform>());
-    signature.set(ecs.GetComponentBit<RigidBody>());
-    signature.set(ecs.GetComponentBit<Spin>());
-    ecs.SetSystemSignature<Physics>(signature);
-  }
   _game.m_physics->Init();
 
   _game.m_lighting = &ecs.RegisterSystem<LightingSystem>();
-  {
-    Signature signature;
-    signature.set(ecs.GetComponentBit<DirectionalLight>());
-    ecs.SetSystemSignature<LightingSystem>(signature);
-  }
   _game.m_lighting->Init();
 
   _game.m_render = &ecs.RegisterSystem<RenderSystem>();
-  {
-    Signature signature;
-    signature.set(ecs.GetComponentBit<Transform>());
-    signature.set(ecs.GetComponentBit<Renderable>());
-    ecs.SetSystemSignature<RenderSystem>(signature);
-  }
   _game.m_render->Init(_game.m_assets);
 
   _game.m_ui = &ecs.RegisterSystem<UiSystem>();
-  {
-    Signature signature;
-    // TODO: Find a way not to explicit all component types.
-    // Would be useful especially with this configurable system.
-    signature.set(ecs.GetComponentBit<Configurable>());
-    signature.set(ecs.GetComponentBit<Transform>());
-    signature.set(ecs.GetComponentBit<Spin>());
-    ecs.SetSystemSignature<UiSystem>(signature);
-  }
   _game.m_ui->Init(_game.m_assets);
 
   // --- Assets and entities ----------------------------------------------

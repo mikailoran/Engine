@@ -1,6 +1,5 @@
 #pragma once
 
-#include <bitset>
 #include <cstddef>
 #include <source_location>
 #include <string_view>
@@ -9,11 +8,6 @@
 using EntityType = std::size_t;
 using Entity = std::size_t;
 constexpr const EntityType kMaxEntities = 5000;
-
-using ComponentBit = std::size_t;
-constexpr const ComponentBit kMaxComponents = 32;
-
-using Signature = std::bitset<kMaxComponents>;
 
 /**
  * @brief Compile-time identity for a type, used to key the manager maps.

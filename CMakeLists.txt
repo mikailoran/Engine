@@ -25,7 +25,6 @@ add_subdirectory(third_party/bgfx.cmake)
 add_library(ecs_core STATIC
   src/ecs/core/ecs.cpp
   src/ecs/core/entity_manager.cpp
-  src/ecs/core/system_manager.cpp
   src/ecs/core/component_array.h
   src/ecs/core/component_manager.h
   src/ecs/core/ecs.h

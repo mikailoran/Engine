@@ -30,26 +30,6 @@ public:
   Entity CreateEntity();
 
   /**
-   * @brief Returns the entity's component signature.
-   *
-   * @param entity Entity to query. Must be < MAX_ENTITIES.
-   * @return Its signature; all-zero for an id that is not alive.
-   */
-  [[nodiscard]] Signature signature(Entity entity) const;
-
-  /**
-   * @brief Overwrites the entity's component signature.
-   *
-   * Bookkeeping only. It is Ecs that keeps this in step with the component
-   * arrays and notifies SystemManager, so callers should go through
-   * Ecs::AddComponent / Ecs::RemoveComponent rather than here.
-   *
-   * @param entity Entity to update. Must be < MAX_ENTITIES.
-   * @param signature New signature.
-   */
-  void SetSignature(Entity entity, Signature signature);
-
-  /**
    * @brief Tests whether an id is currently in use.
    *
    * @param entity Entity to test. Must be < MAX_ENTITIES.
@@ -58,13 +38,13 @@ public:
   [[nodiscard]] bool IsAlive(Entity entity) const;
 
   /**
-   * @brief Clears the entity's signature and returns its id to the free pool.
+   * @brief Returns the entity's id to the free pool.
    *
    * Idempotent: destroying an id that is not alive does nothing, so the id
    * cannot be pushed onto the pool twice and handed out to two live entities.
    *
-   * Destroys no components and untracks no systems. Ecs::Flush is what
-   * sequences those alongside this call.
+   * Destroys no components. Ecs::Flush is what sequences that alongside this
+   * call.
    *
    * @param entity Entity to destroy. Must be < MAX_ENTITIES; need not be
    *               alive.
@@ -73,7 +53,6 @@ public:
 
 private:
   std::queue<Entity> available_entities_;
-  std::array<Signature, kMaxEntities> signatures_{};
   EntityType living_entity_count_{0};
   std::array<bool, kMaxEntities> alive_{};
 };

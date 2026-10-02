@@ -6,17 +6,13 @@
 #include <memory>
 #include <unordered_map>
 
+/** @brief Owns every registered system, one instance per type. */
 class SystemManager {
 public:
   SystemManager() = default;
 
+  /** @brief Creates @p SystemClass. @pre Not registered yet. */
   template <class SystemClass> SystemClass &RegisterSystem();
-
-  template <class SystemClass> void SetSignature(Signature signature);
-
-  void EntityDestroyed(Entity entity);
-
-  void EntitySignatureChanged(Entity entity, Signature entity_signature);
 
 private:
   std::unordered_map<TypeKey, std::unique_ptr<System>> systems_;
@@ -31,25 +27,4 @@ template <class SystemClass> SystemClass &SystemManager::RegisterSystem() {
   auto &ref = *system;
   systems_.emplace(type_key, std::move(system));
   return ref;
-}
-
-/**
- * @brief Sets which components an entity must have for @p SystemClass to track
- *        it.
- *
- * Must be called before any entity gains the components in @p signature:
- * EntitySignatureChanged fills System::entities. Currently, a signature set
- * late leaves the system with an empty entity set and no diagnostic.
- *
- * @tparam SystemClass System to configure; must already be registered.
- * @param signature Component mask the system requires.
- */
-template <class SystemClass>
-void SystemManager::SetSignature(Signature signature) {
-  const auto type_key = TypeKeyOf<SystemClass>();
-
-  assert(systems_.contains(type_key) &&
-         "Setting signature of unregistered system.");
-
-  systems_.at(type_key)->signature = signature;
 }
