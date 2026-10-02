@@ -5,6 +5,7 @@
 #include <gtest/gtest.h>
 
 #include <set>
+#include <vector>
 
 namespace {
 
@@ -113,7 +114,8 @@ TEST(View, VisitsMatchesWhicheverArrayDrives) {
   ecs.AddComponent(lone_velocity, Velocity{});
 
   EXPECT_EQ((Visited<Position, Velocity>(ecs)), expected);
-  EXPECT_EQ((Visited<Velocity, Position>(ecs)), expected) << "order matters";
+  EXPECT_EQ((Visited<Velocity, Position>(ecs)), expected)
+      << "the result depends on the order of the view's types";
 }
 
 // Every array holds every entity, so walking more than the driver repeats them.
@@ -149,16 +151,21 @@ TEST(View, CallbackReferencesMutateStoredComponents) {
 TEST(View, CallbackReceivesEachEntitysOwnComponents) {
   Ecs ecs;
   RegisterBoth(ecs);
+  std::vector<Entity> entities;
   for (int i = 0; i < 4; ++i) {
     const auto entity = ecs.CreateEntity();
     ecs.AddComponent(entity, Position{static_cast<float>(entity)});
+    entities.push_back(entity);
   }
   // Swap-and-pop puts entity ids and dense slots out of step
-  ecs.RemoveComponent<Position>(1);
+  ecs.RemoveComponent<Position>(entities.at(1));
 
-  ecs.View<Position>().ForEach([](Entity entity, Position &position) {
+  int visits = 0;
+  ecs.View<Position>().ForEach([&visits](Entity entity, Position &position) {
     EXPECT_FLOAT_EQ(position.x, static_cast<float>(entity));
+    ++visits;
   });
+  EXPECT_EQ(visits, 3);
 }
 
 // Destruction is deferred, so the entity being visited may request its own.
