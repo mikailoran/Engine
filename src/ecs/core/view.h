@@ -3,8 +3,13 @@
 #include "component_array.h"
 #include "types.h"
 
+#include <algorithm>
+#include <array>
 #include <cassert>
+#include <concepts>
 #include <cstddef>
+#include <functional>
+#include <ranges>
 #include <span>
 #include <tuple>
 
@@ -14,7 +19,7 @@
  * Usage: `ecs.View<Transform, Spin>().Each([](Entity e, Transform &t, Spin &s)
  * { ... });`
  *
- * @tparam Components Component types an entity must all have to be visited.
+ * @tparam Components Distinct component types an entity must all have.
  */
 template <class... Components> class View {
   static_assert(sizeof...(Components) > 0, "A view needs at least one type.");
@@ -29,9 +34,14 @@ public:
    * Visits in the smallest component array's dense order, not entity-id order.
    * @pre @p fn adds or removes none of the viewed components.
    */
-  template <class Fn> auto Each(Fn &&fn) const -> void;
+  template <std::invocable<Entity, Components &...> Fn>
+  auto Each(Fn fn) const -> void;
 
 private:
+  /** @brief Returns the viewed component array for @p Component. */
+  template <class Component>
+  [[nodiscard]] auto ComponentArrayOf() const -> ComponentArray<Component> &;
+
   std::tuple<ComponentArray<Components> *...> component_arrays_;
 };
 
@@ -42,26 +52,16 @@ View<Components...>::View(ComponentArray<Components> &...component_arrays)
     : component_arrays_(&component_arrays...) {}
 
 template <class... Components>
-template <class Fn>
-auto View<Components...>::Each(Fn &&fn) const -> void {
+template <std::invocable<Entity, Components &...> Fn>
+auto View<Components...>::Each(Fn fn) const -> void {
   // Drive from the smallest component array to minimize Has checks
-  std::span<const Entity> driver = std::get<0>(component_arrays_)->Entities();
-  std::apply(
-      [&driver](const auto *...component_arrays) {
-        ((driver = component_arrays->Size() < driver.size()
-                       ? component_arrays->Entities()
-                       : driver),
-         ...);
-      },
-      component_arrays_);
+  const std::array candidates{ComponentArrayOf<Components>().Entities()...};
+  const std::span<const Entity> driver =
+      *std::ranges::min_element(candidates, {}, std::ranges::size);
 
   // Sum of all viewed array sizes, to detect structural changes
   const auto total_size = [this] {
-    return std::apply(
-        [](const auto *...component_arrays) {
-          return (component_arrays->Size() + ...);
-        },
-        component_arrays_);
+    return (ComponentArrayOf<Components>().Size() + ...);
   };
 
   // Only read by the assert, hence unused in Release
@@ -72,19 +72,17 @@ auto View<Components...>::Each(Fn &&fn) const -> void {
            "Viewed components added or removed during Each.");
 
     // Skip entities missing any of the other components
-    const bool matches = std::apply(
-        [entity](const auto *...component_arrays) {
-          return (component_arrays->Has(entity) && ...);
-        },
-        component_arrays_);
-    if (!matches) {
+    if (!(ComponentArrayOf<Components>().Has(entity) && ...)) {
       continue;
     }
     // Hand the entity and one reference per component to fn
-    std::apply(
-        [&fn, entity](auto *...component_arrays) {
-          fn(entity, component_arrays->GetData(entity)...);
-        },
-        component_arrays_);
+    std::invoke(fn, entity, ComponentArrayOf<Components>().GetData(entity)...);
   }
+}
+
+template <class... Components>
+template <class Component>
+auto View<Components...>::ComponentArrayOf() const
+    -> ComponentArray<Component> & {
+  return *std::get<ComponentArray<Component> *>(component_arrays_);
 }
