@@ -33,7 +33,8 @@ add_library(ecs_core STATIC
   src/ecs/core/frame_context.h
   src/ecs/core/system_manager.h
   src/ecs/core/system.h
-  src/ecs/core/types.h)
+  src/ecs/core/types.h
+  src/ecs/core/view.h)
 
 # PUBLIC so both engine and the tests can #include "ecs/core/ecs.h".
 target_include_directories(ecs_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)

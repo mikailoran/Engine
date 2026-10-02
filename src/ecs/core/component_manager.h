@@ -2,6 +2,7 @@
 
 #include "component_array.h"
 #include "types.h"
+#include "view.h"
 #include <cassert>
 #include <memory>
 #include <unordered_map>
@@ -25,6 +26,10 @@ public:
 
   template <class Component>
   [[nodiscard]] bool HasComponent(Entity entity) const;
+
+  /** @brief Views the entities having all @p Components. @pre Registered. */
+  // ::View: inside this class, plain View names this member
+  template <class... Components> auto View() -> ::View<Components...>;
 
   void EntityDestroyed(Entity entity);
 
@@ -100,6 +105,11 @@ const Component &ComponentManager::GetComponent(Entity entity) const {
 template <class Component>
 bool ComponentManager::HasComponent(Entity entity) const {
   return GetComponentArray<Component>().Has(entity);
+}
+
+template <class... Components>
+auto ComponentManager::View() -> ::View<Components...> {
+  return ::View<Components...>(GetComponentArray<Components>()...);
 }
 
 inline void ComponentManager::EntityDestroyed(Entity entity) {

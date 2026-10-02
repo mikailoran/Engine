@@ -4,26 +4,29 @@
 #include "entity_manager.h"
 #include "system_manager.h"
 #include "types.h"
+#include "view.h"
 
 #include <vector>
 
+/** @brief Facade over the entity, component and system managers. */
 class Ecs {
 public:
   Ecs() = default;
 
+  /** @brief Creates an entity with no components. */
   Entity CreateEntity();
 
   /**
    * @brief Requests removal of an entity: its components, its entry in every
    *        system, and its id.
    *
-   * Uses deffered destruction. Flush() is run after system updates to run the
+   * Uses deferred destruction. Flush() is run after system updates to run the
    * destruction process on all entities marked for deletion.
    *
    * Idempotent: queueing an entity twice, or naming one that is already dead,
    * destroys it once and is otherwise a no-op.
    *
-   * @param entity Entity to destroy. Must be < MAX_ENTITIES; the id need not
+   * @param entity Entity to destroy. Must be < kMaxEntities; the id need not
    *               be alive.
    */
   // TODO: rename to RequestDestroyEntity?
@@ -38,34 +41,39 @@ public:
    */
   void Flush();
 
+  /** @brief Registers @p Component. @pre Not registered yet. */
   template <class Component> void RegisterComponent();
 
+  /** @brief Creates and registers a system. @return The Ecs-owned system. */
+  template <class SystemClass> SystemClass &RegisterSystem();
+
+  /** @brief Gives @p entity a @p Component. @pre It does not have one yet. */
   template <class Component>
   void AddComponent(Entity entity, Component component);
 
+  /** @brief Removes @p entity's @p Component. @pre It has one. */
   template <class Component> void RemoveComponent(Entity entity);
 
+  /** @brief Returns @p entity's @p Component. @pre It has one. */
   template <class Component> Component &GetComponent(Entity entity);
 
+  /** @brief Returns @p entity's @p Component. @pre It has one. */
   template <class Component> const Component &GetComponent(Entity entity) const;
 
-  /**
-   * @brief Tests whether @p entity has a component of type @p Component.
-   *
-   * The way to check for absence: GetComponent asserts when the component is
-   * missing, so it cannot answer this question.
-   *
-   * @tparam Component Registered component type to look for.
-   * @param entity Entity to test.
-   * @return True if the entity has that component.
-   */
+  /** @brief Tests whether @p entity has a @p Component. @pre Registered. */
   template <class Component>
   [[nodiscard]] bool HasComponent(Entity entity) const;
 
+  /** @brief Returns @p Component's bit in Signature. @pre Registered. */
   template <class Component> ComponentBit GetComponentBit() const;
 
-  template <class SystemClass> SystemClass &RegisterSystem();
+  /**
+   * @brief Views the entities that have every one of @p Components.
+   * @pre Every type in @p Components is registered.
+   */
+  template <class... Components> auto View() -> ::View<Components...>;
 
+  /** @brief Sets the components @p SystemClass requires to track an entity. */
   template <class SystemClass> void SetSystemSignature(Signature signature);
 
 private:
@@ -79,6 +87,10 @@ private:
 
 template <class Component> void Ecs::RegisterComponent() {
   component_manager_.RegisterComponent<Component>();
+}
+
+template <class SystemClass> SystemClass &Ecs::RegisterSystem() {
+  return system_manager_.RegisterSystem<SystemClass>();
 }
 
 template <class Component>
@@ -124,8 +136,8 @@ template <class Component> ComponentBit Ecs::GetComponentBit() const {
   return component_manager_.GetComponentBit<Component>();
 }
 
-template <class SystemClass> SystemClass &Ecs::RegisterSystem() {
-  return system_manager_.RegisterSystem<SystemClass>();
+template <class... Components> auto Ecs::View() -> ::View<Components...> {
+  return component_manager_.View<Components...>();
 }
 
 template <class SystemClass> void Ecs::SetSystemSignature(Signature signature) {

@@ -7,7 +7,8 @@
 #include <span>
 #include <utility>
 
-/** @brief Type-erased base so ComponentManager can hold every pool together. */
+/** @brief Type-erased base so ComponentManager can hold every component array
+ * together. */
 class ComponentArrayInterface {
 public:
   virtual ~ComponentArrayInterface() = default;
@@ -24,7 +25,8 @@ public:
 template <class Component>
 class ComponentArray : public ComponentArrayInterface {
 public:
-  /** @brief Creates an empty pool with every entity marked absent. */
+  /** @brief Creates an empty component array with every entity marked absent.
+   */
   ComponentArray();
 
   /** @brief Number of entities that have this component. */
@@ -61,11 +63,12 @@ public:
 
 private:
   std::size_t current_size_{0};
-  // Marks an entity with no component in this pool
+  // Marks an entity with no component in this array
   static constexpr auto kInvalidIndex = std::numeric_limits<std::size_t>::max();
-  std::array<std::size_t, kMaxEntities> sparse_;
-  std::array<Entity, kMaxEntities> dense_;
-  std::array<Component, kMaxEntities> components_;
+  // TODO: Look up the cost of default initializing the arrays and alternatives
+  std::array<std::size_t, kMaxEntities> sparse_{};
+  std::array<Entity, kMaxEntities> dense_{};
+  std::array<Component, kMaxEntities> components_{};
 };
 
 // Implementation
