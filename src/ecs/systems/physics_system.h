@@ -1,12 +1,14 @@
 #pragma once
 
-#include "../core/system.h"
-
 class Ecs;
 struct FrameContext;
 
-class Physics : public System {
+class Physics {
 public:
+  Physics() = default;
+  Physics(const Physics &) = delete;
+  Physics &operator=(const Physics &) = delete;
+
   void Init();
 
   /**

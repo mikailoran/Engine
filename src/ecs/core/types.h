@@ -1,6 +1,5 @@
 #pragma once
 
-#include <bitset>
 #include <cstddef>
 #include <source_location>
 #include <string_view>
@@ -8,15 +7,10 @@
 // TODO: Figure out Entity vs EntityType
 using EntityType = std::size_t;
 using Entity = std::size_t;
-constexpr const EntityType MAX_ENTITIES = 5000;
-
-using ComponentBit = std::size_t;
-constexpr const ComponentBit MAX_COMPONENTS = 32;
-
-using Signature = std::bitset<MAX_COMPONENTS>;
+constexpr const EntityType kMaxEntities = 5000;
 
 /**
- * @brief Compile-time identity for a type, used to key the manager maps.
+ * @brief Compile-time identity for a type, used to key the component arrays.
  *
  * The value is the compiler's own signature for this function with @p T
  * substituted in, so it is distinct for every @p T. It points into static

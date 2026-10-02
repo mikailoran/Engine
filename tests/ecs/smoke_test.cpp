@@ -19,7 +19,7 @@ TEST(EcsSmoke, CreatesAnEntityInRange) {
 
   const auto entity = ecs.CreateEntity();
 
-  EXPECT_LT(entity, MAX_ENTITIES);
+  EXPECT_LT(entity, kMaxEntities);
 }
 
 TEST(EcsSmoke, StoresAndReadsBackAComponent) {
@@ -32,11 +32,4 @@ TEST(EcsSmoke, StoresAndReadsBackAComponent) {
   const auto &position = ecs.GetComponent<Position>(entity);
   EXPECT_FLOAT_EQ(position.x, 1.0F);
   EXPECT_FLOAT_EQ(position.y, 2.0F);
-}
-
-TEST(EcsSmoke, AssignsTheFirstComponentBitZero) {
-  Ecs ecs;
-  ecs.RegisterComponent<Position>();
-
-  EXPECT_EQ(ecs.GetComponentBit<Position>(), 0U);
 }

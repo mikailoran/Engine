@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../core/system.h"
+#include "../core/types.h"
 
 #include <bgfx/bgfx.h>
 
@@ -14,8 +14,12 @@ struct FrameContext;
  * Owns view 0 and the resources shared across entities (shader program,
  * uniforms and the fallback white texture)
  */
-class RenderSystem : public System {
+class RenderSystem {
 public:
+  RenderSystem() = default;
+  RenderSystem(const RenderSystem &) = delete;
+  RenderSystem &operator=(const RenderSystem &) = delete;
+
   /**
    * @brief Creates the shared GPU resources.
    *

@@ -6,6 +6,7 @@
 
 #include <array>
 #include <cassert>
+#include <cstddef>
 #include <bx/math.h>
 
 namespace {
@@ -29,11 +30,16 @@ void LightingSystem::Init() {
 }
 
 void LightingSystem::Update(Ecs &ecs, const FrameContext & /*ctx*/) {
-  // Release builds use the lowest entity id if several lights exist.
-  assert(entities.size() <= 1 && "at most one DirectionalLight per scene");
-  const DirectionalLight light =
-      entities.empty() ? DirectionalLight{}
-                       : ecs.GetComponent<DirectionalLight>(*entities.begin());
+  // Release builds use the first light in dense order if several exist
+  DirectionalLight light{};
+  std::size_t light_count = 0;
+  ecs.View<DirectionalLight>().ForEach(
+      [&light, &light_count](Entity, const DirectionalLight &found) {
+        if (light_count++ == 0) {
+          light = found;
+        }
+      });
+  assert(light_count <= 1 && "at most one DirectionalLight per scene");
 
   const auto light_dir = ToVec4(bx::normalize(light.direction));
   const auto light_color = ToVec4(bx::mul(light.color, light.intensity));
