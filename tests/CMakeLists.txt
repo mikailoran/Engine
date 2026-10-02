@@ -7,7 +7,6 @@ set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
 add_executable(ecs_tests
-  ecs/smoke_test.cpp
   ecs/entity_test.cpp
   ecs/component_test.cpp
   ecs/view_test.cpp

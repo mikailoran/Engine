@@ -1,5 +1,5 @@
-// A flushed DestroyEntity must remove the entity's components, drop it from
-// views, and free its id. Deferral itself is covered in
+// A flushed DestroyEntity must remove the entity's components, which is what
+// drops it from views, and free its id. Deferral itself is covered in
 // deferred_destruction_test.cpp; these tests flush immediately and only assert
 // the teardown is complete.
 
@@ -18,14 +18,6 @@ struct Position {
 struct Health {
   int value{0};
 };
-
-/** @brief Collects the entities a Position view visits. */
-std::set<Entity> Visited(Ecs &ecs) {
-  std::set<Entity> visited;
-  ecs.View<Position>().ForEach(
-      [&visited](Entity entity, Position &) { visited.insert(entity); });
-  return visited;
-}
 
 } // namespace
 
@@ -61,21 +53,9 @@ TEST(Destruction, ToleratesComponentsTheEntityNeverHad) {
   EXPECT_FALSE(ecs.HasComponent<Position>(entity));
 }
 
-TEST(Destruction, ViewsNoLongerVisitTheEntity) {
-  Ecs ecs;
-  ecs.RegisterComponent<Position>();
-
-  const auto entity = ecs.CreateEntity();
-  ecs.AddComponent(entity, Position{});
-  ASSERT_TRUE(Visited(ecs).contains(entity));
-
-  ecs.DestroyEntity(entity);
-  ecs.Flush();
-
-  EXPECT_FALSE(Visited(ecs).contains(entity));
-}
-
-TEST(Destruction, LeavesOtherEntitiesUntouched) {
+// RemoveData swaps the last element into each hole, so the survivor's data
+// moves twice here and must still be found.
+TEST(Destruction, LeavesTheRemainingEntitiesIntact) {
   Ecs ecs;
   ecs.RegisterComponent<Position>();
 
@@ -87,9 +67,26 @@ TEST(Destruction, LeavesOtherEntitiesUntouched) {
   ecs.AddComponent(last, Position{3.0F});
 
   ecs.DestroyEntity(middle);
+  ecs.DestroyEntity(first);
   ecs.Flush();
 
-  EXPECT_EQ(Visited(ecs), (std::set<Entity>{first, last}));
-  EXPECT_FLOAT_EQ(ecs.GetComponent<Position>(first).x, 1.0F);
+  EXPECT_FALSE(ecs.HasComponent<Position>(first));
+  EXPECT_FALSE(ecs.HasComponent<Position>(middle));
+  EXPECT_TRUE(ecs.HasComponent<Position>(last));
   EXPECT_FLOAT_EQ(ecs.GetComponent<Position>(last).x, 3.0F);
+}
+
+TEST(Destruction, FreesTheIdForReuse) {
+  Ecs ecs;
+  const auto entity = ecs.CreateEntity();
+
+  ecs.DestroyEntity(entity);
+  ecs.Flush();
+
+  // Every id must be available again, including the freed one
+  std::set<Entity> created;
+  for (EntityType i = 0; i < kMaxEntities; ++i) {
+    created.insert(ecs.CreateEntity());
+  }
+  EXPECT_TRUE(created.contains(entity));
 }

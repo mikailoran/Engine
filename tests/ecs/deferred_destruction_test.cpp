@@ -1,11 +1,13 @@
 // Deferral itself: when a queued destruction takes effect, that repeating or
-// re-issuing a request is harmless, and that a system may destroy the entity it
-// is iterating.
+// re-issuing a request is harmless, and that a ForEach callback may destroy the
+// entity it is visiting.
 
 #include "ecs/core/ecs.h"
 
 #include <gtest/gtest.h>
 
+#include <cstddef>
+#include <initializer_list>
 #include <set>
 #include <vector>
 
@@ -15,32 +17,45 @@ struct Position {
   float x{0.0F};
 };
 
-/// Destroys every entity it visits, from inside the view's ForEach.
-struct SelfReaper {
-  /** @brief Requests destruction of every entity with a Position. */
-  void Update(Ecs &ecs) {
-    ecs.View<Position>().ForEach(
-        [&ecs](Entity entity, Position &) { ecs.DestroyEntity(entity); });
-  }
-};
-
-/// Destroys a fixed entity that is not the one being visited.
-struct NeighbourReaper {
-  Entity victim{0};
-
-  /** @brief Requests destruction of victim once per visited entity. */
-  void Update(Ecs &ecs) {
-    ecs.View<Position>().ForEach(
-        [&ecs, this](Entity, Position &) { ecs.DestroyEntity(victim); });
-  }
-};
-
 /** @brief Collects the entities a Position view visits. */
 std::set<Entity> Visited(Ecs &ecs) {
   std::set<Entity> visited;
   ecs.View<Position>().ForEach(
       [&visited](Entity entity, Position &) { visited.insert(entity); });
   return visited;
+}
+
+/**
+ * @brief Creates entities until every id is in use.
+ * @param alive Entities already alive in @p ecs.
+ * @return The ids handed out; fewer than requested means one repeated.
+ */
+std::set<Entity> FillPool(Ecs &ecs, std::size_t alive) {
+  std::set<Entity> created;
+  for (std::size_t i = alive; i < kMaxEntities; ++i) {
+    created.insert(ecs.CreateEntity());
+  }
+  return created;
+}
+
+/**
+ * @brief Expects the id pool to hold each free id exactly once.
+ *
+ * A duplicate only surfaces once the pool is drained, so this fills it, then
+ * recycles two ids in turn so that freeing the duplicate itself can't hide it.
+ * @param alive Entities already alive in @p ecs.
+ */
+void ExpectPoolHoldsEachFreeIdOnce(Ecs &ecs, std::size_t alive) {
+  const auto created = FillPool(ecs, alive);
+  ASSERT_EQ(created.size(), kMaxEntities - alive)
+      << "an id was handed out twice";
+
+  // With the pool empty, a freed id must be the next one handed out
+  for (const Entity freed : {*created.begin(), *created.rbegin()}) {
+    ecs.DestroyEntity(freed);
+    ecs.Flush();
+    EXPECT_EQ(ecs.CreateEntity(), freed) << "the pool held a stale id";
+  }
 }
 
 } // namespace
@@ -79,26 +94,21 @@ TEST(DeferredDestruction, FlushOnAnEmptyQueueIsANoOp) {
   EXPECT_TRUE(Visited(ecs).contains(entity));
 }
 
-TEST(DeferredDestruction, FlushClearsTheQueue) {
+// A replayed request would destroy whichever entity has since reused the id.
+TEST(DeferredDestruction, FlushDoesNotReplayEarlierRequests) {
   Ecs ecs;
   ecs.RegisterComponent<Position>();
 
   const auto entity = ecs.CreateEntity();
-  ecs.AddComponent(entity, Position{});
-
   ecs.DestroyEntity(entity);
   ecs.Flush();
 
-  // A second flush must not replay the queue and recycle the id again. The
-  // symptom of a replay is a duplicate in the free pool, so drain enough ids
-  // to see one.
+  ASSERT_TRUE(FillPool(ecs, 0).contains(entity)) << "the id was not reused";
+  ecs.AddComponent(entity, Position{});
   ecs.Flush();
 
-  std::set<Entity> seen;
-  for (int i = 0; i < 64; ++i) {
-    EXPECT_TRUE(seen.insert(ecs.CreateEntity()).second)
-        << "an id was handed out twice, so it entered the free pool twice";
-  }
+  EXPECT_TRUE(ecs.HasComponent<Position>(entity))
+      << "the previous frame's request was replayed";
 }
 
 // Two systems can independently decide to kill the same entity within one
@@ -117,12 +127,7 @@ TEST(DeferredDestruction, RepeatedRequestsInOneFrameDestroyOnce) {
   ecs.Flush();
 
   EXPECT_FALSE(Visited(ecs).contains(entity));
-
-  std::set<Entity> seen{entity};
-  for (int i = 0; i < 64; ++i) {
-    EXPECT_TRUE(seen.insert(ecs.CreateEntity()).second)
-        << "the id pool handed out a duplicate id";
-  }
+  ExpectPoolHoldsEachFreeIdOnce(ecs, 0);
 }
 
 TEST(DeferredDestruction, RequestingAnAlreadyDestroyedEntityIsIgnored) {
@@ -138,15 +143,11 @@ TEST(DeferredDestruction, RequestingAnAlreadyDestroyedEntityIsIgnored) {
   ecs.DestroyEntity(entity);
   ecs.Flush();
 
-  std::set<Entity> seen{entity};
-  for (int i = 0; i < 64; ++i) {
-    EXPECT_TRUE(seen.insert(ecs.CreateEntity()).second)
-        << "the id pool handed out a duplicate id";
-  }
+  ExpectPoolHoldsEachFreeIdOnce(ecs, 0);
 }
 
 // An id below kMaxEntities that was never created is simply not alive, so the
-// request is dropped and living_entity_count_ never under-decrements.
+// request is dropped rather than putting that id into the pool a second time.
 TEST(DeferredDestruction, RequestingANeverCreatedEntityIsIgnored) {
   Ecs ecs;
   ecs.RegisterComponent<Position>();
@@ -156,19 +157,14 @@ TEST(DeferredDestruction, RequestingANeverCreatedEntityIsIgnored) {
   ecs.DestroyEntity(entity + 1);
   ecs.Flush();
 
-  std::set<Entity> seen{entity};
-  for (int i = 0; i < 64; ++i) {
-    EXPECT_TRUE(seen.insert(ecs.CreateEntity()).second)
-        << "a never-created id was recycled into the free pool";
-  }
+  ExpectPoolHoldsEachFreeIdOnce(ecs, 1);
 }
 
 // The reason deferral exists: destroying immediately would swap-and-pop the
 // component array ForEach is walking.
-TEST(DeferredDestruction, SystemCanDestroyTheEntityItIsIterating) {
+TEST(DeferredDestruction, ForEachCanDestroyTheVisitedEntity) {
   Ecs ecs;
   ecs.RegisterComponent<Position>();
-  SelfReaper reaper;
 
   std::vector<Entity> entities;
   for (int i = 0; i < 16; ++i) {
@@ -176,7 +172,8 @@ TEST(DeferredDestruction, SystemCanDestroyTheEntityItIsIterating) {
     ecs.AddComponent(entity, Position{});
     entities.push_back(entity);
   }
-  reaper.Update(ecs);
+  ecs.View<Position>().ForEach(
+      [&ecs](Entity entity, Position &) { ecs.DestroyEntity(entity); });
 
   EXPECT_EQ(Visited(ecs).size(), 16U)
       << "the request alone must not tear anything down";
@@ -189,63 +186,21 @@ TEST(DeferredDestruction, SystemCanDestroyTheEntityItIsIterating) {
   }
 }
 
-TEST(DeferredDestruction, SystemCanDestroyADifferentEntityMidIteration) {
+TEST(DeferredDestruction, ForEachCanDestroyADifferentEntity) {
   Ecs ecs;
   ecs.RegisterComponent<Position>();
-  NeighbourReaper reaper;
 
   const auto survivor = ecs.CreateEntity();
   const auto victim = ecs.CreateEntity();
   ecs.AddComponent(survivor, Position{1.0F});
   ecs.AddComponent(victim, Position{2.0F});
-  reaper.victim = victim;
 
-  reaper.Update(ecs);
+  // Requested on every visit, including the survivor's
+  ecs.View<Position>().ForEach(
+      [&ecs, victim](Entity, Position &) { ecs.DestroyEntity(victim); });
   ecs.Flush();
 
   EXPECT_FALSE(Visited(ecs).contains(victim));
   EXPECT_TRUE(Visited(ecs).contains(survivor));
   EXPECT_FLOAT_EQ(ecs.GetComponent<Position>(survivor).x, 1.0F);
-}
-
-// Destroying mid-iteration must not disturb the packed component array for the
-// entities that remain -- RemoveData swaps the last element into the hole.
-TEST(DeferredDestruction, PackedDataSurvivesADeferredDestroy) {
-  Ecs ecs;
-  ecs.RegisterComponent<Position>();
-
-  const auto first = ecs.CreateEntity();
-  const auto middle = ecs.CreateEntity();
-  const auto last = ecs.CreateEntity();
-  ecs.AddComponent(first, Position{1.0F});
-  ecs.AddComponent(middle, Position{2.0F});
-  ecs.AddComponent(last, Position{3.0F});
-
-  ecs.DestroyEntity(middle);
-  ecs.DestroyEntity(first);
-  ecs.Flush();
-
-  EXPECT_EQ(Visited(ecs), std::set<Entity>{last});
-  EXPECT_FLOAT_EQ(ecs.GetComponent<Position>(last).x, 3.0F);
-}
-
-// Requests queued across separate frames must not leak into one another.
-TEST(DeferredDestruction, QueueDoesNotCarryAcrossFlushes) {
-  Ecs ecs;
-  ecs.RegisterComponent<Position>();
-
-  const auto first = ecs.CreateEntity();
-  const auto second = ecs.CreateEntity();
-  ecs.AddComponent(first, Position{});
-  ecs.AddComponent(second, Position{});
-
-  ecs.DestroyEntity(first);
-  ecs.Flush();
-  ASSERT_FALSE(Visited(ecs).contains(first));
-  ASSERT_TRUE(Visited(ecs).contains(second));
-
-  ecs.Flush();
-
-  EXPECT_TRUE(Visited(ecs).contains(second))
-      << "the previous frame's request was replayed";
 }

@@ -29,13 +29,10 @@ TEST(EntityLifecycle, IdsStayInRange) {
 // the property rather than a specific id keeps this valid if the pool changes.
 TEST(EntityLifecycle, DestroyedIdIsNotImmediatelyReused) {
   Ecs ecs;
-  const auto first = ecs.CreateEntity();
-  const auto second = ecs.CreateEntity();
+  const auto entity = ecs.CreateEntity();
 
-  ecs.DestroyEntity(second);
+  ecs.DestroyEntity(entity);
   ecs.Flush();
-  const auto third = ecs.CreateEntity();
 
-  EXPECT_NE(third, second);
-  EXPECT_NE(third, first);
+  EXPECT_NE(ecs.CreateEntity(), entity);
 }

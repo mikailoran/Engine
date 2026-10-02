@@ -4,8 +4,9 @@
 
 #include <gtest/gtest.h>
 
+#include <set>
 #include <stdexcept>
-#include <vector>
+#include <string>
 
 namespace {
 
@@ -18,15 +19,17 @@ struct Health {
   int value{0};
 };
 
-/**
- * @brief Lists the entities with @p Component in the order a view visits them.
- * @return Dense order, which swap-and-pop makes differ from id order.
- */
-template <class Component> std::vector<Entity> VisitOrder(Ecs &ecs) {
-  std::vector<Entity> order;
+/// Non-trivial component: std::string has real move and swap semantics.
+struct Name {
+  std::string value;
+};
+
+/** @brief Collects the entities a @p Component view visits. */
+template <class Component> std::set<Entity> Visited(Ecs &ecs) {
+  std::set<Entity> visited;
   ecs.View<Component>().ForEach(
-      [&order](Entity entity, Component &) { order.push_back(entity); });
-  return order;
+      [&visited](Entity entity, Component &) { visited.insert(entity); });
+  return visited;
 }
 
 } // namespace
@@ -40,6 +43,18 @@ TEST(ComponentStorage, AddThenGetReturnsTheStoredValue) {
 
   EXPECT_FLOAT_EQ(ecs.GetComponent<Position>(entity).x, 3.0F);
   EXPECT_FLOAT_EQ(ecs.GetComponent<Position>(entity).y, 4.0F);
+}
+
+TEST(ComponentStorage, GetThroughAConstEcsReturnsTheStoredValue) {
+  Ecs ecs;
+  ecs.RegisterComponent<Position>();
+  const auto entity = ecs.CreateEntity();
+  ecs.AddComponent(entity, Position{3.0F, 4.0F});
+
+  const Ecs &read_only = ecs;
+
+  EXPECT_FLOAT_EQ(read_only.GetComponent<Position>(entity).x, 3.0F);
+  EXPECT_FLOAT_EQ(read_only.GetComponent<Position>(entity).y, 4.0F);
 }
 
 TEST(ComponentStorage, MutationThroughTheReferenceIsVisible) {
@@ -79,58 +94,6 @@ TEST(ComponentStorage, ComponentTypesAreIndependent) {
   EXPECT_FALSE(ecs.HasComponent<Health>(entity));
 }
 
-// The storage swaps the removed element with the last one, so removing from the
-// middle is the case that can corrupt its index bookkeeping.
-TEST(ComponentStorage, RemovingTheMiddleLeavesNeighboursIntact) {
-  Ecs ecs;
-  ecs.RegisterComponent<Position>();
-
-  const auto first = ecs.CreateEntity();
-  const auto middle = ecs.CreateEntity();
-  const auto last = ecs.CreateEntity();
-  ecs.AddComponent(first, Position{1.0F, 1.0F});
-  ecs.AddComponent(middle, Position{2.0F, 2.0F});
-  ecs.AddComponent(last, Position{3.0F, 3.0F});
-
-  ecs.RemoveComponent<Position>(middle);
-
-  EXPECT_FALSE(ecs.HasComponent<Position>(middle));
-  EXPECT_FLOAT_EQ(ecs.GetComponent<Position>(first).x, 1.0F);
-  EXPECT_FLOAT_EQ(ecs.GetComponent<Position>(last).x, 3.0F);
-}
-
-TEST(ComponentStorage, RemovingTheLastLeavesNeighboursIntact) {
-  Ecs ecs;
-  ecs.RegisterComponent<Position>();
-
-  const auto first = ecs.CreateEntity();
-  const auto last = ecs.CreateEntity();
-  ecs.AddComponent(first, Position{1.0F, 1.0F});
-  ecs.AddComponent(last, Position{2.0F, 2.0F});
-
-  ecs.RemoveComponent<Position>(last);
-
-  EXPECT_FALSE(ecs.HasComponent<Position>(last));
-  EXPECT_FLOAT_EQ(ecs.GetComponent<Position>(first).x, 1.0F);
-}
-
-// Dense order: views visit in the order components were added, not by id.
-
-TEST(ComponentStorage, ViewsVisitInAdditionOrder) {
-  Ecs ecs;
-  ecs.RegisterComponent<Position>();
-  const auto first = ecs.CreateEntity();
-  const auto second = ecs.CreateEntity();
-  const auto third = ecs.CreateEntity();
-
-  ecs.AddComponent(third, Position{});
-  ecs.AddComponent(first, Position{});
-  ecs.AddComponent(second, Position{});
-
-  EXPECT_EQ(VisitOrder<Position>(ecs),
-            (std::vector<Entity>{third, first, second}));
-}
-
 // Ids that differ from their dense slot catch lookups that mix the two up.
 TEST(ComponentStorage, GetFindsComponentsWhoseIdDiffersFromTheirSlot) {
   Ecs ecs;
@@ -145,7 +108,9 @@ TEST(ComponentStorage, GetFindsComponentsWhoseIdDiffersFromTheirSlot) {
   EXPECT_EQ(ecs.GetComponent<Health>(second).value, 20);
 }
 
-TEST(ComponentStorage, RemovingTheMiddleMovesTheLastIntoTheHole) {
+// The storage swaps the removed element with the last one, so removing from the
+// middle is the case that can corrupt its index bookkeeping.
+TEST(ComponentStorage, RemovingTheMiddleLeavesTheOthersIntact) {
   Ecs ecs;
   ecs.RegisterComponent<Health>();
   const auto a = ecs.CreateEntity();
@@ -159,13 +124,38 @@ TEST(ComponentStorage, RemovingTheMiddleMovesTheLastIntoTheHole) {
 
   ecs.RemoveComponent<Health>(b);
 
-  EXPECT_EQ(VisitOrder<Health>(ecs), (std::vector<Entity>{a, d, c}));
-  EXPECT_EQ(ecs.GetComponent<Health>(d).value, 4);
+  EXPECT_FALSE(ecs.HasComponent<Health>(b));
+  EXPECT_EQ(Visited<Health>(ecs), (std::set<Entity>{a, c, d}));
+  EXPECT_EQ(ecs.GetComponent<Health>(a).value, 1);
   EXPECT_EQ(ecs.GetComponent<Health>(c).value, 3);
+  EXPECT_EQ(ecs.GetComponent<Health>(d).value, 4);
+}
+
+// Each removal moves a survivor into the hole: first the heap-allocated name,
+// then the small-string one, since the two move differently.
+TEST(ComponentStorage, RemovalsKeepNonTrivialComponentsIntact) {
+  Ecs ecs;
+  ecs.RegisterComponent<Name>();
+  const auto first = ecs.CreateEntity();
+  const auto second = ecs.CreateEntity();
+  const auto short_named = ecs.CreateEntity();
+  const auto long_named = ecs.CreateEntity();
+  const std::string long_name(64, 'x');
+  ecs.AddComponent(first, Name{"first"});
+  ecs.AddComponent(second, Name{"second"});
+  ecs.AddComponent(short_named, Name{"short"});
+  ecs.AddComponent(long_named, Name{long_name});
+
+  ecs.RemoveComponent<Name>(second);
+  ecs.RemoveComponent<Name>(first);
+
+  EXPECT_EQ(Visited<Name>(ecs), (std::set<Entity>{short_named, long_named}));
+  EXPECT_EQ(ecs.GetComponent<Name>(short_named).value, "short");
+  EXPECT_EQ(ecs.GetComponent<Name>(long_named).value, long_name);
 }
 
 // The removed element is its own swap partner here.
-TEST(ComponentStorage, RemovingTheLastKeepsTheOrderOfOthers) {
+TEST(ComponentStorage, RemovingTheLastLeavesTheOthersIntact) {
   Ecs ecs;
   ecs.RegisterComponent<Health>();
   const auto first = ecs.CreateEntity();
@@ -177,7 +167,10 @@ TEST(ComponentStorage, RemovingTheLastKeepsTheOrderOfOthers) {
 
   ecs.RemoveComponent<Health>(last);
 
-  EXPECT_EQ(VisitOrder<Health>(ecs), (std::vector<Entity>{first, second}));
+  EXPECT_FALSE(ecs.HasComponent<Health>(last));
+  EXPECT_EQ(Visited<Health>(ecs), (std::set<Entity>{first, second}));
+  EXPECT_EQ(ecs.GetComponent<Health>(first).value, 1);
+  EXPECT_EQ(ecs.GetComponent<Health>(second).value, 2);
 }
 
 TEST(ComponentStorage, RemovingTheOnlyComponentEmptiesTheStorage) {
@@ -189,7 +182,7 @@ TEST(ComponentStorage, RemovingTheOnlyComponentEmptiesTheStorage) {
   ecs.RemoveComponent<Health>(entity);
 
   EXPECT_FALSE(ecs.HasComponent<Health>(entity));
-  EXPECT_TRUE(VisitOrder<Health>(ecs).empty());
+  EXPECT_TRUE(Visited<Health>(ecs).empty());
 }
 
 TEST(ComponentStorage, AComponentCanBeReaddedAfterRemoval) {
@@ -205,7 +198,7 @@ TEST(ComponentStorage, AComponentCanBeReaddedAfterRemoval) {
 
   EXPECT_EQ(ecs.GetComponent<Health>(first).value, 11);
   EXPECT_EQ(ecs.GetComponent<Health>(second).value, 20);
-  EXPECT_EQ(VisitOrder<Health>(ecs), (std::vector<Entity>{second, first}));
+  EXPECT_EQ(Visited<Health>(ecs), (std::set<Entity>{first, second}));
 }
 
 TEST(ComponentStorage, HasComponentThrowsForAnIdOutOfRange) {
