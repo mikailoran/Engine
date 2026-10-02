@@ -1,6 +1,6 @@
 // Deferral itself: when a queued destruction takes effect, that repeating or
 // re-issuing a request is harmless, and that a system may destroy the entity it
-// is iterating -- the case that was undefined before the queue existed.
+// is iterating.
 
 #include "ecs/core/ecs.h"
 
@@ -15,48 +15,39 @@ struct Position {
   float x{0.0F};
 };
 
-struct Mover : System {};
-
-/// Destroys every entity it visits, from inside the range-for over entities.
-struct SelfReaper : System {
+/// Destroys every entity it visits, from inside the view's ForEach.
+struct SelfReaper {
+  /** @brief Requests destruction of every entity with a Position. */
   void Update(Ecs &ecs) {
-    for (const auto &entity : entities) {
-      ecs.DestroyEntity(entity);
-    }
+    ecs.View<Position>().ForEach(
+        [&ecs](Entity entity, Position &) { ecs.DestroyEntity(entity); });
   }
 };
 
 /// Destroys a fixed entity that is not the one being visited.
-struct NeighbourReaper : System {
+struct NeighbourReaper {
   Entity victim{0};
 
+  /** @brief Requests destruction of victim once per visited entity. */
   void Update(Ecs &ecs) {
-    for (const auto &_ : entities) {
-      ecs.DestroyEntity(victim);
-    }
+    ecs.View<Position>().ForEach(
+        [&ecs, this](Entity, Position &) { ecs.DestroyEntity(victim); });
   }
 };
 
-/**
- * @brief Registers Position and a system matching on it.
- * @return Reference to the registered system, owned by @p ecs.
- */
-template <class SystemClass> SystemClass &SetUpWorld(Ecs &ecs) {
-  ecs.RegisterComponent<Position>();
-
-  auto &system = ecs.RegisterSystem<SystemClass>();
-  Signature signature;
-  signature.set(ecs.GetComponentBit<Position>());
-  ecs.SetSystemSignature<SystemClass>(signature);
-
-  return system;
+/** @brief Collects the entities a Position view visits. */
+std::set<Entity> Visited(Ecs &ecs) {
+  std::set<Entity> visited;
+  ecs.View<Position>().ForEach(
+      [&visited](Entity entity, Position &) { visited.insert(entity); });
+  return visited;
 }
 
 } // namespace
 
 TEST(DeferredDestruction, EntitySurvivesUntilFlush) {
   Ecs ecs;
-  auto &mover = SetUpWorld<Mover>(ecs);
+  ecs.RegisterComponent<Position>();
 
   const auto entity = ecs.CreateEntity();
   ecs.AddComponent(entity, Position{1.0F});
@@ -65,18 +56,18 @@ TEST(DeferredDestruction, EntitySurvivesUntilFlush) {
 
   EXPECT_TRUE(ecs.HasComponent<Position>(entity))
       << "the request alone must not tear anything down";
-  EXPECT_TRUE(mover.entities.contains(entity));
+  EXPECT_TRUE(Visited(ecs).contains(entity));
   EXPECT_FLOAT_EQ(ecs.GetComponent<Position>(entity).x, 1.0F);
 
   ecs.Flush();
 
   EXPECT_FALSE(ecs.HasComponent<Position>(entity));
-  EXPECT_FALSE(mover.entities.contains(entity));
+  EXPECT_FALSE(Visited(ecs).contains(entity));
 }
 
 TEST(DeferredDestruction, FlushOnAnEmptyQueueIsANoOp) {
   Ecs ecs;
-  auto &mover = SetUpWorld<Mover>(ecs);
+  ecs.RegisterComponent<Position>();
 
   const auto entity = ecs.CreateEntity();
   ecs.AddComponent(entity, Position{});
@@ -85,12 +76,12 @@ TEST(DeferredDestruction, FlushOnAnEmptyQueueIsANoOp) {
   ecs.Flush();
 
   EXPECT_TRUE(ecs.HasComponent<Position>(entity));
-  EXPECT_TRUE(mover.entities.contains(entity));
+  EXPECT_TRUE(Visited(ecs).contains(entity));
 }
 
 TEST(DeferredDestruction, FlushClearsTheQueue) {
   Ecs ecs;
-  SetUpWorld<Mover>(ecs);
+  ecs.RegisterComponent<Position>();
 
   const auto entity = ecs.CreateEntity();
   ecs.AddComponent(entity, Position{});
@@ -115,7 +106,7 @@ TEST(DeferredDestruction, FlushClearsTheQueue) {
 // than pushing the id onto the free pool twice.
 TEST(DeferredDestruction, RepeatedRequestsInOneFrameDestroyOnce) {
   Ecs ecs;
-  auto &mover = SetUpWorld<Mover>(ecs);
+  ecs.RegisterComponent<Position>();
 
   const auto entity = ecs.CreateEntity();
   ecs.AddComponent(entity, Position{});
@@ -125,7 +116,7 @@ TEST(DeferredDestruction, RepeatedRequestsInOneFrameDestroyOnce) {
   ecs.DestroyEntity(entity);
   ecs.Flush();
 
-  EXPECT_FALSE(mover.entities.contains(entity));
+  EXPECT_FALSE(Visited(ecs).contains(entity));
 
   std::set<Entity> seen{entity};
   for (int i = 0; i < 64; ++i) {
@@ -136,7 +127,7 @@ TEST(DeferredDestruction, RepeatedRequestsInOneFrameDestroyOnce) {
 
 TEST(DeferredDestruction, RequestingAnAlreadyDestroyedEntityIsIgnored) {
   Ecs ecs;
-  SetUpWorld<Mover>(ecs);
+  ecs.RegisterComponent<Position>();
 
   const auto entity = ecs.CreateEntity();
   ecs.AddComponent(entity, Position{});
@@ -154,11 +145,11 @@ TEST(DeferredDestruction, RequestingAnAlreadyDestroyedEntityIsIgnored) {
   }
 }
 
-// An id below MAX_ENTITIES that was never created is simply not alive, so the
+// An id below kMaxEntities that was never created is simply not alive, so the
 // request is dropped and living_entity_count_ never under-decrements.
 TEST(DeferredDestruction, RequestingANeverCreatedEntityIsIgnored) {
   Ecs ecs;
-  SetUpWorld<Mover>(ecs);
+  ecs.RegisterComponent<Position>();
 
   const auto entity = ecs.CreateEntity();
 
@@ -172,11 +163,12 @@ TEST(DeferredDestruction, RequestingANeverCreatedEntityIsIgnored) {
   }
 }
 
-// The reason deferral exists. Destroying immediately from here erased from the
-// std::set the range-for was holding, and the next ++ was undefined.
+// The reason deferral exists: destroying immediately would swap-and-pop the
+// component array ForEach is walking.
 TEST(DeferredDestruction, SystemCanDestroyTheEntityItIsIterating) {
   Ecs ecs;
-  auto &reaper = SetUpWorld<SelfReaper>(ecs);
+  ecs.RegisterComponent<Position>();
+  SelfReaper reaper;
 
   std::vector<Entity> entities;
   for (int i = 0; i < 16; ++i) {
@@ -184,16 +176,14 @@ TEST(DeferredDestruction, SystemCanDestroyTheEntityItIsIterating) {
     ecs.AddComponent(entity, Position{});
     entities.push_back(entity);
   }
-  ASSERT_EQ(reaper.entities.size(), 16U);
-
   reaper.Update(ecs);
 
-  EXPECT_EQ(reaper.entities.size(), 16U)
-      << "the set must not be mutated while it is being walked";
+  EXPECT_EQ(Visited(ecs).size(), 16U)
+      << "the request alone must not tear anything down";
 
   ecs.Flush();
 
-  EXPECT_TRUE(reaper.entities.empty());
+  EXPECT_TRUE(Visited(ecs).empty());
   for (const auto &entity : entities) {
     EXPECT_FALSE(ecs.HasComponent<Position>(entity));
   }
@@ -201,7 +191,8 @@ TEST(DeferredDestruction, SystemCanDestroyTheEntityItIsIterating) {
 
 TEST(DeferredDestruction, SystemCanDestroyADifferentEntityMidIteration) {
   Ecs ecs;
-  auto &reaper = SetUpWorld<NeighbourReaper>(ecs);
+  ecs.RegisterComponent<Position>();
+  NeighbourReaper reaper;
 
   const auto survivor = ecs.CreateEntity();
   const auto victim = ecs.CreateEntity();
@@ -212,8 +203,8 @@ TEST(DeferredDestruction, SystemCanDestroyADifferentEntityMidIteration) {
   reaper.Update(ecs);
   ecs.Flush();
 
-  EXPECT_FALSE(reaper.entities.contains(victim));
-  EXPECT_TRUE(reaper.entities.contains(survivor));
+  EXPECT_FALSE(Visited(ecs).contains(victim));
+  EXPECT_TRUE(Visited(ecs).contains(survivor));
   EXPECT_FLOAT_EQ(ecs.GetComponent<Position>(survivor).x, 1.0F);
 }
 
@@ -221,7 +212,7 @@ TEST(DeferredDestruction, SystemCanDestroyADifferentEntityMidIteration) {
 // entities that remain -- RemoveData swaps the last element into the hole.
 TEST(DeferredDestruction, PackedDataSurvivesADeferredDestroy) {
   Ecs ecs;
-  auto &mover = SetUpWorld<Mover>(ecs);
+  ecs.RegisterComponent<Position>();
 
   const auto first = ecs.CreateEntity();
   const auto middle = ecs.CreateEntity();
@@ -234,15 +225,14 @@ TEST(DeferredDestruction, PackedDataSurvivesADeferredDestroy) {
   ecs.DestroyEntity(first);
   ecs.Flush();
 
-  EXPECT_EQ(mover.entities.size(), 1U);
-  EXPECT_TRUE(mover.entities.contains(last));
+  EXPECT_EQ(Visited(ecs), std::set<Entity>{last});
   EXPECT_FLOAT_EQ(ecs.GetComponent<Position>(last).x, 3.0F);
 }
 
 // Requests queued across separate frames must not leak into one another.
 TEST(DeferredDestruction, QueueDoesNotCarryAcrossFlushes) {
   Ecs ecs;
-  auto &mover = SetUpWorld<Mover>(ecs);
+  ecs.RegisterComponent<Position>();
 
   const auto first = ecs.CreateEntity();
   const auto second = ecs.CreateEntity();
@@ -251,11 +241,11 @@ TEST(DeferredDestruction, QueueDoesNotCarryAcrossFlushes) {
 
   ecs.DestroyEntity(first);
   ecs.Flush();
-  ASSERT_FALSE(mover.entities.contains(first));
-  ASSERT_TRUE(mover.entities.contains(second));
+  ASSERT_FALSE(Visited(ecs).contains(first));
+  ASSERT_TRUE(Visited(ecs).contains(second));
 
   ecs.Flush();
 
-  EXPECT_TRUE(mover.entities.contains(second))
+  EXPECT_TRUE(Visited(ecs).contains(second))
       << "the previous frame's request was replayed";
 }

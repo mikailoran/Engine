@@ -33,10 +33,3 @@ TEST(EcsSmoke, StoresAndReadsBackAComponent) {
   EXPECT_FLOAT_EQ(position.x, 1.0F);
   EXPECT_FLOAT_EQ(position.y, 2.0F);
 }
-
-TEST(EcsSmoke, AssignsTheFirstComponentBitZero) {
-  Ecs ecs;
-  ecs.RegisterComponent<Position>();
-
-  EXPECT_EQ(ecs.GetComponentBit<Position>(), 0U);
-}
