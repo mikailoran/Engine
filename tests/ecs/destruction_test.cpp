@@ -53,6 +53,29 @@ TEST(Destruction, ToleratesComponentsTheEntityNeverHad) {
   EXPECT_FALSE(ecs.HasComponent<Position>(entity));
 }
 
+// RemoveData swaps the last element into each hole, so the survivor's data
+// moves twice here and must still be found.
+TEST(Destruction, LeavesTheRemainingEntitiesIntact) {
+  Ecs ecs;
+  ecs.RegisterComponent<Position>();
+
+  const auto first = ecs.CreateEntity();
+  const auto middle = ecs.CreateEntity();
+  const auto last = ecs.CreateEntity();
+  ecs.AddComponent(first, Position{1.0F});
+  ecs.AddComponent(middle, Position{2.0F});
+  ecs.AddComponent(last, Position{3.0F});
+
+  ecs.DestroyEntity(middle);
+  ecs.DestroyEntity(first);
+  ecs.Flush();
+
+  EXPECT_FALSE(ecs.HasComponent<Position>(first));
+  EXPECT_FALSE(ecs.HasComponent<Position>(middle));
+  EXPECT_TRUE(ecs.HasComponent<Position>(last));
+  EXPECT_FLOAT_EQ(ecs.GetComponent<Position>(last).x, 3.0F);
+}
+
 TEST(Destruction, FreesTheIdForReuse) {
   Ecs ecs;
   const auto entity = ecs.CreateEntity();
