@@ -2,7 +2,6 @@
 
 #include "component_manager.h"
 #include "entity_manager.h"
-#include "system_manager.h"
 #include "types.h"
 #include "view.h"
 
@@ -43,9 +42,6 @@ public:
   /** @brief Registers @p Component. @pre Not registered yet. */
   template <class Component> void RegisterComponent();
 
-  /** @brief Creates and registers a system. @return The Ecs-owned system. */
-  template <class SystemClass> SystemClass &RegisterSystem();
-
   /** @brief Gives @p entity a @p Component. @pre It does not have one yet. */
   template <class Component>
   void AddComponent(Entity entity, Component component);
@@ -73,7 +69,6 @@ public:
 private:
   EntityManager entity_manager_;
   ComponentManager component_manager_;
-  SystemManager system_manager_;
   std::vector<Entity> pending_destroy_;
 };
 
@@ -81,10 +76,6 @@ private:
 
 template <class Component> void Ecs::RegisterComponent() {
   component_manager_.RegisterComponent<Component>();
-}
-
-template <class SystemClass> SystemClass &Ecs::RegisterSystem() {
-  return system_manager_.RegisterSystem<SystemClass>();
 }
 
 template <class Component>

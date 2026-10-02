@@ -30,8 +30,6 @@ add_library(ecs_core STATIC
   src/ecs/core/ecs.h
   src/ecs/core/entity_manager.h
   src/ecs/core/frame_context.h
-  src/ecs/core/system_manager.h
-  src/ecs/core/system.h
   src/ecs/core/types.h
   src/ecs/core/view.h)
 

@@ -1,7 +1,5 @@
 #pragma once
 
-#include "../core/system.h"
-
 #include <bgfx/bgfx.h>
 
 class Ecs;
@@ -13,8 +11,12 @@ struct FrameContext;
  * Reads the entity carrying a DirectionalLight; at most one is expected. Only
  * sets uniforms, so it must run before RenderSystem submits the frame.
  */
-class LightingSystem : public System {
+class LightingSystem {
 public:
+  LightingSystem() = default;
+  LightingSystem(const LightingSystem &) = delete;
+  LightingSystem &operator=(const LightingSystem &) = delete;
+
   /** @brief Creates the light uniforms. Requires bgfx::init to have completed. */
   void Init();
 

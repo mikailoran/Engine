@@ -10,7 +10,7 @@ using Entity = std::size_t;
 constexpr const EntityType kMaxEntities = 5000;
 
 /**
- * @brief Compile-time identity for a type, used to key the manager maps.
+ * @brief Compile-time identity for a type, used to key the component arrays.
  *
  * The value is the compiler's own signature for this function with @p T
  * substituted in, so it is distinct for every @p T. It points into static

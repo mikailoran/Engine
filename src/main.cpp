@@ -41,12 +41,11 @@ struct Game {
   Ecs m_ecs;
   AssetRegistry m_assets;
 
-  // Non-owning; SystemManager owns the systems themselves.
-  CameraControl *m_camera_control = nullptr;
-  Physics *m_physics = nullptr;
-  LightingSystem *m_lighting = nullptr;
-  RenderSystem *m_render = nullptr;
-  UiSystem *m_ui = nullptr;
+  CameraControl m_camera_control;
+  Physics m_physics;
+  LightingSystem m_lighting;
+  RenderSystem m_render;
+  UiSystem m_ui;
 
   uint32_t m_width = 1280;
   uint32_t m_height = 720;
@@ -98,27 +97,18 @@ void gameInit(Game &_game) {
   ecs.RegisterComponent<Configurable>();
   ecs.RegisterComponent<DirectionalLight>();
 
-  // --- ECS: systems, Init -----------------------------------------------
-  _game.m_camera_control = &ecs.RegisterSystem<CameraControl>();
-  _game.m_camera_control->Init();
-
-  _game.m_physics = &ecs.RegisterSystem<Physics>();
-  _game.m_physics->Init();
-
-  _game.m_lighting = &ecs.RegisterSystem<LightingSystem>();
-  _game.m_lighting->Init();
-
-  _game.m_render = &ecs.RegisterSystem<RenderSystem>();
-  _game.m_render->Init(_game.m_assets);
-
-  _game.m_ui = &ecs.RegisterSystem<UiSystem>();
-  _game.m_ui->Init(_game.m_assets);
+  // --- Systems: Init ----------------------------------------------------
+  _game.m_camera_control.Init();
+  _game.m_physics.Init();
+  _game.m_lighting.Init();
+  _game.m_render.Init(_game.m_assets);
+  _game.m_ui.Init(_game.m_assets);
 
   // --- Assets and entities ----------------------------------------------
   const auto camera_entity = ecs.CreateEntity();
   ecs.AddComponent(camera_entity, Transform{.position = {0.0F, 1.0F, -5.0F}});
   ecs.AddComponent(camera_entity, Camera{});
-  _game.m_render->SetCamera(camera_entity);
+  _game.m_render.SetCamera(camera_entity);
 
   // Load the debug scene's decor as ordinary entities
   SceneLoader scene_loader;
@@ -132,10 +122,10 @@ void gameInit(Game &_game) {
  * @return Process exit code.
  */
 auto gameShutdown(Game &_game) -> int {
-  _game.m_ui->Shutdown();
-  _game.m_render->Shutdown();
-  _game.m_lighting->Shutdown();
-  _game.m_camera_control->Shutdown();
+  _game.m_ui.Shutdown();
+  _game.m_render.Shutdown();
+  _game.m_lighting.Shutdown();
+  _game.m_camera_control.Shutdown();
   _game.m_assets.UnloadAll();
   _game.m_ecs.Flush();
   bgfx::shutdown();
@@ -182,12 +172,12 @@ auto _main_(int /*_argc*/, char ** /*_argv*/) -> int {
     };
 
     // The camera pose must settle before the renderer reads it.
-    game.m_camera_control->Update(game.m_ecs, ctx);
-    game.m_physics->Update(game.m_ecs, ctx);
+    game.m_camera_control.Update(game.m_ecs, ctx);
+    game.m_physics.Update(game.m_ecs, ctx);
     // Frame uniforms must be set before the renderer submits.
-    game.m_lighting->Update(game.m_ecs, ctx);
-    game.m_render->Update(game.m_ecs, ctx);
-    game.m_ui->Update(game.m_ecs, ctx);
+    game.m_lighting.Update(game.m_ecs, ctx);
+    game.m_render.Update(game.m_ecs, ctx);
+    game.m_ui.Update(game.m_ecs, ctx);
 
     game.m_ecs.Flush();
   }

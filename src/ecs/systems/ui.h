@@ -1,14 +1,17 @@
 #pragma once
 
-#include "../core/system.h"
 #include "../core/types.h"
 
 class Ecs;
 class AssetRegistry;
 struct FrameContext;
 
-class UiSystem : public System {
+class UiSystem {
 public:
+  UiSystem() = default;
+  UiSystem(const UiSystem &) = delete;
+  UiSystem &operator=(const UiSystem &) = delete;
+
   void Init(AssetRegistry &asset_registry);
 
   Entity SpawnEntity(Ecs &ecs);

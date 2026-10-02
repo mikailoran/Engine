@@ -1,7 +1,5 @@
 #pragma once
 
-#include "../core/system.h"
-
 class Ecs;
 struct FrameContext;
 
@@ -11,8 +9,12 @@ struct FrameContext;
  * Currently using examples-common free-look camera. The system copies its
  * resulting pose into the components.
  */
-class CameraControl : public System {
+class CameraControl {
 public:
+  CameraControl() = default;
+  CameraControl(const CameraControl &) = delete;
+  CameraControl &operator=(const CameraControl &) = delete;
+
   /**
    * @brief Creates the underlying camera and sets its initial pose.
    */
