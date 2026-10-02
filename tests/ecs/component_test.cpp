@@ -6,6 +6,7 @@
 
 #include <set>
 #include <stdexcept>
+#include <string>
 
 namespace {
 
@@ -16,6 +17,11 @@ struct Position {
 
 struct Health {
   int value{0};
+};
+
+/// Non-trivial component: std::string has real move and swap semantics.
+struct Name {
+  std::string value;
 };
 
 /** @brief Collects the entities a @p Component view visits. */
@@ -123,6 +129,29 @@ TEST(ComponentStorage, RemovingTheMiddleLeavesTheOthersIntact) {
   EXPECT_EQ(ecs.GetComponent<Health>(a).value, 1);
   EXPECT_EQ(ecs.GetComponent<Health>(c).value, 3);
   EXPECT_EQ(ecs.GetComponent<Health>(d).value, 4);
+}
+
+// Each removal moves a survivor into the hole: first the heap-allocated name,
+// then the small-string one, since the two move differently.
+TEST(ComponentStorage, RemovalsKeepNonTrivialComponentsIntact) {
+  Ecs ecs;
+  ecs.RegisterComponent<Name>();
+  const auto first = ecs.CreateEntity();
+  const auto second = ecs.CreateEntity();
+  const auto short_named = ecs.CreateEntity();
+  const auto long_named = ecs.CreateEntity();
+  const std::string long_name(64, 'x');
+  ecs.AddComponent(first, Name{"first"});
+  ecs.AddComponent(second, Name{"second"});
+  ecs.AddComponent(short_named, Name{"short"});
+  ecs.AddComponent(long_named, Name{long_name});
+
+  ecs.RemoveComponent<Name>(second);
+  ecs.RemoveComponent<Name>(first);
+
+  EXPECT_EQ(Visited<Name>(ecs), (std::set<Entity>{short_named, long_named}));
+  EXPECT_EQ(ecs.GetComponent<Name>(short_named).value, "short");
+  EXPECT_EQ(ecs.GetComponent<Name>(long_named).value, long_name);
 }
 
 // The removed element is its own swap partner here.
