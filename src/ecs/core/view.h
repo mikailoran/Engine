@@ -13,6 +13,14 @@
 #include <span>
 #include <tuple>
 
+// TODO: Make View become a range. Currently, we can only pass functions to
+// views (internal iteration). Making View returning ranges would allow external
+// iteration and early exits in systems where iterating over all entities is not
+// necessary (LightSystem).
+
+// TODO: Add const overload to views. Useful for const Ecs & and read only
+// systems. Warning: TypeKeyOf<Transform>() != TypeKeyOf<const Transform>()
+
 /**
  * @brief Non-owning view over the entities that have every listed component.
  *
@@ -35,7 +43,7 @@ public:
    * @pre @p fn adds or removes none of the viewed components.
    */
   template <std::invocable<Entity, Components &...> Fn>
-  auto Each(Fn fn) const -> void;
+  auto ForEach(Fn fn) const -> void;
 
 private:
   /** @brief Returns the viewed component array for @p Component. */
@@ -53,7 +61,7 @@ View<Components...>::View(ComponentArray<Components> &...component_arrays)
 
 template <class... Components>
 template <std::invocable<Entity, Components &...> Fn>
-auto View<Components...>::Each(Fn fn) const -> void {
+auto View<Components...>::ForEach(Fn fn) const -> void {
   // Drive from the smallest component array to minimize Has checks
   const std::array candidates{ComponentArrayOf<Components>().Entities()...};
   const std::span<const Entity> driver =
@@ -69,7 +77,7 @@ auto View<Components...>::Each(Fn fn) const -> void {
 
   for (const Entity entity : driver) {
     assert(total_size() == total_size_before &&
-           "Viewed components added or removed during Each.");
+           "Viewed components added or removed during ForEach.");
 
     // Skip entities missing any of the other components
     if (!(ComponentArrayOf<Components>().Has(entity) && ...)) {
