@@ -42,6 +42,18 @@ TEST(ComponentStorage, AddThenGetReturnsTheStoredValue) {
   EXPECT_FLOAT_EQ(ecs.GetComponent<Position>(entity).y, 4.0F);
 }
 
+TEST(ComponentStorage, GetThroughAConstEcsReturnsTheStoredValue) {
+  Ecs ecs;
+  ecs.RegisterComponent<Position>();
+  const auto entity = ecs.CreateEntity();
+  ecs.AddComponent(entity, Position{3.0F, 4.0F});
+
+  const Ecs &read_only = ecs;
+
+  EXPECT_FLOAT_EQ(read_only.GetComponent<Position>(entity).x, 3.0F);
+  EXPECT_FLOAT_EQ(read_only.GetComponent<Position>(entity).y, 4.0F);
+}
+
 TEST(ComponentStorage, MutationThroughTheReferenceIsVisible) {
   Ecs ecs;
   ecs.RegisterComponent<Position>();

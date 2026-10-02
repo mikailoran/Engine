@@ -61,6 +61,21 @@ TEST(Destruction, ToleratesComponentsTheEntityNeverHad) {
   EXPECT_FALSE(ecs.HasComponent<Position>(entity));
 }
 
+TEST(Destruction, FreesTheIdForReuse) {
+  Ecs ecs;
+  const auto entity = ecs.CreateEntity();
+
+  ecs.DestroyEntity(entity);
+  ecs.Flush();
+
+  // Every id must be available again, including the freed one
+  std::set<Entity> created;
+  for (EntityType i = 0; i < kMaxEntities; ++i) {
+    created.insert(ecs.CreateEntity());
+  }
+  EXPECT_TRUE(created.contains(entity));
+}
+
 TEST(Destruction, ViewsNoLongerVisitTheEntity) {
   Ecs ecs;
   ecs.RegisterComponent<Position>();
