@@ -41,5 +41,5 @@ auto ReadFloats(const nlohmann::json& data) -> std::array<float, N> {
 /** @brief Reads a JSON array of 3 numbers into a bx::Vec3. */
 inline auto ReadVec3(const nlohmann::json& data) -> bx::Vec3 {
   const auto values = ReadFloats<3>(data);
-  return {values[0], values[1], values[2]};
+  return {values.at(0), values.at(1), values.at(2)};
 }
