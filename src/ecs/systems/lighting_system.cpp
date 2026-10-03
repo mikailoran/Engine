@@ -1,40 +1,41 @@
 #include "lighting_system.h"
 
-#include "../components/directional_light.h"
-#include "../core/ecs.h"
-#include "../core/frame_context.h"
+#include <bx/math.h>
 
 #include <array>
 #include <cassert>
 #include <cstddef>
-#include <bx/math.h>
+
+#include "../components/directional_light.h"
+#include "../core/ecs.h"
+#include "../core/frame_context.h"
 
 namespace {
 
 /** @brief Packs a Vec3 into a vec4 uniform value with w = 0. */
-auto ToVec4(const bx::Vec3 &v) -> std::array<float, 4> {
+auto ToVec4(const bx::Vec3& v) -> std::array<float, 4> {
   return {v.x, v.y, v.z, 0.0F};
 }
 
-} // namespace
+}  // namespace
 
 void LightingSystem::Init() {
   u_light_dir_ = bgfx::createUniform("u_lightDir", bgfx::UniformFreq::Frame,
                                      bgfx::UniformType::Vec4);
-  u_light_color_ = bgfx::createUniform(
-      "u_lightColor", bgfx::UniformFreq::Frame, bgfx::UniformType::Vec4);
+  u_light_color_ = bgfx::createUniform("u_lightColor", bgfx::UniformFreq::Frame,
+                                       bgfx::UniformType::Vec4);
   u_sky_color_ = bgfx::createUniform("u_skyColor", bgfx::UniformFreq::Frame,
                                      bgfx::UniformType::Vec4);
   u_ground_color_ = bgfx::createUniform(
       "u_groundColor", bgfx::UniformFreq::Frame, bgfx::UniformType::Vec4);
 }
 
-void LightingSystem::Update(Ecs &ecs, const FrameContext & /*ctx*/) {
+void LightingSystem::Update(Ecs& ecs, const FrameContext& /*ctx*/) {
   // Release builds use the first light in dense order if several exist
   DirectionalLight light{};
   std::size_t light_count = 0;
   ecs.View<DirectionalLight>().ForEach(
-      [&light, &light_count](Entity, const DirectionalLight &found) {
+      [&light, &light_count](Entity, const DirectionalLight& found) {
         if (light_count++ == 0) {
           light = found;
         }

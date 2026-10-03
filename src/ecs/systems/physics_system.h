@@ -4,10 +4,10 @@ class Ecs;
 struct FrameContext;
 
 class Physics {
-public:
+ public:
   Physics() = default;
-  Physics(const Physics &) = delete;
-  Physics &operator=(const Physics &) = delete;
+  Physics(const Physics&) = delete;
+  Physics& operator=(const Physics&) = delete;
 
   void Init();
 
@@ -21,16 +21,16 @@ public:
    * @param ctx Per-frame inputs; only its variable @c dt is consumed.
    */
   // TODO: Switch from passing ECS directly, to Views (apparently a lot of work)
-  void Update(Ecs &ecs, const FrameContext &ctx);
+  void Update(Ecs& ecs, const FrameContext& ctx);
 
-private:
+ private:
   /**
    * @brief Simulates exactly one step.
    *
    * @param ecs World to read and write components through.
    * @param fixed_dt Seconds to advance by; always @ref kFixedDt.
    */
-  void Step(Ecs &ecs, float fixed_dt);
+  void Step(Ecs& ecs, float fixed_dt);
 
   /// Simulation step length, in seconds (60 Hz).
   static constexpr float kFixedDt = 1.0F / 60.0F;

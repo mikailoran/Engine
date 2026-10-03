@@ -1,12 +1,13 @@
 #pragma once
 
-#include "mesh_handle.h"
-#include "texture_handle.h"
-
 #include <bgfx/bgfx.h>
+
 #include <filesystem>
 #include <unordered_map>
 #include <vector>
+
+#include "mesh_handle.h"
+#include "texture_handle.h"
 
 struct Mesh;
 
@@ -20,11 +21,11 @@ struct Mesh;
  * Assets live from their first load until UnloadAll; there is no refcounting.
  */
 class AssetRegistry {
-public:
+ public:
   AssetRegistry() noexcept = default;
   // Delete copy&assignment: registry owns Mesh pointers
-  AssetRegistry(const AssetRegistry &) = delete;
-  AssetRegistry &operator=(const AssetRegistry &) = delete;
+  AssetRegistry(const AssetRegistry&) = delete;
+  AssetRegistry& operator=(const AssetRegistry&) = delete;
 
   /**
    * @brief Loads a mesh, or returns the handle of one already loaded.
@@ -37,7 +38,7 @@ public:
    * @param path Compiled mesh file, e.g. "assets/meshes/compiled/bunny.bin".
    * @return Handle to the mesh.
    */
-  MeshHandle LoadMesh(const std::filesystem::path &path);
+  MeshHandle LoadMesh(const std::filesystem::path& path);
 
   /**
    * @brief Resolves a handle to the mesh it refers to.
@@ -45,7 +46,7 @@ public:
    * @param handle Handle from LoadMesh; must be valid and not yet unloaded.
    * @return Mesh owned by this registry, valid until UnloadAll.
    */
-  const Mesh *GetMesh(MeshHandle handle) const;
+  const Mesh* GetMesh(MeshHandle handle) const;
 
   /**
    * @brief Loads a texture, or returns the handle of one already loaded.
@@ -56,7 +57,7 @@ public:
    * @param path Compiled texture file, e.g. "assets/textures/debug_grid.dds".
    * @return Handle to the texture.
    */
-  TextureHandle LoadTexture(const std::filesystem::path &path);
+  TextureHandle LoadTexture(const std::filesystem::path& path);
 
   /**
    * @brief Resolves a handle to the bgfx texture it refers to.
@@ -74,10 +75,10 @@ public:
    */
   void UnloadAll();
 
-private:
+ private:
   // TODO: figure out optimized key and also cross platform compatibility
   std::unordered_map<std::filesystem::path, MeshHandle> mesh_by_path_;
-  std::vector<Mesh *> meshes_;
+  std::vector<Mesh*> meshes_;
 
   std::unordered_map<std::filesystem::path, TextureHandle> texture_by_path_;
   std::vector<bgfx::TextureHandle> textures_;

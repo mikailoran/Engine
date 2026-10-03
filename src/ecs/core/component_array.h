@@ -1,16 +1,17 @@
 #pragma once
 
-#include "types.h"
 #include <array>
 #include <cassert>
 #include <limits>
 #include <span>
 #include <utility>
 
+#include "types.h"
+
 /** @brief Type-erased base so ComponentManager can hold every component array
  * together. */
 class ComponentArrayInterface {
-public:
+ public:
   virtual ~ComponentArrayInterface() = default;
   /** @brief Drops @p entity's component, if it has one. */
   virtual void EntityDestroyed(Entity entity) = 0;
@@ -24,7 +25,7 @@ public:
  */
 template <class Component>
 class ComponentArray : public ComponentArrayInterface {
-public:
+ public:
   /** @brief Creates an empty component array with every entity marked absent.
    */
   ComponentArray();
@@ -45,10 +46,10 @@ public:
   void RemoveData(Entity entity);
 
   /** @brief Returns @p entity's component. @pre Has(entity) is true. */
-  const Component &GetData(Entity entity) const;
+  const Component& GetData(Entity entity) const;
 
   /** @brief Returns @p entity's component. @pre Has(entity) is true. */
-  Component &GetData(Entity entity);
+  Component& GetData(Entity entity);
 
   /**
    * @brief Tests whether @p entity currently has a component in this array.
@@ -61,7 +62,7 @@ public:
   /** @brief Removes @p entity's component if present; a no-op otherwise. */
   void EntityDestroyed(Entity entity) override;
 
-private:
+ private:
   std::size_t current_size_{0};
   // Marks an entity with no component in this array
   static constexpr auto kInvalidIndex = std::numeric_limits<std::size_t>::max();
@@ -73,7 +74,8 @@ private:
 
 // Implementation
 
-template <class Component> ComponentArray<Component>::ComponentArray() {
+template <class Component>
+ComponentArray<Component>::ComponentArray() {
   sparse_.fill(kInvalidIndex);
 }
 
@@ -121,7 +123,7 @@ void ComponentArray<Component>::RemoveData(Entity entity) {
 }
 
 template <class Component>
-Component &ComponentArray<Component>::GetData(Entity entity) {
+Component& ComponentArray<Component>::GetData(Entity entity) {
   assert(Has(entity) &&
          "Trying to retrieve a component the entity does not have.");
 
@@ -129,7 +131,7 @@ Component &ComponentArray<Component>::GetData(Entity entity) {
 }
 
 template <class Component>
-const Component &ComponentArray<Component>::GetData(Entity entity) const {
+const Component& ComponentArray<Component>::GetData(Entity entity) const {
   assert(Has(entity) &&
          "Trying to retrieve a component the entity does not have.");
 

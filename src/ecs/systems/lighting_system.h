@@ -12,25 +12,27 @@ struct FrameContext;
  * sets uniforms, so it must run before RenderSystem submits the frame.
  */
 class LightingSystem {
-public:
+ public:
   LightingSystem() = default;
-  LightingSystem(const LightingSystem &) = delete;
-  LightingSystem &operator=(const LightingSystem &) = delete;
+  LightingSystem(const LightingSystem&) = delete;
+  LightingSystem& operator=(const LightingSystem&) = delete;
 
-  /** @brief Creates the light uniforms. Requires bgfx::init to have completed. */
+  /** @brief Creates the light uniforms. Requires bgfx::init to have completed.
+   */
   void Init();
 
   /**
    * @brief Sets the sun and ambient uniforms for this frame.
    *
-   * Falls back to a default-constructed DirectionalLight when no entity has one.
+   * Falls back to a default-constructed DirectionalLight when no entity has
+   * one.
    */
-  void Update(Ecs &ecs, const FrameContext &ctx);
+  void Update(Ecs& ecs, const FrameContext& ctx);
 
   /** @brief Destroys the light uniforms. Must run before bgfx::shutdown. */
   void Shutdown();
 
-private:
+ private:
   bgfx::UniformHandle u_light_dir_{bgfx::kInvalidHandle};
   bgfx::UniformHandle u_light_color_{bgfx::kInvalidHandle};
   bgfx::UniformHandle u_sky_color_{bgfx::kInvalidHandle};

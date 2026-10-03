@@ -1,19 +1,19 @@
 #include "scene_loader.h"
 
-#include "../ecs/core/ecs.h"
-#include "../platform/asset_root.h"
-
 #include <cassert>
 #include <fstream>
 #include <nlohmann/json.hpp>
 #include <stdexcept>
+
+#include "../ecs/core/ecs.h"
+#include "../platform/asset_root.h"
 
 namespace {
 
 // Scene format version this loader reads.
 constexpr int kSceneVersion = 1;
 
-} // namespace
+}  // namespace
 
 void SceneLoader::Register(std::string key, ComponentLoader loader) {
   [[maybe_unused]] const auto [it, inserted] =
@@ -21,10 +21,10 @@ void SceneLoader::Register(std::string key, ComponentLoader loader) {
   assert(inserted && "component loader registered twice");
 }
 
-void SceneLoader::LoadEntities(const nlohmann::json &scene,
-                               SceneLoadContext &ctx) const {
+void SceneLoader::LoadEntities(const nlohmann::json& scene,
+                               SceneLoadContext& ctx) const {
   // Reject keys this version does not know, so typos fail loudly
-  for (const auto &item : scene.items()) {
+  for (const auto& item : scene.items()) {
     if (item.key() != "version" && item.key() != "entities") {
       throw std::runtime_error("unknown top-level key '" + item.key() + "'");
     }
@@ -35,11 +35,11 @@ void SceneLoader::LoadEntities(const nlohmann::json &scene,
   }
 
   // One entity per entry, then one loader call per component block
-  for (const auto &entry : scene.at("entities")) {
+  for (const auto& entry : scene.at("entities")) {
     const auto name = entry.value("name", std::string{"<unnamed>"});
     const auto entity = ctx.ecs.CreateEntity();
 
-    for (const auto &component : entry.at("components").items()) {
+    for (const auto& component : entry.at("components").items()) {
       const std::string where =
           "entity '" + name + "', component '" + component.key() + "': ";
 
@@ -50,15 +50,15 @@ void SceneLoader::LoadEntities(const nlohmann::json &scene,
 
       try {
         it->second(component.value(), entity, ctx);
-      } catch (const nlohmann::json::exception &e) {
+      } catch (const nlohmann::json::exception& e) {
         throw std::runtime_error(where + e.what());
       }
     }
   }
 }
 
-void SceneLoader::Load(const std::filesystem::path &path,
-                       SceneLoadContext &ctx) const {
+void SceneLoader::Load(const std::filesystem::path& path,
+                       SceneLoadContext& ctx) const {
   // Read the file relative to the asset root
   const auto full_path = std::filesystem::path(AssetRoot()) / path;
   std::ifstream file(full_path);
@@ -69,9 +69,9 @@ void SceneLoader::Load(const std::filesystem::path &path,
   // Tag every error with the file; JSON errors become runtime_error
   try {
     LoadEntities(nlohmann::json::parse(file), ctx);
-  } catch (const nlohmann::json::exception &e) {
+  } catch (const nlohmann::json::exception& e) {
     throw std::runtime_error(full_path.string() + ": " + e.what());
-  } catch (const std::runtime_error &e) {
+  } catch (const std::runtime_error& e) {
     throw std::runtime_error(full_path.string() + ": " + e.what());
   }
 }

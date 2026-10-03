@@ -1,28 +1,24 @@
 #include "ui.h"
 
-#include "imgui/imgui.h"
-
-#include "../core/ecs.h"
-#include "../core/frame_context.h"
-
+#include "../../resource/asset_registry.h"
 #include "../components/configurable.h"
 #include "../components/renderable.h"
 #include "../components/rigid_body.h"
 #include "../components/spin.h"
 #include "../components/transform.h"
-
-#include "../../resource/asset_registry.h"
-
+#include "../core/ecs.h"
+#include "../core/frame_context.h"
 #include "entry/entry.h"
+#include "imgui/imgui.h"
 
-void UiSystem::Init(AssetRegistry &asset_registry) {
+void UiSystem::Init(AssetRegistry& asset_registry) {
   imguiCreate();
   asset_registry_ = &asset_registry;
 }
 
 void UiSystem::Shutdown() { imguiDestroy(); }
 
-Entity UiSystem::SpawnEntity(Ecs &ecs) {
+Entity UiSystem::SpawnEntity(Ecs& ecs) {
   // TODO: remove paths
   const MeshHandle mesh_handle =
       asset_registry_->LoadMesh("assets/meshes/bunny.bin");
@@ -36,13 +32,13 @@ Entity UiSystem::SpawnEntity(Ecs &ecs) {
   return entity;
 }
 
-void UiSystem::Update(Ecs &ecs, const FrameContext &ctx) {
+void UiSystem::Update(Ecs& ecs, const FrameContext& ctx) {
   // Wait for windowing set up to finish
   if (ctx.width <= 1 || ctx.height <= 1) {
     return;
   }
 
-  const auto &mouse = *ctx.mouse;
+  const auto& mouse = *ctx.mouse;
   imguiBeginFrame(
       mouse.m_mx, mouse.m_my,
       (mouse.m_buttons[entry::MouseButton::Left] ? IMGUI_MBUT_LEFT : 0) |
@@ -63,8 +59,8 @@ void UiSystem::Update(Ecs &ecs, const FrameContext &ctx) {
 
   // Sliders of transforms of entities
   ecs.View<Configurable, Transform, Spin, RigidBody, Renderable>().ForEach(
-      [&ecs](Entity entity, Configurable &, Transform &transform, Spin &spin,
-             RigidBody &rigid_body, Renderable &renderable) {
+      [&ecs](Entity entity, Configurable&, Transform& transform, Spin& spin,
+             RigidBody& rigid_body, Renderable& renderable) {
         ImGui::PushID(static_cast<int>(entity));
 
         ImGui::Text("Entity %zu", entity);

@@ -29,6 +29,7 @@ constexpr const EntityType kMaxEntities = 5000;
  */
 using TypeKey = std::string_view;
 
-template <class T> consteval TypeKey TypeKeyOf() {
+template <class T>
+consteval TypeKey TypeKeyOf() {
   return std::source_location::current().function_name();
 }

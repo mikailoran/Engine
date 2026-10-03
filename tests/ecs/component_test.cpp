@@ -1,12 +1,12 @@
 // Component storage: round-trip, mutation, and data integrity across removals.
 
-#include "ecs/core/ecs.h"
-
 #include <gtest/gtest.h>
 
 #include <set>
 #include <stdexcept>
 #include <string>
+
+#include "ecs/core/ecs.h"
 
 namespace {
 
@@ -25,14 +25,15 @@ struct Name {
 };
 
 /** @brief Collects the entities a @p Component view visits. */
-template <class Component> std::set<Entity> Visited(Ecs &ecs) {
+template <class Component>
+std::set<Entity> Visited(Ecs& ecs) {
   std::set<Entity> visited;
   ecs.View<Component>().ForEach(
-      [&visited](Entity entity, Component &) { visited.insert(entity); });
+      [&visited](Entity entity, Component&) { visited.insert(entity); });
   return visited;
 }
 
-} // namespace
+}  // namespace
 
 TEST(ComponentStorage, AddThenGetReturnsTheStoredValue) {
   Ecs ecs;
@@ -51,7 +52,7 @@ TEST(ComponentStorage, GetThroughAConstEcsReturnsTheStoredValue) {
   const auto entity = ecs.CreateEntity();
   ecs.AddComponent(entity, Position{3.0F, 4.0F});
 
-  const Ecs &read_only = ecs;
+  const Ecs& read_only = ecs;
 
   EXPECT_FLOAT_EQ(read_only.GetComponent<Position>(entity).x, 3.0F);
   EXPECT_FLOAT_EQ(read_only.GetComponent<Position>(entity).y, 4.0F);

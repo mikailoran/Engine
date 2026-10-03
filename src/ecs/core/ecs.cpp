@@ -12,7 +12,7 @@ void Ecs::DestroyEntity(Entity entity) {
 }
 
 void Ecs::Flush() {
-  for (const auto &entity : pending_destroy_) {
+  for (const auto& entity : pending_destroy_) {
     component_manager_.EntityDestroyed(entity);
     entity_manager_.DestroyEntity(entity);
   }

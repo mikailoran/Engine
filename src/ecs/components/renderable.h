@@ -1,11 +1,12 @@
 #pragma once
 
-#include "../../resource/mesh_handle.h"
-#include "../../resource/texture_handle.h"
+#include <bgfx/bgfx.h>
 
 #include <array>
-#include <bgfx/bgfx.h>
 #include <cstdint>
+
+#include "../../resource/mesh_handle.h"
+#include "../../resource/texture_handle.h"
 
 /**
  * @brief Everything needed to issue one draw call for an entity.

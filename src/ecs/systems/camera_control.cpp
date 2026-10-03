@@ -1,13 +1,13 @@
 #include "camera_control.h"
 
+#include <bx/math.h>
+#include <camera.h>
+#include <entry/entry.h>
+
 #include "../components/camera.h"
 #include "../components/transform.h"
 #include "../core/ecs.h"
 #include "../core/frame_context.h"
-
-#include <bx/math.h>
-#include <camera.h>
-#include <entry/entry.h>
 
 namespace {
 
@@ -16,7 +16,7 @@ constexpr bx::Vec3 kStartPosition{0.0F, 1.0F, -5.0F};
 
 constexpr float kStartVerticalAngle = 0.0F;
 
-} // namespace
+}  // namespace
 
 void CameraControl::Init() {
   cameraCreate();
@@ -24,7 +24,7 @@ void CameraControl::Init() {
   cameraSetVerticalAngle(kStartVerticalAngle);
 }
 
-void CameraControl::Update(Ecs &ecs, const FrameContext &ctx) {
+void CameraControl::Update(Ecs& ecs, const FrameContext& ctx) {
   if (ctx.mouse == nullptr) {
     return;
   }
@@ -36,7 +36,7 @@ void CameraControl::Update(Ecs &ecs, const FrameContext &ctx) {
   const auto at = cameraGetAt();
 
   ecs.View<Transform, Camera>().ForEach(
-      [&position, &at](Entity, Transform &transform, Camera &camera) {
+      [&position, &at](Entity, Transform& transform, Camera& camera) {
         transform.position = position;
         camera.target = at;
       });

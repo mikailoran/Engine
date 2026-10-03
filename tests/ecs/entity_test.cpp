@@ -1,10 +1,10 @@
 // Entity lifecycle as observed through the Ecs facade.
 
-#include "ecs/core/ecs.h"
-
 #include <gtest/gtest.h>
 
 #include <set>
+
+#include "ecs/core/ecs.h"
 
 TEST(EntityLifecycle, CreateReturnsDistinctIds) {
   Ecs ecs;

@@ -1,5 +1,10 @@
 #include "render_system.h"
 
+#include <bgfx_utils.h>
+#include <bx/math.h>
+
+#include <array>
+
 #include "../../resource/asset_registry.h"
 #include "../components/camera.h"
 #include "../components/renderable.h"
@@ -7,24 +12,20 @@
 #include "../core/ecs.h"
 #include "../core/frame_context.h"
 
-#include <array>
-#include <bgfx_utils.h>
-#include <bx/math.h>
-
 namespace {
 
 // Matrix element count for bx's 4x4 routines.
 constexpr std::size_t kMtxSize = 16;
 
-constexpr uint32_t kClearColor = 0x303030ff; // RGBA
+constexpr uint32_t kClearColor = 0x303030ff;  // RGBA
 // Only used when no camera entity has been nominated.
 constexpr float kFallbackFovDegrees = 60.0F;
 constexpr float kFallbackNearPlane = 0.1F;
 constexpr float kFallbackFarPlane = 100.0F;
 
-} // namespace
+}  // namespace
 
-void RenderSystem::Init(const AssetRegistry &assets) {
+void RenderSystem::Init(const AssetRegistry& assets) {
   assets_ = &assets;
 
   // View 0 clears the backbuffer each frame.
@@ -46,9 +47,9 @@ void RenderSystem::Init(const AssetRegistry &assets) {
       bgfx::copy(&kWhite, sizeof(kWhite)));
 }
 
-void RenderSystem::Update(Ecs &ecs, const FrameContext &ctx) {
+void RenderSystem::Update(Ecs& ecs, const FrameContext& ctx) {
   // Debug overlay.
-  const bgfx::Stats *stats = bgfx::getStats();
+  const bgfx::Stats* stats = bgfx::getStats();
   bgfx::dbgTextClear();
   bgfx::dbgTextPrintf(0, 3, 0x0f, "Backbuffer %dW x %dH", stats->width,
                       stats->height);
@@ -70,8 +71,8 @@ void RenderSystem::Update(Ecs &ecs, const FrameContext &ctx) {
     std::array<float, 4> eye_pos{0.0F, 0.0F, 0.0F, 0.0F};
 
     if (has_camera_) {
-      const auto &transform = ecs.GetComponent<Transform>(camera_);
-      const auto &camera = ecs.GetComponent<Camera>(camera_);
+      const auto& transform = ecs.GetComponent<Transform>(camera_);
+      const auto& camera = ecs.GetComponent<Camera>(camera_);
       eye_pos = {transform.position.x, transform.position.y,
                  transform.position.z, 0.0F};
 
@@ -92,7 +93,7 @@ void RenderSystem::Update(Ecs &ecs, const FrameContext &ctx) {
   }
 
   ecs.View<Transform, Renderable>().ForEach(
-      [this](Entity, const Transform &transform, const Renderable &renderable) {
+      [this](Entity, const Transform& transform, const Renderable& renderable) {
         std::array<float, kMtxSize> mtx{};
         bx::mtxSRT(
             mtx.data(), transform.scale.x, transform.scale.y, transform.scale.z,
@@ -102,7 +103,7 @@ void RenderSystem::Update(Ecs &ecs, const FrameContext &ctx) {
         const auto program = bgfx::isValid(renderable.program)
                                  ? renderable.program
                                  : default_program_;
-        const auto *mesh = assets_->GetMesh(renderable.mesh_handle);
+        const auto* mesh = assets_->GetMesh(renderable.mesh_handle);
 
         const auto texture = isValid(renderable.texture)
                                  ? assets_->GetTexture(renderable.texture)

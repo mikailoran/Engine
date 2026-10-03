@@ -4,7 +4,7 @@
 
 namespace entry {
 struct MouseState;
-} // namespace entry
+}  // namespace entry
 
 /**
  * @brief Generic info used per-frame for rendering
@@ -23,5 +23,5 @@ struct FrameContext {
   float time{0.0F};
 
   // Current mouse position and button state.
-  const entry::MouseState *mouse{nullptr};
+  const entry::MouseState* mouse{nullptr};
 };
