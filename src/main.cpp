@@ -88,14 +88,6 @@ class Game {
   /** @brief Brings up bgfx, the systems and the debug scene. */
   Game();
 
-  /** @brief Releases the systems' and assets' GPU resources. */
-  ~Game();
-
-  Game(const Game&) = delete;
-  auto operator=(const Game&) -> Game& = delete;
-  Game(Game&&) = delete;
-  auto operator=(Game&&) -> Game& = delete;
-
   /**
    * @brief Runs the frame loop until the window closes.
    * @return Process exit code.
@@ -142,11 +134,6 @@ Game::Game() {
   RegisterBuiltinLoaders(scene_loader);
   SceneLoadContext scene_ctx{.ecs = ecs_, .assets = assets_};
   scene_loader.Load("assets/scenes/debug.json", scene_ctx);
-}
-
-Game::~Game() {
-  // Until AssetRegistry is RAII; bgfx_context_ shuts down after this
-  assets_.UnloadAll();
 }
 
 auto Game::Run() -> int {

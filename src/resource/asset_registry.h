@@ -3,13 +3,21 @@
 #include <bgfx/bgfx.h>
 
 #include <filesystem>
+#include <memory>
 #include <unordered_map>
 #include <vector>
 
 #include "resource/mesh_handle.h"
 #include "resource/texture_handle.h"
+#include "resource/unique_handle.h"
 
 struct Mesh;
+
+/** @brief unique_ptr deleter that frees a mesh with meshUnload. */
+struct MeshUnloader {
+  /** @brief Unloads @p mesh's GPU buffers and frees it. */
+  void operator()(Mesh* mesh) const noexcept;
+};
 
 /**
  * @brief Single owner of every loaded mesh and texture, keyed by file path.
@@ -18,15 +26,11 @@ struct Mesh;
  * number of entities can share one asset without sharing responsibility for
  * freeing it. Asset lifetime is therefore independent of entity lifetime.
  *
- * Assets live from their first load until UnloadAll; there is no refcounting.
+ * Assets live from their first load until the registry is destroyed, which
+ * must precede bgfx::shutdown; there is no refcounting. Move-only.
  */
 class AssetRegistry {
  public:
-  AssetRegistry() noexcept = default;
-  // Delete copy&assignment: registry owns Mesh pointers
-  AssetRegistry(const AssetRegistry&) = delete;
-  auto operator=(const AssetRegistry&) -> AssetRegistry& = delete;
-
   /**
    * @brief Loads a mesh, or returns the handle of one already loaded.
    *
@@ -37,6 +41,7 @@ class AssetRegistry {
    *
    * @param path Compiled mesh file, e.g. "assets/meshes/compiled/bunny.bin".
    * @return Handle to the mesh.
+   * @throws std::runtime_error If the file cannot be opened.
    */
   auto LoadMesh(const std::filesystem::path& path) -> MeshHandle;
 
@@ -44,7 +49,7 @@ class AssetRegistry {
    * @brief Resolves a handle to the mesh it refers to.
    *
    * @param handle Handle from LoadMesh; must be valid and not yet unloaded.
-   * @return Mesh owned by this registry, valid until UnloadAll.
+   * @return Mesh owned by this registry, valid for the registry's lifetime.
    */
   auto GetMesh(MeshHandle handle) const -> const Mesh*;
 
@@ -56,6 +61,7 @@ class AssetRegistry {
    *
    * @param path Compiled texture file, e.g. "assets/textures/debug_grid.dds".
    * @return Handle to the texture.
+   * @throws std::runtime_error If the texture cannot be loaded.
    */
   auto LoadTexture(const std::filesystem::path& path) -> TextureHandle;
 
@@ -63,23 +69,15 @@ class AssetRegistry {
    * @brief Resolves a handle to the bgfx texture it refers to.
    *
    * @param handle Handle from LoadTexture; must be valid and not yet unloaded.
-   * @return bgfx texture owned by this registry, valid until UnloadAll.
+   * @return bgfx texture owned by this registry, valid for its lifetime.
    */
   auto GetTexture(TextureHandle handle) const -> bgfx::TextureHandle;
-
-  /**
-   * @brief Frees every loaded asset and empties the registry.
-   *
-   * Must run before bgfx::shutdown, since it destroys GPU resources.
-   * Every handle handed out so far dangles afterwards.
-   */
-  void UnloadAll();
 
  private:
   // TODO: figure out optimized key and also cross platform compatibility
   std::unordered_map<std::filesystem::path, MeshHandle> mesh_by_path_;
-  std::vector<Mesh*> meshes_;
+  std::vector<std::unique_ptr<Mesh, MeshUnloader>> meshes_;
 
   std::unordered_map<std::filesystem::path, TextureHandle> texture_by_path_;
-  std::vector<bgfx::TextureHandle> textures_;
+  std::vector<UniqueHandle<bgfx::TextureHandle>> textures_;
 };
