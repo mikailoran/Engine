@@ -5,6 +5,8 @@
 #include <entry/entry.h>
 
 #include <cstdint>
+#include <exception>
+#include <iostream>
 #include <stdexcept>
 
 #include "ecs/components/camera.h"
@@ -132,8 +134,7 @@ Game::Game() {
   // Load the debug scene's decor as ordinary entities
   SceneLoader scene_loader;
   RegisterBuiltinLoaders(scene_loader);
-  SceneLoadContext scene_ctx{.ecs = ecs_, .assets = assets_};
-  scene_loader.Load("assets/scenes/debug.json", scene_ctx);
+  scene_loader.Load("assets/scenes/debug.json", ecs_, assets_);
 }
 
 auto Game::Run() -> int {
@@ -189,6 +190,11 @@ auto _main_(int /*_argc*/, char** /*_argv*/) -> int {
   // entry prepends this to every asset path; must precede any load
   entry::setCurrentDir(AssetRoot().c_str());
 
-  Game game;
-  return game.Run();
+  try {
+    Game game;
+    return game.Run();
+  } catch (const std::exception& e) {
+    std::cerr << "fatal: " << e.what() << '\n';
+    return 1;
+  }
 }

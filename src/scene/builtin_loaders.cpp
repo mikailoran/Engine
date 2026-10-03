@@ -21,7 +21,8 @@ namespace {
 using nlohmann::json;
 
 /** @brief Adds a Transform; every field is optional. Rotation is in degrees. */
-void LoadTransform(const json& data, Entity entity, SceneLoadContext& ctx) {
+void LoadTransform(const json& data, Entity entity, Ecs& ecs,
+                   AssetRegistry& /*assets*/) {
   CheckKeys(data, {"position", "rotation_deg", "scale"});
 
   Transform transform{};
@@ -35,25 +36,25 @@ void LoadTransform(const json& data, Entity entity, SceneLoadContext& ctx) {
   if (data.contains("scale")) {
     transform.scale = ReadVec3(data.at("scale"));
   }
-  ctx.ecs.AddComponent(entity, transform);
+  ecs.AddComponent(entity, transform);
 }
 
 /**
  * @brief Adds a Renderable; "mesh" is required, "color", "texture" and
  * "texture_scale" optional.
  */
-void LoadRenderable(const json& data, Entity entity, SceneLoadContext& ctx) {
+void LoadRenderable(const json& data, Entity entity, Ecs& ecs,
+                    AssetRegistry& assets) {
   CheckKeys(data, {"mesh", "color", "texture", "texture_scale"});
 
   Renderable renderable{};
-  renderable.mesh_handle =
-      ctx.assets.LoadMesh(data.at("mesh").get<std::string>());
+  renderable.mesh_handle = assets.LoadMesh(data.at("mesh").get<std::string>());
   if (data.contains("color")) {
     renderable.color = ReadFloats<4>(data.at("color"));
   }
   if (data.contains("texture")) {
     renderable.texture =
-        ctx.assets.LoadTexture(data.at("texture").get<std::string>());
+        assets.LoadTexture(data.at("texture").get<std::string>());
   }
   if (data.contains("texture_scale")) {
     renderable.texture_scale = data.at("texture_scale").get<float>();
@@ -62,12 +63,12 @@ void LoadRenderable(const json& data, Entity entity, SceneLoadContext& ctx) {
       throw std::runtime_error("texture_scale must be positive");
     }
   }
-  ctx.ecs.AddComponent(entity, renderable);
+  ecs.AddComponent(entity, renderable);
 }
 
 /** @brief Adds a DirectionalLight; every field is optional. */
-void LoadDirectionalLight(const json& data, Entity entity,
-                          SceneLoadContext& ctx) {
+void LoadDirectionalLight(const json& data, Entity entity, Ecs& ecs,
+                          AssetRegistry& /*assets*/) {
   CheckKeys(data,
             {"direction", "color", "intensity", "sky_color", "ground_color"});
   DirectionalLight light{};
@@ -86,7 +87,7 @@ void LoadDirectionalLight(const json& data, Entity entity,
   if (data.contains("ground_color")) {
     light.ground_color = ReadVec3(data.at("ground_color"));
   }
-  ctx.ecs.AddComponent(entity, light);
+  ecs.AddComponent(entity, light);
 }
 
 }  // namespace
