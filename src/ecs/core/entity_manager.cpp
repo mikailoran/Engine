@@ -2,6 +2,8 @@
 
 #include <cassert>
 
+#include "types.h"
+
 EntityManager::EntityManager() {
   for (EntityType entity_id = 0; entity_id < kMaxEntities; ++entity_id) {
     available_entities_.push(Entity{entity_id});

@@ -1,5 +1,6 @@
 #include "lighting_system.h"
 
+#include <bgfx/bgfx.h>
 #include <bx/math.h>
 
 #include <array>
@@ -9,6 +10,7 @@
 #include "../components/directional_light.h"
 #include "../core/ecs.h"
 #include "../core/frame_context.h"
+#include "../core/types.h"
 
 namespace {
 

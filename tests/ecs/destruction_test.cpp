@@ -8,6 +8,7 @@
 #include <set>
 
 #include "ecs/core/ecs.h"
+#include "ecs/core/types.h"
 
 namespace {
 

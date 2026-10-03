@@ -1,12 +1,16 @@
 #include "physics_system.h"
 
+#include <bx/math.h>
+
 #include <algorithm>
+#include <cstdlib>
 
 #include "../components/rigid_body.h"
 #include "../components/spin.h"
 #include "../components/transform.h"
 #include "../core/ecs.h"
 #include "../core/frame_context.h"
+#include "../core/types.h"
 
 void Physics::Init() {}
 

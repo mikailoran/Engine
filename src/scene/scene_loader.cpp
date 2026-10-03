@@ -1,9 +1,13 @@
 #include "scene_loader.h"
 
 #include <cassert>
+#include <filesystem>
 #include <fstream>
 #include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
 #include <stdexcept>
+#include <string>
+#include <utility>
 
 #include "../ecs/core/ecs.h"
 #include "../platform/asset_root.h"

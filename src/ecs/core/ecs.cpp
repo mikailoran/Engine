@@ -1,5 +1,7 @@
 #include "ecs.h"
 
+#include "types.h"
+
 Entity Ecs::CreateEntity() { return entity_manager_.CreateEntity(); }
 
 void Ecs::DestroyEntity(Entity entity) {

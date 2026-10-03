@@ -1,8 +1,11 @@
 #include "asset_root.h"
 
 #include <bx/filepath.h>
+#include <bx/string.h>
 
 #include <cassert>
+#include <cstddef>
+#include <string>
 
 auto AssetRoot() -> std::string {
   const bx::FilePath exe_path(bx::Dir::Executable);

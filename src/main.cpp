@@ -1,6 +1,9 @@
 #include <bgfx/bgfx.h>
-#include <bgfx_utils.h>
+#include <bgfx/defines.h>
 #include <bx/timer.h>
+#include <entry/entry.h>
+
+#include <cstdint>
 
 #include "common.h"
 #include "ecs/components/camera.h"

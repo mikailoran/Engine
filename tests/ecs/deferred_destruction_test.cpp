@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "ecs/core/ecs.h"
+#include "ecs/core/types.h"
 
 namespace {
 

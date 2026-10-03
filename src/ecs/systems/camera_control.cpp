@@ -2,12 +2,12 @@
 
 #include <bx/math.h>
 #include <camera.h>
-#include <entry/entry.h>
 
 #include "../components/camera.h"
 #include "../components/transform.h"
 #include "../core/ecs.h"
 #include "../core/frame_context.h"
+#include "../core/types.h"
 
 namespace {
 

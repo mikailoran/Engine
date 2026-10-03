@@ -1,6 +1,11 @@
 #include "ui.h"
 
+#include <dear-imgui/imgui.h>
+
+#include <cstdint>
+
 #include "../../resource/asset_registry.h"
+#include "../../resource/mesh_handle.h"
 #include "../components/configurable.h"
 #include "../components/renderable.h"
 #include "../components/rigid_body.h"
@@ -8,6 +13,7 @@
 #include "../components/transform.h"
 #include "../core/ecs.h"
 #include "../core/frame_context.h"
+#include "../core/types.h"
 #include "entry/entry.h"
 #include "imgui/imgui.h"
 

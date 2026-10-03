@@ -5,6 +5,7 @@
 #include <set>
 
 #include "ecs/core/ecs.h"
+#include "ecs/core/types.h"
 
 TEST(EntityLifecycle, CreateReturnsDistinctIds) {
   Ecs ecs;

@@ -1,8 +1,15 @@
 #include "asset_registry.h"
 
+#include <bgfx/bgfx.h>
+#include <bgfx/defines.h>
 #include <bgfx_utils.h>
 
 #include <cassert>
+#include <cstdint>
+#include <filesystem>
+
+#include "mesh_handle.h"
+#include "texture_handle.h"
 
 MeshHandle AssetRegistry::LoadMesh(const std::filesystem::path& path) {
   // Mesh previously loaded: return handle from map
