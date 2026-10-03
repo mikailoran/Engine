@@ -5,6 +5,7 @@
 #include <imgui/imgui.h>
 
 #include <cstdint>
+#include <format>
 
 #include "ecs/components/configurable.h"
 #include "ecs/components/renderable.h"
@@ -53,9 +54,11 @@ void UiSystem::Update(Ecs& ecs, const FrameContext& ctx) {
       mouse.m_mz, static_cast<std::uint16_t>(ctx.width),
       static_cast<std::uint16_t>(ctx.height));
 
-  ImGui::SetNextWindowPos(ImVec2(ctx.width - (ctx.width / 5.0f) - 10.0f, 10.0f),
+  const auto width = static_cast<float>(ctx.width);
+  const auto height = static_cast<float>(ctx.height);
+  ImGui::SetNextWindowPos(ImVec2(width - (width / 5.0f) - 10.0f, 10.0f),
                           ImGuiCond_FirstUseEver);
-  ImGui::SetNextWindowSize(ImVec2(ctx.width / 5.0f, ctx.height / 3.5f),
+  ImGui::SetNextWindowSize(ImVec2(width / 5.0f, height / 3.5f),
                            ImGuiCond_FirstUseEver);
   ImGui::Begin("Settings", nullptr, 0);
 
@@ -69,7 +72,7 @@ void UiSystem::Update(Ecs& ecs, const FrameContext& ctx) {
              RigidBody& rigid_body, Renderable& renderable) {
         ImGui::PushID(static_cast<int>(entity));
 
-        ImGui::Text("Entity %zu", entity);
+        ImGui::TextUnformatted(std::format("Entity {}", entity).c_str());
         if (ImGui::Button("Destroy")) {
           ecs.DestroyEntity(entity);
         }
