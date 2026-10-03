@@ -1,0 +1,26 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			// clangd only lints open files; this lints all of src/ and tests/.
+			"label": "clang-tidy: project",
+			"type": "shell",
+			// Keep diagnostic lines, collapse "/x/../" and drop per-TU duplicates.
+			"command": "run-clang-tidy -p build -quiet '^${workspaceFolder}/(src|tests)/.*\\.cpp$' 2>/dev/null | grep --line-buffered -E '^/.+:[0-9]+:[0-9]+: (warning|error):' | sed -u -E ':a; s#/[^/]+/\\.\\./#/#; ta' | awk '!seen[$0]++ { print; fflush() }'",
+			"problemMatcher": {
+				"owner": "clang-tidy",
+				"source": "clang-tidy",
+				"fileLocation": "absolute",
+				"pattern": {
+					"regexp": "^(.+):(\\d+):(\\d+): (warning|error): (.*?)(?: \\[([^\\]]+)\\])?$",
+					"file": 1,
+					"line": 2,
+					"column": 3,
+					"severity": 4,
+					"message": 5,
+					"code": 6
+				}
+			}
+		}
+	]
+}
