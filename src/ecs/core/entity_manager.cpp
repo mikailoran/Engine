@@ -1,6 +1,8 @@
-#include "entity_manager.h"
+#include "ecs/core/entity_manager.h"
 
 #include <cassert>
+
+#include "ecs/core/types.h"
 
 EntityManager::EntityManager() {
   for (EntityType entity_id = 0; entity_id < kMaxEntities; ++entity_id) {
@@ -8,7 +10,7 @@ EntityManager::EntityManager() {
   }
 }
 
-Entity EntityManager::CreateEntity() {
+auto EntityManager::CreateEntity() -> Entity {
   assert(living_entity_count_ < kMaxEntities &&
          "Too many entities in existence.");
 
@@ -19,7 +21,7 @@ Entity EntityManager::CreateEntity() {
   return id;
 }
 
-bool EntityManager::IsAlive(Entity entity) const {
+auto EntityManager::IsAlive(Entity entity) const -> bool {
   return entity < kMaxEntities && alive_.at(entity);
 }
 

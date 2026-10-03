@@ -1,13 +1,13 @@
-#include "camera_control.h"
+#include "ecs/systems/camera_control.h"
 
 #include <bx/math.h>
 #include <camera.h>
-#include <entry/entry.h>
 
-#include "../components/camera.h"
-#include "../components/transform.h"
-#include "../core/ecs.h"
-#include "../core/frame_context.h"
+#include "ecs/components/camera.h"
+#include "ecs/components/transform.h"
+#include "ecs/core/ecs.h"
+#include "ecs/core/frame_context.h"
+#include "ecs/core/types.h"
 
 namespace {
 
@@ -36,7 +36,7 @@ void CameraControl::Update(Ecs& ecs, const FrameContext& ctx) {
   const auto at = cameraGetAt();
 
   ecs.View<Transform, Camera>().ForEach(
-      [&position, &at](Entity, Transform& transform, Camera& camera) {
+      [&position, &at](Entity, Transform& transform, Camera& camera) -> void {
         transform.position = position;
         camera.target = at;
       });

@@ -3,10 +3,11 @@
 #include <cassert>
 #include <memory>
 #include <unordered_map>
+#include <utility>
 
-#include "component_array.h"
-#include "types.h"
-#include "view.h"
+#include "ecs/core/component_array.h"
+#include "ecs/core/types.h"
+#include "ecs/core/view.h"
 
 class ComponentManager {
  public:
@@ -22,13 +23,13 @@ class ComponentManager {
   void RemoveComponent(Entity entity);
 
   template <class Component>
-  Component& GetComponent(Entity entity);
+  auto GetComponent(Entity entity) -> Component&;
 
   template <class Component>
-  const Component& GetComponent(Entity entity) const;
+  auto GetComponent(Entity entity) const -> const Component&;
 
   template <class Component>
-  [[nodiscard]] bool HasComponent(Entity entity) const;
+  [[nodiscard]] auto HasComponent(Entity entity) const -> bool;
 
   /** @brief Views the entities having all @p Components. @pre Registered. */
   // ::View: inside this class, plain View names this member
@@ -39,10 +40,10 @@ class ComponentManager {
 
  private:
   template <class Component>
-  ComponentArray<Component>& GetComponentArray();
+  auto GetComponentArray() -> ComponentArray<Component>&;
 
   template <class Component>
-  const ComponentArray<Component>& GetComponentArray() const;
+  auto GetComponentArray() const -> const ComponentArray<Component>&;
 
   std::unordered_map<TypeKey, std::unique_ptr<ComponentArrayInterface>>
       component_arrays_;
@@ -62,7 +63,7 @@ void ComponentManager::RegisterComponent() {
 
 template <class Component>
 void ComponentManager::AddComponent(Entity entity, Component component) {
-  GetComponentArray<Component>().InsertData(entity, component);
+  GetComponentArray<Component>().InsertData(entity, std::move(component));
 }
 
 template <class Component>
@@ -71,12 +72,12 @@ void ComponentManager::RemoveComponent(Entity entity) {
 }
 
 template <class Component>
-Component& ComponentManager::GetComponent(Entity entity) {
+auto ComponentManager::GetComponent(Entity entity) -> Component& {
   return GetComponentArray<Component>().GetData(entity);
 }
 
 template <class Component>
-const Component& ComponentManager::GetComponent(Entity entity) const {
+auto ComponentManager::GetComponent(Entity entity) const -> const Component& {
   return GetComponentArray<Component>().GetData(entity);
 }
 
@@ -92,7 +93,7 @@ const Component& ComponentManager::GetComponent(Entity entity) const {
  * @return True if the entity has that component.
  */
 template <class Component>
-bool ComponentManager::HasComponent(Entity entity) const {
+auto ComponentManager::HasComponent(Entity entity) const -> bool {
   return GetComponentArray<Component>().Has(entity);
 }
 
@@ -108,7 +109,7 @@ inline void ComponentManager::EntityDestroyed(Entity entity) {
 }
 
 template <class Component>
-ComponentArray<Component>& ComponentManager::GetComponentArray() {
+auto ComponentManager::GetComponentArray() -> ComponentArray<Component>& {
   const auto type_key = TypeKeyOf<Component>();
   assert(component_arrays_.contains(type_key) &&
          "Getting component array before component being registered.");
@@ -118,7 +119,8 @@ ComponentArray<Component>& ComponentManager::GetComponentArray() {
 }
 
 template <class Component>
-const ComponentArray<Component>& ComponentManager::GetComponentArray() const {
+auto ComponentManager::GetComponentArray() const
+    -> const ComponentArray<Component>& {
   const auto type_key = TypeKeyOf<Component>();
   assert(component_arrays_.contains(type_key) &&
          "Getting component array before component being registered.");

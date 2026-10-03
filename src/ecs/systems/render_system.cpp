@@ -1,16 +1,24 @@
-#include "render_system.h"
+#include "ecs/systems/render_system.h"
 
+#include <bgfx/bgfx.h>
+#include <bgfx/defines.h>
 #include <bgfx_utils.h>
 #include <bx/math.h>
 
 #include <array>
+#include <cstddef>
+#include <cstdint>
+#include <format>
+#include <string>
 
-#include "../../resource/asset_registry.h"
-#include "../components/camera.h"
-#include "../components/renderable.h"
-#include "../components/transform.h"
-#include "../core/ecs.h"
-#include "../core/frame_context.h"
+#include "ecs/components/camera.h"
+#include "ecs/components/renderable.h"
+#include "ecs/components/transform.h"
+#include "ecs/core/ecs.h"
+#include "ecs/core/frame_context.h"
+#include "ecs/core/types.h"
+#include "resource/asset_registry.h"
+#include "resource/texture_handle.h"
 
 namespace {
 
@@ -22,6 +30,14 @@ constexpr uint32_t kClearColor = 0x303030ff;  // RGBA
 constexpr float kFallbackFovDegrees = 60.0F;
 constexpr float kFallbackNearPlane = 0.1F;
 constexpr float kFallbackFarPlane = 100.0F;
+
+/** @brief Prints @p text to bgfx's debug overlay at a character cell. */
+void DebugText(std::uint16_t x, std::uint16_t y, std::uint8_t attr,
+               const std::string& text) {
+  // Only vararg call; "%s" keeps the format fixed.
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
+  bgfx::dbgTextPrintf(x, y, attr, "%s", text.c_str());
+}
 
 }  // namespace
 
@@ -51,12 +67,12 @@ void RenderSystem::Update(Ecs& ecs, const FrameContext& ctx) {
   // Debug overlay.
   const bgfx::Stats* stats = bgfx::getStats();
   bgfx::dbgTextClear();
-  bgfx::dbgTextPrintf(0, 3, 0x0f, "Backbuffer %dW x %dH", stats->width,
-                      stats->height);
+  DebugText(0, 3, 0x0f,
+            std::format("Backbuffer {}W x {}H", stats->width, stats->height));
   // First frame has dt == 0.
   const float fps = ctx.dt > 0.0F ? 1.0F / ctx.dt : 0.0F;
-  bgfx::dbgTextPrintf(0, 4, 0x0f, "Frame %.2f ms (%.0f fps)", ctx.dt * 1000.0F,
-                      fps);
+  DebugText(0, 4, 0x0f,
+            std::format("Frame {:.2f} ms ({:.0f} fps)", ctx.dt * 1000.0F, fps));
 
   bgfx::setFrameUniform(u_time_, &ctx.time);
 
@@ -93,7 +109,8 @@ void RenderSystem::Update(Ecs& ecs, const FrameContext& ctx) {
   }
 
   ecs.View<Transform, Renderable>().ForEach(
-      [this](Entity, const Transform& transform, const Renderable& renderable) {
+      [this](Entity, const Transform& transform,
+             const Renderable& renderable) -> void {
         std::array<float, kMtxSize> mtx{};
         bx::mtxSRT(
             mtx.data(), transform.scale.x, transform.scale.y, transform.scale.z,
@@ -105,7 +122,7 @@ void RenderSystem::Update(Ecs& ecs, const FrameContext& ctx) {
                                  : default_program_;
         const auto* mesh = assets_->GetMesh(renderable.mesh_handle);
 
-        const auto texture = isValid(renderable.texture)
+        const auto texture = IsValid(renderable.texture)
                                  ? assets_->GetTexture(renderable.texture)
                                  : default_texture_;
         const std::array<float, 4> tex_params{1.0F / renderable.texture_scale,

@@ -6,8 +6,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "mesh_handle.h"
-#include "texture_handle.h"
+#include "resource/mesh_handle.h"
+#include "resource/texture_handle.h"
 
 struct Mesh;
 
@@ -25,7 +25,7 @@ class AssetRegistry {
   AssetRegistry() noexcept = default;
   // Delete copy&assignment: registry owns Mesh pointers
   AssetRegistry(const AssetRegistry&) = delete;
-  AssetRegistry& operator=(const AssetRegistry&) = delete;
+  auto operator=(const AssetRegistry&) -> AssetRegistry& = delete;
 
   /**
    * @brief Loads a mesh, or returns the handle of one already loaded.
@@ -38,7 +38,7 @@ class AssetRegistry {
    * @param path Compiled mesh file, e.g. "assets/meshes/compiled/bunny.bin".
    * @return Handle to the mesh.
    */
-  MeshHandle LoadMesh(const std::filesystem::path& path);
+  auto LoadMesh(const std::filesystem::path& path) -> MeshHandle;
 
   /**
    * @brief Resolves a handle to the mesh it refers to.
@@ -46,7 +46,7 @@ class AssetRegistry {
    * @param handle Handle from LoadMesh; must be valid and not yet unloaded.
    * @return Mesh owned by this registry, valid until UnloadAll.
    */
-  const Mesh* GetMesh(MeshHandle handle) const;
+  auto GetMesh(MeshHandle handle) const -> const Mesh*;
 
   /**
    * @brief Loads a texture, or returns the handle of one already loaded.
@@ -57,7 +57,7 @@ class AssetRegistry {
    * @param path Compiled texture file, e.g. "assets/textures/debug_grid.dds".
    * @return Handle to the texture.
    */
-  TextureHandle LoadTexture(const std::filesystem::path& path);
+  auto LoadTexture(const std::filesystem::path& path) -> TextureHandle;
 
   /**
    * @brief Resolves a handle to the bgfx texture it refers to.
@@ -65,7 +65,7 @@ class AssetRegistry {
    * @param handle Handle from LoadTexture; must be valid and not yet unloaded.
    * @return bgfx texture owned by this registry, valid until UnloadAll.
    */
-  bgfx::TextureHandle GetTexture(TextureHandle handle) const;
+  auto GetTexture(TextureHandle handle) const -> bgfx::TextureHandle;
 
   /**
    * @brief Frees every loaded asset and empties the registry.

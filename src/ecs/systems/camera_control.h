@@ -13,7 +13,7 @@ class CameraControl {
  public:
   CameraControl() = default;
   CameraControl(const CameraControl&) = delete;
-  CameraControl& operator=(const CameraControl&) = delete;
+  auto operator=(const CameraControl&) -> CameraControl& = delete;
 
   /**
    * @brief Creates the underlying camera and sets its initial pose.

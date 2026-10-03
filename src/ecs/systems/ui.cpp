@@ -1,15 +1,22 @@
-#include "ui.h"
+#include "ecs/systems/ui.h"
 
-#include "../../resource/asset_registry.h"
-#include "../components/configurable.h"
-#include "../components/renderable.h"
-#include "../components/rigid_body.h"
-#include "../components/spin.h"
-#include "../components/transform.h"
-#include "../core/ecs.h"
-#include "../core/frame_context.h"
-#include "entry/entry.h"
-#include "imgui/imgui.h"
+#include <dear-imgui/imgui.h>
+#include <entry/entry.h>
+#include <imgui/imgui.h>
+
+#include <cstdint>
+#include <format>
+
+#include "ecs/components/configurable.h"
+#include "ecs/components/renderable.h"
+#include "ecs/components/rigid_body.h"
+#include "ecs/components/spin.h"
+#include "ecs/components/transform.h"
+#include "ecs/core/ecs.h"
+#include "ecs/core/frame_context.h"
+#include "ecs/core/types.h"
+#include "resource/asset_registry.h"
+#include "resource/mesh_handle.h"
 
 void UiSystem::Init(AssetRegistry& asset_registry) {
   imguiCreate();
@@ -18,7 +25,7 @@ void UiSystem::Init(AssetRegistry& asset_registry) {
 
 void UiSystem::Shutdown() { imguiDestroy(); }
 
-Entity UiSystem::SpawnEntity(Ecs& ecs) {
+auto UiSystem::SpawnEntity(Ecs& ecs) -> Entity {
   // TODO: remove paths
   const MeshHandle mesh_handle =
       asset_registry_->LoadMesh("assets/meshes/bunny.bin");
@@ -47,9 +54,11 @@ void UiSystem::Update(Ecs& ecs, const FrameContext& ctx) {
       mouse.m_mz, static_cast<std::uint16_t>(ctx.width),
       static_cast<std::uint16_t>(ctx.height));
 
-  ImGui::SetNextWindowPos(ImVec2(ctx.width - (ctx.width / 5.0f) - 10.0f, 10.0f),
+  const auto width = static_cast<float>(ctx.width);
+  const auto height = static_cast<float>(ctx.height);
+  ImGui::SetNextWindowPos(ImVec2(width - (width / 5.0f) - 10.0f, 10.0f),
                           ImGuiCond_FirstUseEver);
-  ImGui::SetNextWindowSize(ImVec2(ctx.width / 5.0f, ctx.height / 3.5f),
+  ImGui::SetNextWindowSize(ImVec2(width / 5.0f, height / 3.5f),
                            ImGuiCond_FirstUseEver);
   ImGui::Begin("Settings", nullptr, 0);
 
@@ -60,10 +69,10 @@ void UiSystem::Update(Ecs& ecs, const FrameContext& ctx) {
   // Sliders of transforms of entities
   ecs.View<Configurable, Transform, Spin, RigidBody, Renderable>().ForEach(
       [&ecs](Entity entity, Configurable&, Transform& transform, Spin& spin,
-             RigidBody& rigid_body, Renderable& renderable) {
+             RigidBody& rigid_body, Renderable& renderable) -> void {
         ImGui::PushID(static_cast<int>(entity));
 
-        ImGui::Text("Entity %zu", entity);
+        ImGui::TextUnformatted(std::format("Entity {}", entity).c_str());
         if (ImGui::Button("Destroy")) {
           ecs.DestroyEntity(entity);
         }
@@ -73,7 +82,7 @@ void UiSystem::Update(Ecs& ecs, const FrameContext& ctx) {
         if (ImGui::CollapsingHeader("Color Picker")) {
           ImGui::ColorPicker3(renderable.color.data());
         }
-        ImGui::Checkbox("Gravity", &rigid_body.has_gravity_);
+        ImGui::Checkbox("Gravity", &rigid_body.has_gravity);
         ImGui::SameLine();
         ImGui::Checkbox("Spin", &spin.should_spin);
         ImGui::NewLine();

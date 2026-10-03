@@ -1,17 +1,20 @@
-#include "builtin_loaders.h"
+#include "scene/builtin_loaders.h"
 
 #include <bx/math.h>
 
 #include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
+#include <stdexcept>
 #include <string>
 
-#include "../ecs/components/directional_light.h"
-#include "../ecs/components/renderable.h"
-#include "../ecs/components/transform.h"
-#include "../ecs/core/ecs.h"
-#include "../resource/asset_registry.h"
-#include "json_read.h"
-#include "scene_loader.h"
+#include "ecs/components/directional_light.h"
+#include "ecs/components/renderable.h"
+#include "ecs/components/transform.h"
+#include "ecs/core/ecs.h"
+#include "ecs/core/types.h"
+#include "resource/asset_registry.h"
+#include "scene/json_read.h"
+#include "scene/scene_loader.h"
 
 namespace {
 

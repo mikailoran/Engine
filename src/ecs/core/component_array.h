@@ -6,15 +6,25 @@
 #include <span>
 #include <utility>
 
-#include "types.h"
+#include "ecs/core/types.h"
 
 /** @brief Type-erased base so ComponentManager can hold every component array
  * together. */
 class ComponentArrayInterface {
  public:
   virtual ~ComponentArrayInterface() = default;
+  ComponentArrayInterface(const ComponentArrayInterface&) = delete;
+  auto operator=(const ComponentArrayInterface&)
+      -> ComponentArrayInterface& = delete;
+  ComponentArrayInterface(ComponentArrayInterface&&) = delete;
+  auto operator=(ComponentArrayInterface&&)
+      -> ComponentArrayInterface& = delete;
+
   /** @brief Drops @p entity's component, if it has one. */
   virtual void EntityDestroyed(Entity entity) = 0;
+
+ protected:
+  ComponentArrayInterface() = default;
 };
 
 /**
@@ -46,10 +56,10 @@ class ComponentArray : public ComponentArrayInterface {
   void RemoveData(Entity entity);
 
   /** @brief Returns @p entity's component. @pre Has(entity) is true. */
-  const Component& GetData(Entity entity) const;
+  [[nodiscard]] auto GetData(Entity entity) const -> const Component&;
 
   /** @brief Returns @p entity's component. @pre Has(entity) is true. */
-  Component& GetData(Entity entity);
+  auto GetData(Entity entity) -> Component&;
 
   /**
    * @brief Tests whether @p entity currently has a component in this array.
@@ -57,7 +67,7 @@ class ComponentArray : public ComponentArrayInterface {
    * Absence is a normal answer, not a caller error; only an id outside
    * [0, kMaxEntities) is, and throws std::out_of_range.
    */
-  [[nodiscard]] bool Has(Entity entity) const;
+  [[nodiscard]] auto Has(Entity entity) const -> bool;
 
   /** @brief Removes @p entity's component if present; a no-op otherwise. */
   void EntityDestroyed(Entity entity) override;
@@ -86,7 +96,7 @@ auto ComponentArray<Component>::Size() const -> std::size_t {
 
 template <class Component>
 auto ComponentArray<Component>::Entities() const -> std::span<const Entity> {
-  return {dense_.cbegin(), dense_.cbegin() + Size()};
+  return std::span(dense_).first(Size());
 }
 
 template <class Component>
@@ -123,7 +133,7 @@ void ComponentArray<Component>::RemoveData(Entity entity) {
 }
 
 template <class Component>
-Component& ComponentArray<Component>::GetData(Entity entity) {
+auto ComponentArray<Component>::GetData(Entity entity) -> Component& {
   assert(Has(entity) &&
          "Trying to retrieve a component the entity does not have.");
 
@@ -131,7 +141,8 @@ Component& ComponentArray<Component>::GetData(Entity entity) {
 }
 
 template <class Component>
-const Component& ComponentArray<Component>::GetData(Entity entity) const {
+auto ComponentArray<Component>::GetData(Entity entity) const
+    -> const Component& {
   assert(Has(entity) &&
          "Trying to retrieve a component the entity does not have.");
 
@@ -139,7 +150,7 @@ const Component& ComponentArray<Component>::GetData(Entity entity) const {
 }
 
 template <class Component>
-bool ComponentArray<Component>::Has(Entity entity) const {
+auto ComponentArray<Component>::Has(Entity entity) const -> bool {
   return sparse_.at(entity) != kInvalidIndex;
 }
 

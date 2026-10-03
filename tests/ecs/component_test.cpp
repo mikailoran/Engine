@@ -7,6 +7,7 @@
 #include <string>
 
 #include "ecs/core/ecs.h"
+#include "ecs/core/types.h"
 
 namespace {
 
@@ -26,10 +27,11 @@ struct Name {
 
 /** @brief Collects the entities a @p Component view visits. */
 template <class Component>
-std::set<Entity> Visited(Ecs& ecs) {
+auto Visited(Ecs& ecs) -> std::set<Entity> {
   std::set<Entity> visited;
-  ecs.View<Component>().ForEach(
-      [&visited](Entity entity, Component&) { visited.insert(entity); });
+  ecs.View<Component>().ForEach([&visited](Entity entity, Component&) -> auto {
+    visited.insert(entity);
+  });
   return visited;
 }
 
@@ -40,7 +42,7 @@ TEST(ComponentStorage, AddThenGetReturnsTheStoredValue) {
   ecs.RegisterComponent<Position>();
   const auto entity = ecs.CreateEntity();
 
-  ecs.AddComponent(entity, Position{3.0F, 4.0F});
+  ecs.AddComponent(entity, Position{.x = 3.0F, .y = 4.0F});
 
   EXPECT_FLOAT_EQ(ecs.GetComponent<Position>(entity).x, 3.0F);
   EXPECT_FLOAT_EQ(ecs.GetComponent<Position>(entity).y, 4.0F);
@@ -50,7 +52,7 @@ TEST(ComponentStorage, GetThroughAConstEcsReturnsTheStoredValue) {
   Ecs ecs;
   ecs.RegisterComponent<Position>();
   const auto entity = ecs.CreateEntity();
-  ecs.AddComponent(entity, Position{3.0F, 4.0F});
+  ecs.AddComponent(entity, Position{.x = 3.0F, .y = 4.0F});
 
   const Ecs& read_only = ecs;
 

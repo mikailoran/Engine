@@ -23,6 +23,6 @@ constexpr MeshHandle kInvalidMesh{};
  * @param handle Handle to test.
  * @return True unless the handle is kInvalidMesh.
  */
-constexpr bool isValid(MeshHandle handle) {
+constexpr auto IsValid(MeshHandle handle) -> bool {
   return handle.idx != std::numeric_limits<std::uint16_t>::max();
 }

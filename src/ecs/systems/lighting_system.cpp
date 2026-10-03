@@ -1,14 +1,16 @@
-#include "lighting_system.h"
+#include "ecs/systems/lighting_system.h"
 
+#include <bgfx/bgfx.h>
 #include <bx/math.h>
 
 #include <array>
 #include <cassert>
 #include <cstddef>
 
-#include "../components/directional_light.h"
-#include "../core/ecs.h"
-#include "../core/frame_context.h"
+#include "ecs/components/directional_light.h"
+#include "ecs/core/ecs.h"
+#include "ecs/core/frame_context.h"
+#include "ecs/core/types.h"
 
 namespace {
 
@@ -35,7 +37,7 @@ void LightingSystem::Update(Ecs& ecs, const FrameContext& /*ctx*/) {
   DirectionalLight light{};
   std::size_t light_count = 0;
   ecs.View<DirectionalLight>().ForEach(
-      [&light, &light_count](Entity, const DirectionalLight& found) {
+      [&light, &light_count](Entity, const DirectionalLight& found) -> void {
         if (light_count++ == 0) {
           light = found;
         }

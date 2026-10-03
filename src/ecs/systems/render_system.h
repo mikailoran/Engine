@@ -2,7 +2,7 @@
 
 #include <bgfx/bgfx.h>
 
-#include "../core/types.h"
+#include "ecs/core/types.h"
 
 class Ecs;
 class AssetRegistry;
@@ -18,7 +18,7 @@ class RenderSystem {
  public:
   RenderSystem() = default;
   RenderSystem(const RenderSystem&) = delete;
-  RenderSystem& operator=(const RenderSystem&) = delete;
+  auto operator=(const RenderSystem&) -> RenderSystem& = delete;
 
   /**
    * @brief Creates the shared GPU resources.

@@ -10,8 +10,8 @@
 #include <span>
 #include <tuple>
 
-#include "component_array.h"
-#include "types.h"
+#include "ecs/core/component_array.h"
+#include "ecs/core/types.h"
 
 // TODO: Make View become a range. Currently, we can only pass functions to
 // views (internal iteration). Making View returning ranges would allow external
@@ -69,7 +69,7 @@ auto View<Components...>::ForEach(Fn fn) const -> void {
       *std::ranges::min_element(candidates, {}, std::ranges::size);
 
   // Sum of all viewed array sizes, to detect structural changes
-  const auto total_size = [this] {
+  const auto total_size = [this]() -> std::size_t {
     return (ComponentArrayOf<Components>().Size() + ...);
   };
 

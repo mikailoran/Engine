@@ -1,10 +1,17 @@
-#include "asset_registry.h"
+#include "resource/asset_registry.h"
 
+#include <bgfx/bgfx.h>
+#include <bgfx/defines.h>
 #include <bgfx_utils.h>
 
 #include <cassert>
+#include <cstdint>
+#include <filesystem>
 
-MeshHandle AssetRegistry::LoadMesh(const std::filesystem::path& path) {
+#include "resource/mesh_handle.h"
+#include "resource/texture_handle.h"
+
+auto AssetRegistry::LoadMesh(const std::filesystem::path& path) -> MeshHandle {
   // Mesh previously loaded: return handle from map
   if (auto it = mesh_by_path_.find(path); it != mesh_by_path_.end()) {
     return it->second;
@@ -19,14 +26,16 @@ MeshHandle AssetRegistry::LoadMesh(const std::filesystem::path& path) {
   return handle;
 }
 
-[[nodiscard]] const Mesh* AssetRegistry::GetMesh(MeshHandle handle) const {
-  assert(isValid(handle) && "Trying to get invalid mesh handle.");
+[[nodiscard]] auto AssetRegistry::GetMesh(MeshHandle handle) const
+    -> const Mesh* {
+  assert(IsValid(handle) && "Trying to get invalid mesh handle.");
   assert(handle.idx < meshes_.size() && "Mesh handle out of range.");
 
   return meshes_.at(handle.idx);
 }
 
-TextureHandle AssetRegistry::LoadTexture(const std::filesystem::path& path) {
+auto AssetRegistry::LoadTexture(const std::filesystem::path& path)
+    -> TextureHandle {
   // Texture previously loaded: return handle from map
   if (auto it = texture_by_path_.find(path); it != texture_by_path_.end()) {
     return it->second;
@@ -44,9 +53,9 @@ TextureHandle AssetRegistry::LoadTexture(const std::filesystem::path& path) {
   return handle;
 }
 
-[[nodiscard]] bgfx::TextureHandle AssetRegistry::GetTexture(
-    TextureHandle handle) const {
-  assert(isValid(handle) && "Trying to get invalid texture handle.");
+[[nodiscard]] auto AssetRegistry::GetTexture(TextureHandle handle) const
+    -> bgfx::TextureHandle {
+  assert(IsValid(handle) && "Trying to get invalid texture handle.");
   assert(handle.idx < textures_.size() && "Texture handle out of range.");
 
   return textures_.at(handle.idx);
