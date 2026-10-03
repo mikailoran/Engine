@@ -1,6 +1,8 @@
 #include "ecs/systems/ui.h"
 
 #include <dear-imgui/imgui.h>
+#include <entry/entry.h>
+#include <imgui/imgui.h>
 
 #include <cstdint>
 
@@ -12,8 +14,6 @@
 #include "ecs/core/ecs.h"
 #include "ecs/core/frame_context.h"
 #include "ecs/core/types.h"
-#include "entry/entry.h"
-#include "imgui/imgui.h"
 #include "resource/asset_registry.h"
 #include "resource/mesh_handle.h"
 
