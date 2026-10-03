@@ -69,7 +69,7 @@ auto View<Components...>::ForEach(Fn fn) const -> void {
       *std::ranges::min_element(candidates, {}, std::ranges::size);
 
   // Sum of all viewed array sizes, to detect structural changes
-  const auto total_size = [this] {
+  const auto total_size = [this]() -> std::size_t {
     return (ComponentArrayOf<Components>().Size() + ...);
   };
 

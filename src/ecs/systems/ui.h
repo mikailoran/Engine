@@ -10,11 +10,11 @@ class UiSystem {
  public:
   UiSystem() = default;
   UiSystem(const UiSystem&) = delete;
-  UiSystem& operator=(const UiSystem&) = delete;
+  auto operator=(const UiSystem&) -> UiSystem& = delete;
 
   void Init(AssetRegistry& asset_registry);
 
-  Entity SpawnEntity(Ecs& ecs);
+  auto SpawnEntity(Ecs& ecs) -> Entity;
 
   void Update(Ecs& ecs, const FrameContext& ctx);
 

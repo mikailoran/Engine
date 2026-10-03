@@ -25,7 +25,7 @@ void UiSystem::Init(AssetRegistry& asset_registry) {
 
 void UiSystem::Shutdown() { imguiDestroy(); }
 
-Entity UiSystem::SpawnEntity(Ecs& ecs) {
+auto UiSystem::SpawnEntity(Ecs& ecs) -> Entity {
   // TODO: remove paths
   const MeshHandle mesh_handle =
       asset_registry_->LoadMesh("assets/meshes/bunny.bin");
@@ -69,7 +69,7 @@ void UiSystem::Update(Ecs& ecs, const FrameContext& ctx) {
   // Sliders of transforms of entities
   ecs.View<Configurable, Transform, Spin, RigidBody, Renderable>().ForEach(
       [&ecs](Entity entity, Configurable&, Transform& transform, Spin& spin,
-             RigidBody& rigid_body, Renderable& renderable) {
+             RigidBody& rigid_body, Renderable& renderable) -> void {
         ImGui::PushID(static_cast<int>(entity));
 
         ImGui::TextUnformatted(std::format("Entity {}", entity).c_str());

@@ -99,7 +99,8 @@ void RenderSystem::Update(Ecs& ecs, const FrameContext& ctx) {
   }
 
   ecs.View<Transform, Renderable>().ForEach(
-      [this](Entity, const Transform& transform, const Renderable& renderable) {
+      [this](Entity, const Transform& transform,
+             const Renderable& renderable) -> void {
         std::array<float, kMtxSize> mtx{};
         bx::mtxSRT(
             mtx.data(), transform.scale.x, transform.scale.y, transform.scale.z,

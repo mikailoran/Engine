@@ -19,10 +19,10 @@ struct Position {
 };
 
 /** @brief Collects the entities a Position view visits. */
-std::set<Entity> Visited(Ecs& ecs) {
+auto Visited(Ecs& ecs) -> std::set<Entity> {
   std::set<Entity> visited;
   ecs.View<Position>().ForEach(
-      [&visited](Entity entity, Position&) { visited.insert(entity); });
+      [&visited](Entity entity, Position&) -> void { visited.insert(entity); });
   return visited;
 }
 
@@ -31,7 +31,7 @@ std::set<Entity> Visited(Ecs& ecs) {
  * @param alive Entities already alive in @p ecs.
  * @return The ids handed out; fewer than requested means one repeated.
  */
-std::set<Entity> FillPool(Ecs& ecs, std::size_t alive) {
+auto FillPool(Ecs& ecs, std::size_t alive) -> std::set<Entity> {
   std::set<Entity> created;
   for (std::size_t i = alive; i < kMaxEntities; ++i) {
     created.insert(ecs.CreateEntity());
@@ -174,7 +174,7 @@ TEST(DeferredDestruction, ForEachCanDestroyTheVisitedEntity) {
     entities.push_back(entity);
   }
   ecs.View<Position>().ForEach(
-      [&ecs](Entity entity, Position&) { ecs.DestroyEntity(entity); });
+      [&ecs](Entity entity, Position&) -> void { ecs.DestroyEntity(entity); });
 
   EXPECT_EQ(Visited(ecs).size(), 16U)
       << "the request alone must not tear anything down";
@@ -198,7 +198,7 @@ TEST(DeferredDestruction, ForEachCanDestroyADifferentEntity) {
 
   // Requested on every visit, including the survivor's
   ecs.View<Position>().ForEach(
-      [&ecs, victim](Entity, Position&) { ecs.DestroyEntity(victim); });
+      [&ecs, victim](Entity, Position&) -> void { ecs.DestroyEntity(victim); });
   ecs.Flush();
 
   EXPECT_FALSE(Visited(ecs).contains(victim));

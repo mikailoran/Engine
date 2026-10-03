@@ -10,7 +10,7 @@ EntityManager::EntityManager() {
   }
 }
 
-Entity EntityManager::CreateEntity() {
+auto EntityManager::CreateEntity() -> Entity {
   assert(living_entity_count_ < kMaxEntities &&
          "Too many entities in existence.");
 
@@ -21,7 +21,7 @@ Entity EntityManager::CreateEntity() {
   return id;
 }
 
-bool EntityManager::IsAlive(Entity entity) const {
+auto EntityManager::IsAlive(Entity entity) const -> bool {
   return entity < kMaxEntities && alive_.at(entity);
 }
 

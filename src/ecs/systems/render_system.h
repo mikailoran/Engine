@@ -18,7 +18,7 @@ class RenderSystem {
  public:
   RenderSystem() = default;
   RenderSystem(const RenderSystem&) = delete;
-  RenderSystem& operator=(const RenderSystem&) = delete;
+  auto operator=(const RenderSystem&) -> RenderSystem& = delete;
 
   /**
    * @brief Creates the shared GPU resources.

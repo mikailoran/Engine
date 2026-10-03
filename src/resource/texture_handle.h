@@ -25,6 +25,6 @@ constexpr TextureHandle kInvalidTexture{};
  * @param handle Handle to test.
  * @return True unless the handle is kInvalidTexture.
  */
-constexpr bool IsValid(TextureHandle handle) {
+constexpr auto IsValid(TextureHandle handle) -> bool {
   return handle.idx != std::numeric_limits<std::uint16_t>::max();
 }

@@ -7,7 +7,7 @@ class Physics {
  public:
   Physics() = default;
   Physics(const Physics&) = delete;
-  Physics& operator=(const Physics&) = delete;
+  auto operator=(const Physics&) -> Physics& = delete;
 
   void Init();
 

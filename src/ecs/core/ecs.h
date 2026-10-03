@@ -13,7 +13,7 @@ class Ecs {
   Ecs() = default;
 
   /** @brief Creates an entity with no components. */
-  Entity CreateEntity();
+  auto CreateEntity() -> Entity;
 
   /**
    * @brief Requests removal of an entity: its components and its id.
@@ -53,15 +53,15 @@ class Ecs {
 
   /** @brief Returns @p entity's @p Component. @pre It has one. */
   template <class Component>
-  Component& GetComponent(Entity entity);
+  auto GetComponent(Entity entity) -> Component&;
 
   /** @brief Returns @p entity's @p Component. @pre It has one. */
   template <class Component>
-  const Component& GetComponent(Entity entity) const;
+  auto GetComponent(Entity entity) const -> const Component&;
 
   /** @brief Tests whether @p entity has a @p Component. @pre Registered. */
   template <class Component>
-  [[nodiscard]] bool HasComponent(Entity entity) const;
+  [[nodiscard]] auto HasComponent(Entity entity) const -> bool;
 
   /**
    * @brief Views the entities that have every one of @p Components.
@@ -94,17 +94,17 @@ void Ecs::RemoveComponent(Entity entity) {
 }
 
 template <class Component>
-Component& Ecs::GetComponent(Entity entity) {
+auto Ecs::GetComponent(Entity entity) -> Component& {
   return component_manager_.GetComponent<Component>(entity);
 }
 
 template <class Component>
-const Component& Ecs::GetComponent(Entity entity) const {
+auto Ecs::GetComponent(Entity entity) const -> const Component& {
   return component_manager_.GetComponent<Component>(entity);
 }
 
 template <class Component>
-bool Ecs::HasComponent(Entity entity) const {
+auto Ecs::HasComponent(Entity entity) const -> bool {
   return component_manager_.HasComponent<Component>(entity);
 }
 

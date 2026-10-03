@@ -2,7 +2,7 @@
 
 #include "ecs/core/types.h"
 
-Entity Ecs::CreateEntity() { return entity_manager_.CreateEntity(); }
+auto Ecs::CreateEntity() -> Entity { return entity_manager_.CreateEntity(); }
 
 void Ecs::DestroyEntity(Entity entity) {
   // Filtering dead ids here keeps the queue short; it does not make the queue

@@ -37,7 +37,7 @@ void LightingSystem::Update(Ecs& ecs, const FrameContext& /*ctx*/) {
   DirectionalLight light{};
   std::size_t light_count = 0;
   ecs.View<DirectionalLight>().ForEach(
-      [&light, &light_count](Entity, const DirectionalLight& found) {
+      [&light, &light_count](Entity, const DirectionalLight& found) -> void {
         if (light_count++ == 0) {
           light = found;
         }

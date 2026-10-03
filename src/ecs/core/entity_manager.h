@@ -27,7 +27,7 @@ class EntityManager {
    * @return An id not currently in use, < MAX_ENTITIES.
    * @pre Fewer than MAX_ENTITIES entities are alive.
    */
-  Entity CreateEntity();
+  auto CreateEntity() -> Entity;
 
   /**
    * @brief Tests whether an id is currently in use.
@@ -35,7 +35,7 @@ class EntityManager {
    * @param entity Entity to test. Must be < MAX_ENTITIES.
    * @return True if the id has been created and not yet destroyed.
    */
-  [[nodiscard]] bool IsAlive(Entity entity) const;
+  [[nodiscard]] auto IsAlive(Entity entity) const -> bool;
 
   /**
    * @brief Returns the entity's id to the free pool.

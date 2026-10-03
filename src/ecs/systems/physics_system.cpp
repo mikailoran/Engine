@@ -17,7 +17,7 @@ void Physics::Init() {}
 void Physics::Step(Ecs& ecs, const float fixed_dt) {
   ecs.View<Transform, RigidBody, Spin>().ForEach(
       [fixed_dt](Entity, Transform& transform, RigidBody& rigid_body,
-                 const Spin& spin) {
+                 const Spin& spin) -> void {
         bx::Vec3 acceleration = rigid_body.acceleration;
         if (rigid_body.has_gravity) {
           acceleration = bx::add(acceleration, {0.0F, kGravity, 0.0F});

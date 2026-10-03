@@ -36,7 +36,7 @@ void CameraControl::Update(Ecs& ecs, const FrameContext& ctx) {
   const auto at = cameraGetAt();
 
   ecs.View<Transform, Camera>().ForEach(
-      [&position, &at](Entity, Transform& transform, Camera& camera) {
+      [&position, &at](Entity, Transform& transform, Camera& camera) -> void {
         transform.position = position;
         camera.target = at;
       });

@@ -27,10 +27,11 @@ struct Name {
 
 /** @brief Collects the entities a @p Component view visits. */
 template <class Component>
-std::set<Entity> Visited(Ecs& ecs) {
+auto Visited(Ecs& ecs) -> std::set<Entity> {
   std::set<Entity> visited;
-  ecs.View<Component>().ForEach(
-      [&visited](Entity entity, Component&) { visited.insert(entity); });
+  ecs.View<Component>().ForEach([&visited](Entity entity, Component&) -> auto {
+    visited.insert(entity);
+  });
   return visited;
 }
 

@@ -15,7 +15,7 @@ class LightingSystem {
  public:
   LightingSystem() = default;
   LightingSystem(const LightingSystem&) = delete;
-  LightingSystem& operator=(const LightingSystem&) = delete;
+  auto operator=(const LightingSystem&) -> LightingSystem& = delete;
 
   /** @brief Creates the light uniforms. Requires bgfx::init to have completed.
    */
