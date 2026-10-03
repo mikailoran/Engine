@@ -27,7 +27,7 @@ MeshHandle AssetRegistry::LoadMesh(const std::filesystem::path& path) {
 }
 
 [[nodiscard]] const Mesh* AssetRegistry::GetMesh(MeshHandle handle) const {
-  assert(isValid(handle) && "Trying to get invalid mesh handle.");
+  assert(IsValid(handle) && "Trying to get invalid mesh handle.");
   assert(handle.idx < meshes_.size() && "Mesh handle out of range.");
 
   return meshes_.at(handle.idx);
@@ -53,7 +53,7 @@ TextureHandle AssetRegistry::LoadTexture(const std::filesystem::path& path) {
 
 [[nodiscard]] bgfx::TextureHandle AssetRegistry::GetTexture(
     TextureHandle handle) const {
-  assert(isValid(handle) && "Trying to get invalid texture handle.");
+  assert(IsValid(handle) && "Trying to get invalid texture handle.");
   assert(handle.idx < textures_.size() && "Texture handle out of range.");
 
   return textures_.at(handle.idx);

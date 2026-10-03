@@ -36,23 +36,23 @@ namespace {
  * the systems, and the window/timing state entry writes back into.
  */
 struct Game {
-  Ecs m_ecs;
-  AssetRegistry m_assets;
+  Ecs ecs;
+  AssetRegistry assets;
 
-  CameraControl m_camera_control;
-  Physics m_physics;
-  LightingSystem m_lighting;
-  RenderSystem m_render;
-  UiSystem m_ui;
+  CameraControl camera_control;
+  Physics physics;
+  LightingSystem lighting;
+  RenderSystem render;
+  UiSystem ui;
 
-  uint32_t m_width = 1280;
-  uint32_t m_height = 720;
-  uint32_t m_debug = BGFX_DEBUG_TEXT;
-  uint32_t m_reset = BGFX_RESET_VSYNC;
+  uint32_t width = 1280;
+  uint32_t height = 720;
+  uint32_t debug = BGFX_DEBUG_TEXT;
+  uint32_t reset = BGFX_RESET_VSYNC;
 
-  entry::MouseState m_mouseState;
+  entry::MouseState mouse_state;
 
-  FrameTime m_frameTime;
+  FrameTime frame_time;
 };
 
 /**
@@ -61,10 +61,10 @@ struct Game {
  * entry owns the process entry point and the platform message pump, so by the
  * time this runs a window exists and its native handles are queryable.
  *
- * @param _game Game state to initialise.
+ * @param game Game state to initialise.
  */
-void gameInit(Game& _game) {
-  auto& ecs = _game.m_ecs;
+void GameInit(Game& game) {
+  auto& ecs = game.ecs;
 
   // --- Asset root -------------------------------------------------------
   // Must precede meshLoad/loadProgram: entry prepends this to every path its
@@ -79,12 +79,12 @@ void gameInit(Game& _game) {
       entry::getNativeWindowHandle(entry::kDefaultWindowHandle);
   init.platformData.ndt = entry::getNativeDisplayHandle();
   init.platformData.type = entry::getNativeWindowHandleType();
-  init.resolution.width = _game.m_width;
-  init.resolution.height = _game.m_height;
-  init.resolution.reset = _game.m_reset;
+  init.resolution.width = game.width;
+  init.resolution.height = game.height;
+  init.resolution.reset = game.reset;
   bgfx::init(init);
 
-  bgfx::setDebug(_game.m_debug);
+  bgfx::setDebug(game.debug);
 
   // --- ECS: components --------------------------------------------------
   ecs.RegisterComponent<Camera>();
@@ -96,22 +96,22 @@ void gameInit(Game& _game) {
   ecs.RegisterComponent<DirectionalLight>();
 
   // --- Systems: Init ----------------------------------------------------
-  _game.m_camera_control.Init();
-  _game.m_physics.Init();
-  _game.m_lighting.Init();
-  _game.m_render.Init(_game.m_assets);
-  _game.m_ui.Init(_game.m_assets);
+  game.camera_control.Init();
+  game.physics.Init();
+  game.lighting.Init();
+  game.render.Init(game.assets);
+  game.ui.Init(game.assets);
 
   // --- Assets and entities ----------------------------------------------
   const auto camera_entity = ecs.CreateEntity();
   ecs.AddComponent(camera_entity, Transform{.position = {0.0F, 1.0F, -5.0F}});
   ecs.AddComponent(camera_entity, Camera{});
-  _game.m_render.SetCamera(camera_entity);
+  game.render.SetCamera(camera_entity);
 
   // Load the debug scene's decor as ordinary entities
   SceneLoader scene_loader;
   RegisterBuiltinLoaders(scene_loader);
-  SceneLoadContext scene_ctx{.ecs = ecs, .assets = _game.m_assets};
+  SceneLoadContext scene_ctx{.ecs = ecs, .assets = game.assets};
   scene_loader.Load("assets/scenes/debug.json", scene_ctx);
 }
 
@@ -119,13 +119,13 @@ void gameInit(Game& _game) {
  * @brief Tears down bgfx.
  * @return Process exit code.
  */
-auto gameShutdown(Game& _game) -> int {
-  _game.m_ui.Shutdown();
-  _game.m_render.Shutdown();
-  _game.m_lighting.Shutdown();
-  _game.m_camera_control.Shutdown();
-  _game.m_assets.UnloadAll();
-  _game.m_ecs.Flush();
+auto GameShutdown(Game& game) -> int {
+  game.ui.Shutdown();
+  game.render.Shutdown();
+  game.lighting.Shutdown();
+  game.camera_control.Shutdown();
+  game.assets.UnloadAll();
+  game.ecs.Flush();
   bgfx::shutdown();
   return 0;
 }
@@ -151,33 +151,33 @@ auto gameShutdown(Game& _game) -> int {
  */
 auto _main_(int /*_argc*/, char** /*_argv*/) -> int {
   Game game;
-  gameInit(game);
+  GameInit(game);
 
   // processEvents pumps entry's event queue and returns true when the window
   // asks to close; it also writes back width/height and handles reset.
-  while (!entry::processEvents(game.m_width, game.m_height, game.m_debug,
-                               game.m_reset, &game.m_mouseState)) {
-    game.m_frameTime.frame();
+  while (!entry::processEvents(game.width, game.height, game.debug, game.reset,
+                               &game.mouse_state)) {
+    game.frame_time.frame();
 
     // One context per frame, shared by every system.
     const FrameContext ctx{
-        .width = game.m_width,
-        .height = game.m_height,
-        .dt = bx::toSeconds<float>(game.m_frameTime.getDeltaTime()),
-        .time = bx::toSeconds<float>(game.m_frameTime.getDurationTime()),
-        .mouse = &game.m_mouseState,
+        .width = game.width,
+        .height = game.height,
+        .dt = bx::toSeconds<float>(game.frame_time.getDeltaTime()),
+        .time = bx::toSeconds<float>(game.frame_time.getDurationTime()),
+        .mouse = &game.mouse_state,
     };
 
     // The camera pose must settle before the renderer reads it.
-    game.m_camera_control.Update(game.m_ecs, ctx);
-    game.m_physics.Update(game.m_ecs, ctx);
+    game.camera_control.Update(game.ecs, ctx);
+    game.physics.Update(game.ecs, ctx);
     // Frame uniforms must be set before the renderer submits.
-    game.m_lighting.Update(game.m_ecs, ctx);
-    game.m_render.Update(game.m_ecs, ctx);
-    game.m_ui.Update(game.m_ecs, ctx);
+    game.lighting.Update(game.ecs, ctx);
+    game.render.Update(game.ecs, ctx);
+    game.ui.Update(game.ecs, ctx);
 
-    game.m_ecs.Flush();
+    game.ecs.Flush();
   }
 
-  return gameShutdown(game);
+  return GameShutdown(game);
 }

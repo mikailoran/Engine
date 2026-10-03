@@ -111,7 +111,7 @@ void RenderSystem::Update(Ecs& ecs, const FrameContext& ctx) {
                                  : default_program_;
         const auto* mesh = assets_->GetMesh(renderable.mesh_handle);
 
-        const auto texture = isValid(renderable.texture)
+        const auto texture = IsValid(renderable.texture)
                                  ? assets_->GetTexture(renderable.texture)
                                  : default_texture_;
         const std::array<float, 4> tex_params{1.0F / renderable.texture_scale,

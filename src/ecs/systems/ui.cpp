@@ -79,7 +79,7 @@ void UiSystem::Update(Ecs& ecs, const FrameContext& ctx) {
         if (ImGui::CollapsingHeader("Color Picker")) {
           ImGui::ColorPicker3(renderable.color.data());
         }
-        ImGui::Checkbox("Gravity", &rigid_body.has_gravity_);
+        ImGui::Checkbox("Gravity", &rigid_body.has_gravity);
         ImGui::SameLine();
         ImGui::Checkbox("Spin", &spin.should_spin);
         ImGui::NewLine();
