@@ -1,15 +1,16 @@
 #include "asset_registry.h"
 
 #include <bgfx_utils.h>
+
 #include <cassert>
 
-MeshHandle AssetRegistry::LoadMesh(const std::filesystem::path &path) {
+MeshHandle AssetRegistry::LoadMesh(const std::filesystem::path& path) {
   // Mesh previously loaded: return handle from map
   if (auto it = mesh_by_path_.find(path); it != mesh_by_path_.end()) {
     return it->second;
   }
 
-  auto *mesh = meshLoad(path.c_str());
+  auto* mesh = meshLoad(path.c_str());
   assert(mesh && "Trying to load invalid mesh.");
 
   const MeshHandle handle{static_cast<std::uint16_t>(meshes_.size())};
@@ -18,14 +19,14 @@ MeshHandle AssetRegistry::LoadMesh(const std::filesystem::path &path) {
   return handle;
 }
 
-[[nodiscard]] const Mesh *AssetRegistry::GetMesh(MeshHandle handle) const {
+[[nodiscard]] const Mesh* AssetRegistry::GetMesh(MeshHandle handle) const {
   assert(isValid(handle) && "Trying to get invalid mesh handle.");
   assert(handle.idx < meshes_.size() && "Mesh handle out of range.");
 
   return meshes_.at(handle.idx);
 }
 
-TextureHandle AssetRegistry::LoadTexture(const std::filesystem::path &path) {
+TextureHandle AssetRegistry::LoadTexture(const std::filesystem::path& path) {
   // Texture previously loaded: return handle from map
   if (auto it = texture_by_path_.find(path); it != texture_by_path_.end()) {
     return it->second;
@@ -43,8 +44,8 @@ TextureHandle AssetRegistry::LoadTexture(const std::filesystem::path &path) {
   return handle;
 }
 
-[[nodiscard]] bgfx::TextureHandle
-AssetRegistry::GetTexture(TextureHandle handle) const {
+[[nodiscard]] bgfx::TextureHandle AssetRegistry::GetTexture(
+    TextureHandle handle) const {
   assert(isValid(handle) && "Trying to get invalid texture handle.");
   assert(handle.idx < textures_.size() && "Texture handle out of range.");
 
@@ -52,7 +53,7 @@ AssetRegistry::GetTexture(TextureHandle handle) const {
 }
 
 void AssetRegistry::UnloadAll() {
-  for (Mesh *mesh : meshes_) {
+  for (Mesh* mesh : meshes_) {
     meshUnload(mesh);
   }
   meshes_.clear();

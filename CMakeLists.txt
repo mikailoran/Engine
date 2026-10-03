@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.25)
 project(engine LANGUAGES CXX)
 
 # Fail explicitly on unfetched submodules.
@@ -19,7 +19,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(BGFX_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(BGFX_BUILD_EXAMPLE_COMMON ON CACHE BOOL "" FORCE)
 set(BGFX_BUILD_TOOLS ON CACHE BOOL "" FORCE)
-add_subdirectory(third_party/bgfx.cmake)
+add_subdirectory(third_party/bgfx.cmake SYSTEM)
 
 # --- ECS core ---------------------------------------------------------------
 add_library(ecs_core STATIC
@@ -49,7 +49,8 @@ include(FetchContent)
 FetchContent_Declare(nlohmann_json
   URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz
   URL_HASH SHA256=42f6e95cad6ec532fd372391373363b62a14af6d771056dbfc86160e6dfff7aa
-  DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+  SYSTEM)
 FetchContent_MakeAvailable(nlohmann_json)
 
 # --- Runtime layout ---------------------------------------------------------

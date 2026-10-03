@@ -3,11 +3,11 @@
 // deferred_destruction_test.cpp; these tests flush immediately and only assert
 // the teardown is complete.
 
-#include "ecs/core/ecs.h"
-
 #include <gtest/gtest.h>
 
 #include <set>
+
+#include "ecs/core/ecs.h"
 
 namespace {
 
@@ -19,7 +19,7 @@ struct Health {
   int value{0};
 };
 
-} // namespace
+}  // namespace
 
 TEST(Destruction, RemovesEveryComponentOfTheEntity) {
   Ecs ecs;

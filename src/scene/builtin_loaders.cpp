@@ -1,24 +1,24 @@
 #include "builtin_loaders.h"
 
-#include "json_read.h"
-#include "scene_loader.h"
+#include <bx/math.h>
+
+#include <nlohmann/json.hpp>
+#include <string>
 
 #include "../ecs/components/directional_light.h"
 #include "../ecs/components/renderable.h"
 #include "../ecs/components/transform.h"
 #include "../ecs/core/ecs.h"
 #include "../resource/asset_registry.h"
-
-#include <bx/math.h>
-#include <nlohmann/json.hpp>
-#include <string>
+#include "json_read.h"
+#include "scene_loader.h"
 
 namespace {
 
 using nlohmann::json;
 
 /** @brief Adds a Transform; every field is optional. Rotation is in degrees. */
-void LoadTransform(const json &data, Entity entity, SceneLoadContext &ctx) {
+void LoadTransform(const json& data, Entity entity, SceneLoadContext& ctx) {
   CheckKeys(data, {"position", "rotation_deg", "scale"});
 
   Transform transform{};
@@ -39,7 +39,7 @@ void LoadTransform(const json &data, Entity entity, SceneLoadContext &ctx) {
  * @brief Adds a Renderable; "mesh" is required, "color", "texture" and
  * "texture_scale" optional.
  */
-void LoadRenderable(const json &data, Entity entity, SceneLoadContext &ctx) {
+void LoadRenderable(const json& data, Entity entity, SceneLoadContext& ctx) {
   CheckKeys(data, {"mesh", "color", "texture", "texture_scale"});
 
   Renderable renderable{};
@@ -63,10 +63,10 @@ void LoadRenderable(const json &data, Entity entity, SceneLoadContext &ctx) {
 }
 
 /** @brief Adds a DirectionalLight; every field is optional. */
-void LoadDirectionalLight(const json &data, Entity entity,
-                          SceneLoadContext &ctx) {
-  CheckKeys(data, {"direction", "color", "intensity", "sky_color",
-                   "ground_color"});
+void LoadDirectionalLight(const json& data, Entity entity,
+                          SceneLoadContext& ctx) {
+  CheckKeys(data,
+            {"direction", "color", "intensity", "sky_color", "ground_color"});
   DirectionalLight light{};
   if (data.contains("direction")) {
     light.direction = ReadVec3(data.at("direction"));
@@ -86,9 +86,9 @@ void LoadDirectionalLight(const json &data, Entity entity,
   ctx.ecs.AddComponent(entity, light);
 }
 
-} // namespace
+}  // namespace
 
-void RegisterBuiltinLoaders(SceneLoader &loader) {
+void RegisterBuiltinLoaders(SceneLoader& loader) {
   loader.Register("transform", LoadTransform);
   loader.Register("renderable", LoadRenderable);
   loader.Register("directional_light", LoadDirectionalLight);

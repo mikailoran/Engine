@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../core/types.h"
-
 #include <bgfx/bgfx.h>
+
+#include "../core/types.h"
 
 class Ecs;
 class AssetRegistry;
@@ -15,10 +15,10 @@ struct FrameContext;
  * uniforms and the fallback white texture)
  */
 class RenderSystem {
-public:
+ public:
   RenderSystem() = default;
-  RenderSystem(const RenderSystem &) = delete;
-  RenderSystem &operator=(const RenderSystem &) = delete;
+  RenderSystem(const RenderSystem&) = delete;
+  RenderSystem& operator=(const RenderSystem&) = delete;
 
   /**
    * @brief Creates the shared GPU resources.
@@ -29,7 +29,7 @@ public:
    * @param assets Registry to resolve mesh handles through. Must outlive this
    * system.
    */
-  void Init(const AssetRegistry &assets);
+  void Init(const AssetRegistry& assets);
 
   /**
    * @brief Submits one frame.
@@ -37,7 +37,7 @@ public:
    * @param ecs World to read Transform and Renderable from.
    * @param ctx Per-frame inputs.
    */
-  void Update(Ecs &ecs, const FrameContext &ctx);
+  void Update(Ecs& ecs, const FrameContext& ctx);
 
   /**
    * @brief Destroys every GPU resource this system owns.
@@ -57,9 +57,9 @@ public:
    */
   void SetCamera(Entity camera);
 
-private:
+ private:
   // TODO: figure out how to reinforce class invariants
-  const AssetRegistry *assets_{nullptr};
+  const AssetRegistry* assets_{nullptr};
 
   // Used when a Renderable leaves its own program handle invalid.
   bgfx::ProgramHandle default_program_{bgfx::kInvalidHandle};

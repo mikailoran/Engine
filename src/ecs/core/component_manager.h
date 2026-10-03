@@ -1,41 +1,48 @@
 #pragma once
 
-#include "component_array.h"
-#include "types.h"
-#include "view.h"
 #include <cassert>
 #include <memory>
 #include <unordered_map>
 
+#include "component_array.h"
+#include "types.h"
+#include "view.h"
+
 class ComponentManager {
-public:
+ public:
   ComponentManager() = default;
 
-  template <class Component> void RegisterComponent();
+  template <class Component>
+  void RegisterComponent();
 
   template <class Component>
   void AddComponent(Entity entity, Component component);
 
-  template <class Component> void RemoveComponent(Entity entity);
+  template <class Component>
+  void RemoveComponent(Entity entity);
 
-  template <class Component> Component &GetComponent(Entity entity);
+  template <class Component>
+  Component& GetComponent(Entity entity);
 
-  template <class Component> const Component &GetComponent(Entity entity) const;
+  template <class Component>
+  const Component& GetComponent(Entity entity) const;
 
   template <class Component>
   [[nodiscard]] bool HasComponent(Entity entity) const;
 
   /** @brief Views the entities having all @p Components. @pre Registered. */
   // ::View: inside this class, plain View names this member
-  template <class... Components> auto View() -> ::View<Components...>;
+  template <class... Components>
+  auto View() -> ::View<Components...>;
 
   void EntityDestroyed(Entity entity);
 
-private:
-  template <class Component> ComponentArray<Component> &GetComponentArray();
+ private:
+  template <class Component>
+  ComponentArray<Component>& GetComponentArray();
 
   template <class Component>
-  const ComponentArray<Component> &GetComponentArray() const;
+  const ComponentArray<Component>& GetComponentArray() const;
 
   std::unordered_map<TypeKey, std::unique_ptr<ComponentArrayInterface>>
       component_arrays_;
@@ -43,7 +50,8 @@ private:
 
 // Implementation
 
-template <class Component> void ComponentManager::RegisterComponent() {
+template <class Component>
+void ComponentManager::RegisterComponent() {
   const auto type_key = TypeKeyOf<Component>();
   assert(!component_arrays_.contains(type_key) &&
          "Registering component type more than once.");
@@ -63,12 +71,12 @@ void ComponentManager::RemoveComponent(Entity entity) {
 }
 
 template <class Component>
-Component &ComponentManager::GetComponent(Entity entity) {
+Component& ComponentManager::GetComponent(Entity entity) {
   return GetComponentArray<Component>().GetData(entity);
 }
 
 template <class Component>
-const Component &ComponentManager::GetComponent(Entity entity) const {
+const Component& ComponentManager::GetComponent(Entity entity) const {
   return GetComponentArray<Component>().GetData(entity);
 }
 
@@ -94,27 +102,27 @@ auto ComponentManager::View() -> ::View<Components...> {
 }
 
 inline void ComponentManager::EntityDestroyed(Entity entity) {
-  for (const auto &[type_key, array] : component_arrays_) {
+  for (const auto& [type_key, array] : component_arrays_) {
     array->EntityDestroyed(entity);
   }
 }
 
 template <class Component>
-ComponentArray<Component> &ComponentManager::GetComponentArray() {
+ComponentArray<Component>& ComponentManager::GetComponentArray() {
   const auto type_key = TypeKeyOf<Component>();
   assert(component_arrays_.contains(type_key) &&
          "Getting component array before component being registered.");
 
-  return *static_cast<ComponentArray<Component> *>(
+  return *static_cast<ComponentArray<Component>*>(
       component_arrays_.at(type_key).get());
 }
 
 template <class Component>
-const ComponentArray<Component> &ComponentManager::GetComponentArray() const {
+const ComponentArray<Component>& ComponentManager::GetComponentArray() const {
   const auto type_key = TypeKeyOf<Component>();
   assert(component_arrays_.contains(type_key) &&
          "Getting component array before component being registered.");
 
-  return *static_cast<const ComponentArray<Component> *>(
+  return *static_cast<const ComponentArray<Component>*>(
       component_arrays_.at(type_key).get());
 }

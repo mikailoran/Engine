@@ -1,11 +1,11 @@
 // Views: which entities ForEach visits, and what it hands to the callback.
 
-#include "ecs/core/ecs.h"
-
 #include <gtest/gtest.h>
 
 #include <set>
 #include <vector>
+
+#include "ecs/core/ecs.h"
 
 namespace {
 
@@ -21,20 +21,21 @@ struct Velocity {
  * @brief Collects the entities a view visits.
  * @return Visited entities in id order; repeat visits are kept.
  */
-template <class... Components> std::multiset<Entity> Visited(Ecs &ecs) {
+template <class... Components>
+std::multiset<Entity> Visited(Ecs& ecs) {
   std::multiset<Entity> visited;
   ecs.View<Components...>().ForEach(
-      [&visited](Entity entity, Components &...) { visited.insert(entity); });
+      [&visited](Entity entity, Components&...) { visited.insert(entity); });
   return visited;
 }
 
 /** @brief Registers Position and Velocity in that order. */
-void RegisterBoth(Ecs &ecs) {
+void RegisterBoth(Ecs& ecs) {
   ecs.RegisterComponent<Position>();
   ecs.RegisterComponent<Velocity>();
 }
 
-} // namespace
+}  // namespace
 
 TEST(View, VisitsAnEntityOnlyWhenEveryComponentIsPresent) {
   Ecs ecs;
@@ -141,7 +142,7 @@ TEST(View, CallbackReferencesMutateStoredComponents) {
   ecs.AddComponent(entity, Velocity{2.0F});
 
   ecs.View<Position, Velocity>().ForEach(
-      [](Entity, Position &position, Velocity &velocity) {
+      [](Entity, Position& position, Velocity& velocity) {
         position.x += velocity.dx;
       });
 
@@ -161,7 +162,7 @@ TEST(View, CallbackReceivesEachEntitysOwnComponents) {
   ecs.RemoveComponent<Position>(entities.at(1));
 
   int visits = 0;
-  ecs.View<Position>().ForEach([&visits](Entity entity, Position &position) {
+  ecs.View<Position>().ForEach([&visits](Entity entity, Position& position) {
     EXPECT_FLOAT_EQ(position.x, static_cast<float>(entity));
     ++visits;
   });
@@ -178,7 +179,7 @@ TEST(ViewDeathTest, AddingAViewedComponentDuringForEachAsserts) {
   ecs.AddComponent(ecs.CreateEntity(), Position{});
   ecs.AddComponent(ecs.CreateEntity(), Position{});
 
-  EXPECT_DEATH(ecs.View<Position>().ForEach([&ecs](Entity, Position &) {
+  EXPECT_DEATH(ecs.View<Position>().ForEach([&ecs](Entity, Position&) {
     ecs.AddComponent(ecs.CreateEntity(), Position{});
   }),
                "added or removed during ForEach");
@@ -195,7 +196,7 @@ TEST(ViewDeathTest, RemovingAViewedComponentDuringForEachAsserts) {
   ecs.AddComponent(ecs.CreateEntity(), Position{});
   ecs.AddComponent(ecs.CreateEntity(), Position{});
 
-  EXPECT_DEATH(ecs.View<Position>().ForEach([&ecs](Entity entity, Position &) {
+  EXPECT_DEATH(ecs.View<Position>().ForEach([&ecs](Entity entity, Position&) {
     ecs.RemoveComponent<Position>(entity);
   }),
                "added or removed during ForEach");

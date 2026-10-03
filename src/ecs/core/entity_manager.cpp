@@ -1,4 +1,5 @@
 #include "entity_manager.h"
+
 #include <cassert>
 
 EntityManager::EntityManager() {

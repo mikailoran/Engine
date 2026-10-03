@@ -7,19 +7,19 @@ class AssetRegistry;
 struct FrameContext;
 
 class UiSystem {
-public:
+ public:
   UiSystem() = default;
-  UiSystem(const UiSystem &) = delete;
-  UiSystem &operator=(const UiSystem &) = delete;
+  UiSystem(const UiSystem&) = delete;
+  UiSystem& operator=(const UiSystem&) = delete;
 
-  void Init(AssetRegistry &asset_registry);
+  void Init(AssetRegistry& asset_registry);
 
-  Entity SpawnEntity(Ecs &ecs);
+  Entity SpawnEntity(Ecs& ecs);
 
-  void Update(Ecs &ecs, const FrameContext &ctx);
+  void Update(Ecs& ecs, const FrameContext& ctx);
 
   void Shutdown();
 
-private:
-  AssetRegistry *asset_registry_{nullptr};
+ private:
+  AssetRegistry* asset_registry_{nullptr};
 };

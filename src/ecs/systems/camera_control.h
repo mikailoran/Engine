@@ -10,10 +10,10 @@ struct FrameContext;
  * resulting pose into the components.
  */
 class CameraControl {
-public:
+ public:
   CameraControl() = default;
-  CameraControl(const CameraControl &) = delete;
-  CameraControl &operator=(const CameraControl &) = delete;
+  CameraControl(const CameraControl&) = delete;
+  CameraControl& operator=(const CameraControl&) = delete;
 
   /**
    * @brief Creates the underlying camera and sets its initial pose.
@@ -27,10 +27,10 @@ public:
    * @param ecs World to write components through.
    * @param ctx Per-frame inputs.
    */
-  void Update(Ecs &ecs, const FrameContext &ctx);
+  void Update(Ecs& ecs, const FrameContext& ctx);
 
   // Destroys the underlying camera.
   void Shutdown();
 
-private:
+ private:
 };

@@ -1,0 +1,4 @@
+# Google style, but short ifs and loops always break onto their own line.
+BasedOnStyle: Google
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false

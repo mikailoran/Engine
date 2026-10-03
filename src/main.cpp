@@ -3,15 +3,6 @@
 #include <bx/timer.h>
 
 #include "common.h"
-
-#include "platform/asset_root.h"
-#include "resource/asset_registry.h"
-#include "scene/builtin_loaders.h"
-#include "scene/scene_loader.h"
-
-#include "ecs/core/ecs.h"
-#include "ecs/core/frame_context.h"
-
 #include "ecs/components/camera.h"
 #include "ecs/components/configurable.h"
 #include "ecs/components/directional_light.h"
@@ -19,9 +10,14 @@
 #include "ecs/components/rigid_body.h"
 #include "ecs/components/spin.h"
 #include "ecs/components/transform.h"
-
+#include "ecs/core/ecs.h"
+#include "ecs/core/frame_context.h"
 #include "ecs/systems/camera_control.h"
 #include "ecs/systems/lighting_system.h"
+#include "platform/asset_root.h"
+#include "resource/asset_registry.h"
+#include "scene/builtin_loaders.h"
+#include "scene/scene_loader.h"
 // TODO: Rename "physics_system.h" into "physics.h"
 #include "ecs/systems/physics_system.h"
 #include "ecs/systems/render_system.h"
@@ -37,7 +33,6 @@ namespace {
  * the systems, and the window/timing state entry writes back into.
  */
 struct Game {
-
   Ecs m_ecs;
   AssetRegistry m_assets;
 
@@ -65,8 +60,8 @@ struct Game {
  *
  * @param _game Game state to initialise.
  */
-void gameInit(Game &_game) {
-  auto &ecs = _game.m_ecs;
+void gameInit(Game& _game) {
+  auto& ecs = _game.m_ecs;
 
   // --- Asset root -------------------------------------------------------
   // Must precede meshLoad/loadProgram: entry prepends this to every path its
@@ -76,7 +71,7 @@ void gameInit(Game &_game) {
   // --- Platform / bgfx bring-up ----------------------------------------
   // Done before ECS setup to allow the creation of GPU resources in the systems
   bgfx::Init init;
-  init.type = bgfx::RendererType::Count; // auto-select backend
+  init.type = bgfx::RendererType::Count;  // auto-select backend
   init.platformData.nwh =
       entry::getNativeWindowHandle(entry::kDefaultWindowHandle);
   init.platformData.ndt = entry::getNativeDisplayHandle();
@@ -121,7 +116,7 @@ void gameInit(Game &_game) {
  * @brief Tears down bgfx.
  * @return Process exit code.
  */
-auto gameShutdown(Game &_game) -> int {
+auto gameShutdown(Game& _game) -> int {
   _game.m_ui.Shutdown();
   _game.m_render.Shutdown();
   _game.m_lighting.Shutdown();
@@ -132,7 +127,7 @@ auto gameShutdown(Game &_game) -> int {
   return 0;
 }
 
-} // namespace
+}  // namespace
 
 /**
  * @brief Application entry point, currently called by the examples' common on
@@ -151,8 +146,7 @@ auto gameShutdown(Game &_game) -> int {
  * @param _argv Argument vector, forwarded from main(). Currently unused.
  * @return Process exit code.
  */
-auto _main_(int /*_argc*/, char ** /*_argv*/) -> int {
-
+auto _main_(int /*_argc*/, char** /*_argv*/) -> int {
   Game game;
   gameInit(game);
 

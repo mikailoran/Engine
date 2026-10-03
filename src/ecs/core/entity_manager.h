@@ -1,9 +1,9 @@
 #pragma once
 
-#include "types.h"
-
 #include <array>
 #include <queue>
+
+#include "types.h"
 
 /**
  * @brief Hands out entity ids and tracks which of them are in use.
@@ -17,7 +17,7 @@
  * across frames must re-check IsAlive.
  */
 class EntityManager {
-public:
+ public:
   /** @brief Seeds the free pool with every id in [0, MAX_ENTITIES). */
   EntityManager();
 
@@ -51,7 +51,7 @@ public:
    */
   void DestroyEntity(Entity entity);
 
-private:
+ private:
   std::queue<Entity> available_entities_;
   EntityType living_entity_count_{0};
   std::array<bool, kMaxEntities> alive_{};

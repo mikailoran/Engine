@@ -1,15 +1,15 @@
 #pragma once
 
+#include <vector>
+
 #include "component_manager.h"
 #include "entity_manager.h"
 #include "types.h"
 #include "view.h"
 
-#include <vector>
-
 /** @brief Facade over the entity, component and system managers. */
 class Ecs {
-public:
+ public:
   Ecs() = default;
 
   /** @brief Creates an entity with no components. */
@@ -40,20 +40,24 @@ public:
   void Flush();
 
   /** @brief Registers @p Component. @pre Not registered yet. */
-  template <class Component> void RegisterComponent();
+  template <class Component>
+  void RegisterComponent();
 
   /** @brief Gives @p entity a @p Component. @pre It does not have one yet. */
   template <class Component>
   void AddComponent(Entity entity, Component component);
 
   /** @brief Removes @p entity's @p Component. @pre It has one. */
-  template <class Component> void RemoveComponent(Entity entity);
+  template <class Component>
+  void RemoveComponent(Entity entity);
 
   /** @brief Returns @p entity's @p Component. @pre It has one. */
-  template <class Component> Component &GetComponent(Entity entity);
+  template <class Component>
+  Component& GetComponent(Entity entity);
 
   /** @brief Returns @p entity's @p Component. @pre It has one. */
-  template <class Component> const Component &GetComponent(Entity entity) const;
+  template <class Component>
+  const Component& GetComponent(Entity entity) const;
 
   /** @brief Tests whether @p entity has a @p Component. @pre Registered. */
   template <class Component>
@@ -63,10 +67,10 @@ public:
    * @brief Views the entities that have every one of @p Components.
    * @pre Every type in @p Components is registered.
    */
-  template <class... Components> auto View() -> ::View<Components...>;
+  template <class... Components>
+  auto View() -> ::View<Components...>;
 
-
-private:
+ private:
   EntityManager entity_manager_;
   ComponentManager component_manager_;
   std::vector<Entity> pending_destroy_;
@@ -74,7 +78,8 @@ private:
 
 // Implementation
 
-template <class Component> void Ecs::RegisterComponent() {
+template <class Component>
+void Ecs::RegisterComponent() {
   component_manager_.RegisterComponent<Component>();
 }
 
@@ -83,23 +88,27 @@ void Ecs::AddComponent(Entity entity, Component component) {
   component_manager_.AddComponent(entity, component);
 }
 
-template <class Component> void Ecs::RemoveComponent(Entity entity) {
+template <class Component>
+void Ecs::RemoveComponent(Entity entity) {
   component_manager_.RemoveComponent<Component>(entity);
 }
 
-template <class Component> Component &Ecs::GetComponent(Entity entity) {
+template <class Component>
+Component& Ecs::GetComponent(Entity entity) {
   return component_manager_.GetComponent<Component>(entity);
 }
 
 template <class Component>
-const Component &Ecs::GetComponent(Entity entity) const {
+const Component& Ecs::GetComponent(Entity entity) const {
   return component_manager_.GetComponent<Component>(entity);
 }
 
-template <class Component> bool Ecs::HasComponent(Entity entity) const {
+template <class Component>
+bool Ecs::HasComponent(Entity entity) const {
   return component_manager_.HasComponent<Component>(entity);
 }
 
-template <class... Components> auto Ecs::View() -> ::View<Components...> {
+template <class... Components>
+auto Ecs::View() -> ::View<Components...> {
   return component_manager_.View<Components...>();
 }

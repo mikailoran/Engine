@@ -1,8 +1,5 @@
 #pragma once
 
-#include "component_array.h"
-#include "types.h"
-
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -12,6 +9,9 @@
 #include <ranges>
 #include <span>
 #include <tuple>
+
+#include "component_array.h"
+#include "types.h"
 
 // TODO: Make View become a range. Currently, we can only pass functions to
 // views (internal iteration). Making View returning ranges would allow external
@@ -29,12 +29,13 @@
  *
  * @tparam Components Distinct component types an entity must all have.
  */
-template <class... Components> class View {
+template <class... Components>
+class View {
   static_assert(sizeof...(Components) > 0, "A view needs at least one type.");
 
-public:
+ public:
   /** @brief Views @p component_arrays, which must outlive the view. */
-  explicit View(ComponentArray<Components> &...component_arrays);
+  explicit View(ComponentArray<Components>&... component_arrays);
 
   /**
    * @brief Calls fn(Entity, Components &...) for each matching entity.
@@ -42,25 +43,25 @@ public:
    * Visits in the smallest component array's dense order, not entity-id order.
    * @pre @p fn adds or removes none of the viewed components.
    */
-  template <std::invocable<Entity, Components &...> Fn>
+  template <std::invocable<Entity, Components&...> Fn>
   auto ForEach(Fn fn) const -> void;
 
-private:
+ private:
   /** @brief Returns the viewed component array for @p Component. */
   template <class Component>
-  [[nodiscard]] auto ComponentArrayOf() const -> ComponentArray<Component> &;
+  [[nodiscard]] auto ComponentArrayOf() const -> ComponentArray<Component>&;
 
-  std::tuple<ComponentArray<Components> *...> component_arrays_;
+  std::tuple<ComponentArray<Components>*...> component_arrays_;
 };
 
 // Implementation
 
 template <class... Components>
-View<Components...>::View(ComponentArray<Components> &...component_arrays)
+View<Components...>::View(ComponentArray<Components>&... component_arrays)
     : component_arrays_(&component_arrays...) {}
 
 template <class... Components>
-template <std::invocable<Entity, Components &...> Fn>
+template <std::invocable<Entity, Components&...> Fn>
 auto View<Components...>::ForEach(Fn fn) const -> void {
   // Drive from the smallest component array to minimize Has checks
   const std::array candidates{ComponentArrayOf<Components>().Entities()...};
@@ -91,6 +92,6 @@ auto View<Components...>::ForEach(Fn fn) const -> void {
 template <class... Components>
 template <class Component>
 auto View<Components...>::ComponentArrayOf() const
-    -> ComponentArray<Component> & {
-  return *std::get<ComponentArray<Component> *>(component_arrays_);
+    -> ComponentArray<Component>& {
+  return *std::get<ComponentArray<Component>*>(component_arrays_);
 }
