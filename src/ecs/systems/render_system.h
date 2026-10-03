@@ -2,7 +2,10 @@
 
 #include <bgfx/bgfx.h>
 
+#include <optional>
+
 #include "ecs/core/types.h"
+#include "resource/unique_handle.h"
 
 class Ecs;
 class AssetRegistry;
@@ -12,39 +15,29 @@ struct FrameContext;
  * @brief Draws every entity carrying {Transform, Renderable}.
  *
  * Owns view 0 and the resources shared across entities (shader program,
- * uniforms and the fallback white texture)
+ * uniforms and the fallback white texture). Releases them on destruction,
+ * which must precede bgfx::shutdown.
  */
 class RenderSystem {
  public:
-  RenderSystem() = default;
-  RenderSystem(const RenderSystem&) = delete;
-  auto operator=(const RenderSystem&) -> RenderSystem& = delete;
-
   /**
-   * @brief Creates the shared GPU resources.
+   * @brief Creates the shared GPU resources and sets view 0's clear.
    *
    * Requires bgfx::init to have completed, and the asset root to be set via
    * entry::setCurrentDir, since loadProgram resolves its paths against it.
    *
-   * @param assets Registry to resolve mesh handles through. Must outlive this
-   * system.
+   * @throws std::runtime_error If the default program fails to link.
    */
-  void Init(const AssetRegistry& assets);
+  RenderSystem();
 
   /**
    * @brief Submits one frame.
    *
    * @param ecs World to read Transform and Renderable from.
+   * @param assets Registry to resolve mesh and texture handles through.
    * @param ctx Per-frame inputs.
    */
-  void Update(Ecs& ecs, const FrameContext& ctx);
-
-  /**
-   * @brief Destroys every GPU resource this system owns.
-   *
-   * Must run before bgfx::shutdown.
-   */
-  void Shutdown();
+  void Update(Ecs& ecs, const AssetRegistry& assets, const FrameContext& ctx);
 
   /**
    * @brief Nominates the entity supplying view and projection.
@@ -58,30 +51,26 @@ class RenderSystem {
   void SetCamera(Entity camera);
 
  private:
-  // TODO: figure out how to reinforce class invariants
-  const AssetRegistry* assets_{nullptr};
-
   // Used when a Renderable leaves its own program handle invalid.
-  bgfx::ProgramHandle default_program_{bgfx::kInvalidHandle};
+  UniqueHandle<bgfx::ProgramHandle> default_program_;
 
-  bgfx::UniformHandle u_time_{bgfx::kInvalidHandle};
+  UniqueHandle<bgfx::UniformHandle> u_time_;
 
   // Per-draw surface color, set from Renderable::color before each submit.
-  bgfx::UniformHandle u_color_{bgfx::kInvalidHandle};
+  UniqueHandle<bgfx::UniformHandle> u_color_;
 
   // Per-frame camera world position.
-  bgfx::UniformHandle u_eye_pos_{bgfx::kInvalidHandle};
+  UniqueHandle<bgfx::UniformHandle> u_eye_pos_;
 
   // Albedo sampler, stage 0.
-  bgfx::UniformHandle s_albedo_{bgfx::kInvalidHandle};
+  UniqueHandle<bgfx::UniformHandle> s_albedo_;
 
   // Per-draw texture tiling, set from Renderable::texture_scale.
-  bgfx::UniformHandle u_tex_params_{bgfx::kInvalidHandle};
+  UniqueHandle<bgfx::UniformHandle> u_tex_params_;
 
   // 1x1 white, bound for untextured entities so they keep their plain color.
-  bgfx::TextureHandle default_texture_{bgfx::kInvalidHandle};
+  UniqueHandle<bgfx::TextureHandle> default_texture_;
 
-  // Entity supplying view and projection; only read when has_camera_ is set.
-  Entity camera_{0};
-  bool has_camera_{false};
+  // Entity supplying view and projection; empty until SetCamera.
+  std::optional<Entity> camera_;
 };

@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <format>
+#include <stdexcept>
 #include <string>
 
 #include "ecs/components/camera.h"
@@ -39,31 +40,39 @@ void DebugText(std::uint16_t x, std::uint16_t y, std::uint8_t attr,
   bgfx::dbgTextPrintf(x, y, attr, "%s", text.c_str());
 }
 
+/** @brief Creates the 1x1 opaque white texture bound for untextured draws. */
+auto CreateWhiteTexture() -> bgfx::TextureHandle {
+  constexpr uint32_t kWhite = 0xffffffff;
+  return bgfx::createTexture2D(1, 1, false, 1, bgfx::TextureFormat::RGBA8,
+                               BGFX_TEXTURE_NONE,
+                               bgfx::copy(&kWhite, sizeof(kWhite)));
+}
+
 }  // namespace
 
-void RenderSystem::Init(const AssetRegistry& assets) {
-  assets_ = &assets;
+RenderSystem::RenderSystem()
+    : default_program_(loadProgram("vs_mesh.sc", "fs_mesh.sc")),
+      u_time_(bgfx::createUniform("u_time", bgfx::UniformFreq::Frame,
+                                  bgfx::UniformType::Vec4)),
+      u_color_(bgfx::createUniform("u_color", bgfx::UniformType::Vec4)),
+      u_eye_pos_(bgfx::createUniform("u_eyePos", bgfx::UniformFreq::Frame,
+                                     bgfx::UniformType::Vec4)),
+      s_albedo_(bgfx::createUniform("s_albedo", bgfx::UniformType::Sampler)),
+      u_tex_params_(
+          bgfx::createUniform("u_texParams", bgfx::UniformType::Vec4)),
+      default_texture_(CreateWhiteTexture()) {
+  // Members are built, so throwing here still releases them
+  if (!default_program_) {
+    throw std::runtime_error("failed to link vs_mesh/fs_mesh program");
+  }
 
   // View 0 clears the backbuffer each frame.
   bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, kClearColor, 1.0F,
                      0);
-
-  u_time_ = bgfx::createUniform("u_time", bgfx::UniformFreq::Frame,
-                                bgfx::UniformType::Vec4);
-  u_color_ = bgfx::createUniform("u_color", bgfx::UniformType::Vec4);
-  u_eye_pos_ = bgfx::createUniform("u_eyePos", bgfx::UniformFreq::Frame,
-                                   bgfx::UniformType::Vec4);
-  s_albedo_ = bgfx::createUniform("s_albedo", bgfx::UniformType::Sampler);
-  u_tex_params_ = bgfx::createUniform("u_texParams", bgfx::UniformType::Vec4);
-  default_program_ = loadProgram("vs_mesh.sc", "fs_mesh.sc");
-
-  constexpr uint32_t kWhite = 0xffffffff;
-  default_texture_ = bgfx::createTexture2D(
-      1, 1, false, 1, bgfx::TextureFormat::RGBA8, BGFX_TEXTURE_NONE,
-      bgfx::copy(&kWhite, sizeof(kWhite)));
 }
 
-void RenderSystem::Update(Ecs& ecs, const FrameContext& ctx) {
+void RenderSystem::Update(Ecs& ecs, const AssetRegistry& assets,
+                          const FrameContext& ctx) {
   // Debug overlay.
   const bgfx::Stats* stats = bgfx::getStats();
   bgfx::dbgTextClear();
@@ -74,7 +83,7 @@ void RenderSystem::Update(Ecs& ecs, const FrameContext& ctx) {
   DebugText(0, 4, 0x0f,
             std::format("Frame {:.2f} ms ({:.0f} fps)", ctx.dt * 1000.0F, fps));
 
-  bgfx::setFrameUniform(u_time_, &ctx.time);
+  bgfx::setFrameUniform(u_time_.Get(), &ctx.time);
 
   // View and projection for view 0 taken from the camera entity's components.
   // The CameraControl system writes those each frame.
@@ -86,9 +95,9 @@ void RenderSystem::Update(Ecs& ecs, const FrameContext& ctx) {
     std::array<float, kMtxSize> proj{};
     std::array<float, 4> eye_pos{0.0F, 0.0F, 0.0F, 0.0F};
 
-    if (has_camera_) {
-      const auto& transform = ecs.GetComponent<Transform>(camera_);
-      const auto& camera = ecs.GetComponent<Camera>(camera_);
+    if (camera_) {
+      const auto& transform = ecs.GetComponent<Transform>(*camera_);
+      const auto& camera = ecs.GetComponent<Camera>(*camera_);
       eye_pos = {transform.position.x, transform.position.y,
                  transform.position.z, 0.0F};
 
@@ -103,14 +112,14 @@ void RenderSystem::Update(Ecs& ecs, const FrameContext& ctx) {
     }
 
     bgfx::setViewTransform(0, view.data(), proj.data());
-    bgfx::setFrameUniform(u_eye_pos_, eye_pos.data());
+    bgfx::setFrameUniform(u_eye_pos_.Get(), eye_pos.data());
     bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(ctx.width),
                       static_cast<uint16_t>(ctx.height));
   }
 
   ecs.View<Transform, Renderable>().ForEach(
-      [this](Entity, const Transform& transform,
-             const Renderable& renderable) -> void {
+      [this, &assets](Entity, const Transform& transform,
+                      const Renderable& renderable) -> void {
         std::array<float, kMtxSize> mtx{};
         bx::mtxSRT(
             mtx.data(), transform.scale.x, transform.scale.y, transform.scale.z,
@@ -119,20 +128,20 @@ void RenderSystem::Update(Ecs& ecs, const FrameContext& ctx) {
 
         const auto program = bgfx::isValid(renderable.program)
                                  ? renderable.program
-                                 : default_program_;
-        const auto* mesh = assets_->GetMesh(renderable.mesh_handle);
+                                 : default_program_.Get();
+        const auto* mesh = assets.GetMesh(renderable.mesh_handle);
 
         const auto texture = IsValid(renderable.texture)
-                                 ? assets_->GetTexture(renderable.texture)
-                                 : default_texture_;
+                                 ? assets.GetTexture(renderable.texture)
+                                 : default_texture_.Get();
         const std::array<float, 4> tex_params{1.0F / renderable.texture_scale,
                                               0.0F, 0.0F, 0.0F};
 
         // meshSubmit only discards state after its last group, so the color and
         // texture hold for every group of the mesh.
-        bgfx::setUniform(u_color_, renderable.color.data());
-        bgfx::setUniform(u_tex_params_, tex_params.data());
-        bgfx::setTexture(0, s_albedo_, texture);
+        bgfx::setUniform(u_color_.Get(), renderable.color.data());
+        bgfx::setUniform(u_tex_params_.Get(), tex_params.data());
+        bgfx::setTexture(0, s_albedo_.Get(), texture);
         meshSubmit(mesh, renderable.view, program, mtx.data(),
                    renderable.state);
       });
@@ -140,17 +149,4 @@ void RenderSystem::Update(Ecs& ecs, const FrameContext& ctx) {
   bgfx::frame();
 }
 
-void RenderSystem::Shutdown() {
-  bgfx::destroy(u_time_);
-  bgfx::destroy(u_color_);
-  bgfx::destroy(u_eye_pos_);
-  bgfx::destroy(s_albedo_);
-  bgfx::destroy(u_tex_params_);
-  bgfx::destroy(default_texture_);
-  bgfx::destroy(default_program_);
-}
-
-void RenderSystem::SetCamera(Entity camera) {
-  camera_ = camera;
-  has_camera_ = true;
-}
+void RenderSystem::SetCamera(Entity camera) { camera_ = camera; }

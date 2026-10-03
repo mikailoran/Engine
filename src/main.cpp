@@ -133,8 +133,6 @@ Game::Game() {
   // --- Systems: Init ----------------------------------------------------
   camera_control_.Init();
   physics_.Init();
-  lighting_.Init();
-  render_.Init(assets_);
   ui_.Init(assets_);
 
   // --- Assets and entities ----------------------------------------------
@@ -153,8 +151,6 @@ Game::Game() {
 Game::~Game() {
   // Until the systems are RAII; bgfx_context_ shuts down after this
   ui_.Shutdown();
-  render_.Shutdown();
-  lighting_.Shutdown();
   camera_control_.Shutdown();
   assets_.UnloadAll();
 }
@@ -180,7 +176,7 @@ auto Game::Run() -> int {
     physics_.Update(ecs_, ctx);
     // Frame uniforms must be set before the renderer submits.
     lighting_.Update(ecs_, ctx);
-    render_.Update(ecs_, ctx);
+    render_.Update(ecs_, assets_, ctx);
     ui_.Update(ecs_, ctx);
 
     ecs_.Flush();

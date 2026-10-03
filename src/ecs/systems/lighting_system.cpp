@@ -21,15 +21,15 @@ auto ToVec4(const bx::Vec3& v) -> std::array<float, 4> {
 
 }  // namespace
 
-void LightingSystem::Init() {
-  u_light_dir_ = bgfx::createUniform("u_lightDir", bgfx::UniformFreq::Frame,
-                                     bgfx::UniformType::Vec4);
-  u_light_color_ = bgfx::createUniform("u_lightColor", bgfx::UniformFreq::Frame,
-                                       bgfx::UniformType::Vec4);
-  u_sky_color_ = bgfx::createUniform("u_skyColor", bgfx::UniformFreq::Frame,
-                                     bgfx::UniformType::Vec4);
-  u_ground_color_ = bgfx::createUniform(
-      "u_groundColor", bgfx::UniformFreq::Frame, bgfx::UniformType::Vec4);
+LightingSystem::LightingSystem()
+    : u_light_dir_(bgfx::createUniform("u_lightDir", bgfx::UniformFreq::Frame,
+                                       bgfx::UniformType::Vec4)),
+      u_light_color_(bgfx::createUniform(
+          "u_lightColor", bgfx::UniformFreq::Frame, bgfx::UniformType::Vec4)),
+      u_sky_color_(bgfx::createUniform("u_skyColor", bgfx::UniformFreq::Frame,
+                                       bgfx::UniformType::Vec4)),
+      u_ground_color_(bgfx::createUniform(
+          "u_groundColor", bgfx::UniformFreq::Frame, bgfx::UniformType::Vec4)) {
 }
 
 void LightingSystem::Update(Ecs& ecs, const FrameContext& /*ctx*/) {
@@ -48,15 +48,8 @@ void LightingSystem::Update(Ecs& ecs, const FrameContext& /*ctx*/) {
   const auto light_color = ToVec4(bx::mul(light.color, light.intensity));
   const auto sky_color = ToVec4(light.sky_color);
   const auto ground_color = ToVec4(light.ground_color);
-  bgfx::setFrameUniform(u_light_dir_, light_dir.data());
-  bgfx::setFrameUniform(u_light_color_, light_color.data());
-  bgfx::setFrameUniform(u_sky_color_, sky_color.data());
-  bgfx::setFrameUniform(u_ground_color_, ground_color.data());
-}
-
-void LightingSystem::Shutdown() {
-  bgfx::destroy(u_light_dir_);
-  bgfx::destroy(u_light_color_);
-  bgfx::destroy(u_sky_color_);
-  bgfx::destroy(u_ground_color_);
+  bgfx::setFrameUniform(u_light_dir_.Get(), light_dir.data());
+  bgfx::setFrameUniform(u_light_color_.Get(), light_color.data());
+  bgfx::setFrameUniform(u_sky_color_.Get(), sky_color.data());
+  bgfx::setFrameUniform(u_ground_color_.Get(), ground_color.data());
 }
