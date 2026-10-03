@@ -51,9 +51,8 @@ Checks: >
 #   -fuchsia-*,
 #   -readability-uppercase-literal-suffix,
 
-# Only diagnose headers under src/. Without this, every bgfx and bx header
-# pulled in transitively is analysed too, which buries real findings.
-HeaderFilterRegex: 'src/.*'
+# Diagnose project headers only; vendored ones are SYSTEM and never reported.
+HeaderFilterRegex: '(^|/)(src|tests)/'
 
 WarningsAsErrors: ''
 FormatStyle: file
