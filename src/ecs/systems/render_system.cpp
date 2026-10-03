@@ -8,6 +8,8 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <format>
+#include <string>
 
 #include "ecs/components/camera.h"
 #include "ecs/components/renderable.h"
@@ -28,6 +30,14 @@ constexpr uint32_t kClearColor = 0x303030ff;  // RGBA
 constexpr float kFallbackFovDegrees = 60.0F;
 constexpr float kFallbackNearPlane = 0.1F;
 constexpr float kFallbackFarPlane = 100.0F;
+
+/** @brief Prints @p text to bgfx's debug overlay at a character cell. */
+void DebugText(std::uint16_t x, std::uint16_t y, std::uint8_t attr,
+               const std::string& text) {
+  // Only vararg call; "%s" keeps the format fixed.
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
+  bgfx::dbgTextPrintf(x, y, attr, "%s", text.c_str());
+}
 
 }  // namespace
 
@@ -57,12 +67,12 @@ void RenderSystem::Update(Ecs& ecs, const FrameContext& ctx) {
   // Debug overlay.
   const bgfx::Stats* stats = bgfx::getStats();
   bgfx::dbgTextClear();
-  bgfx::dbgTextPrintf(0, 3, 0x0f, "Backbuffer %dW x %dH", stats->width,
-                      stats->height);
+  DebugText(0, 3, 0x0f,
+            std::format("Backbuffer {}W x {}H", stats->width, stats->height));
   // First frame has dt == 0.
   const float fps = ctx.dt > 0.0F ? 1.0F / ctx.dt : 0.0F;
-  bgfx::dbgTextPrintf(0, 4, 0x0f, "Frame %.2f ms (%.0f fps)", ctx.dt * 1000.0F,
-                      fps);
+  DebugText(0, 4, 0x0f,
+            std::format("Frame {:.2f} ms ({:.0f} fps)", ctx.dt * 1000.0F, fps));
 
   bgfx::setFrameUniform(u_time_, &ctx.time);
 
