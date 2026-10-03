@@ -1,34 +1,18 @@
 ---
-# Start from nothing, then opt in. bugprone/clang-analyzer catch real defects;
-# performance and modernize are advisory.
-# Checks: >
-#   -*,
-#   bugprone-*,
-#   clang-analyzer-*,
-#   concurrency-*,
-#   performance-*,
-#   modernize-*,
-#   readability-*,
-#   -modernize-use-trailing-return-type,
-#   -readability-identifier-length,
-#   -readability-magic-numbers,
-#   -readability-uppercase-literal-suffix,
-#   -readability-braces-around-statements,
-#   -readability-implicit-bool-conversion,
-#   -bugprone-easily-swappable-parameters
-
+# Start from nothing, then opt in. bugprone/clang-analyzer catch real defects
+# and fail the run; the rest are advisory.
 Checks: >
   -*,
   bugprone-*,
   clang-analyzer-*,
   cppcoreguidelines-*,
+  google-*,
   misc-*,
   concurrency-*,
   performance-*,
   modernize-*,
   readability-*,
-  -modernize-use-trailing-return-type,
-  -modernize-use-designated-initializers,
+  -google-readability-todo,
   -readability-identifier-length,
   -readability-magic-numbers,
   -readability-uppercase-literal-suffix,
@@ -36,23 +20,31 @@ Checks: >
   -readability-implicit-bool-conversion,
   -cppcoreguidelines-avoid-magic-numbers
 
-# Checks: >
-#   *,
-#   bugprone-*,
-#   clang-analyzer-*,
-#   concurrency-*,
-#   performance-*,
-#   modernize-*,
-#   readability-*,
-#   -llvmlibc-*,
-#   -llvm-*,
-#   -hicpp-*,
-#   -altera-*,
-#   -fuchsia-*,
-#   -readability-uppercase-literal-suffix,
+CheckOptions:
+  # Google naming: CamelCase types and functions, snake_case values,
+  # trailing _ on private members, k-prefixed constants.
+  readability-identifier-naming.NamespaceCase: lower_case
+  readability-identifier-naming.ClassCase: CamelCase
+  readability-identifier-naming.StructCase: CamelCase
+  readability-identifier-naming.EnumCase: CamelCase
+  readability-identifier-naming.TypeAliasCase: CamelCase
+  readability-identifier-naming.TemplateParameterCase: CamelCase
+  readability-identifier-naming.FunctionCase: CamelCase
+  readability-identifier-naming.MethodCase: CamelCase
+  readability-identifier-naming.VariableCase: lower_case
+  readability-identifier-naming.ParameterCase: lower_case
+  readability-identifier-naming.MemberCase: lower_case
+  readability-identifier-naming.PrivateMemberSuffix: _
+  readability-identifier-naming.ProtectedMemberSuffix: _
+  readability-identifier-naming.ConstexprVariableCase: CamelCase
+  readability-identifier-naming.ConstexprVariablePrefix: k
+  readability-identifier-naming.EnumConstantCase: CamelCase
+  readability-identifier-naming.EnumConstantPrefix: k
+  # Don't count branches hidden inside macros such as gtest's EXPECT_*.
+  readability-function-cognitive-complexity.IgnoreMacros: true
 
 # Diagnose project headers only; vendored ones are SYSTEM and never reported.
 HeaderFilterRegex: '(^|/)(src|tests)/'
 
-WarningsAsErrors: ''
+WarningsAsErrors: 'bugprone-*,clang-analyzer-*'
 FormatStyle: file
