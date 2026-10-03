@@ -13,8 +13,18 @@
 class ComponentArrayInterface {
  public:
   virtual ~ComponentArrayInterface() = default;
+  ComponentArrayInterface(const ComponentArrayInterface&) = delete;
+  auto operator=(const ComponentArrayInterface&)
+      -> ComponentArrayInterface& = delete;
+  ComponentArrayInterface(ComponentArrayInterface&&) = delete;
+  auto operator=(ComponentArrayInterface&&)
+      -> ComponentArrayInterface& = delete;
+
   /** @brief Drops @p entity's component, if it has one. */
   virtual void EntityDestroyed(Entity entity) = 0;
+
+ protected:
+  ComponentArrayInterface() = default;
 };
 
 /**
@@ -46,7 +56,7 @@ class ComponentArray : public ComponentArrayInterface {
   void RemoveData(Entity entity);
 
   /** @brief Returns @p entity's component. @pre Has(entity) is true. */
-  auto GetData(Entity entity) const -> const Component&;
+  [[nodiscard]] auto GetData(Entity entity) const -> const Component&;
 
   /** @brief Returns @p entity's component. @pre Has(entity) is true. */
   auto GetData(Entity entity) -> Component&;
@@ -86,7 +96,7 @@ auto ComponentArray<Component>::Size() const -> std::size_t {
 
 template <class Component>
 auto ComponentArray<Component>::Entities() const -> std::span<const Entity> {
-  return {dense_.cbegin(), dense_.cbegin() + Size()};
+  return std::span(dense_).first(Size());
 }
 
 template <class Component>
