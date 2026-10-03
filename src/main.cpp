@@ -130,15 +130,11 @@ Game::Game() {
   ecs_.RegisterComponent<Configurable>();
   ecs_.RegisterComponent<DirectionalLight>();
 
-  // --- Systems: Init ----------------------------------------------------
-  camera_control_.Init();
-  physics_.Init();
-  ui_.Init(assets_);
-
   // --- Assets and entities ----------------------------------------------
   const auto camera_entity = ecs_.CreateEntity();
   ecs_.AddComponent(camera_entity, Transform{.position = {0.0F, 1.0F, -5.0F}});
   ecs_.AddComponent(camera_entity, Camera{});
+  camera_control_.SetCamera(camera_entity);
   render_.SetCamera(camera_entity);
 
   // Load the debug scene's decor as ordinary entities
@@ -149,9 +145,7 @@ Game::Game() {
 }
 
 Game::~Game() {
-  // Until the systems are RAII; bgfx_context_ shuts down after this
-  ui_.Shutdown();
-  camera_control_.Shutdown();
+  // Until AssetRegistry is RAII; bgfx_context_ shuts down after this
   assets_.UnloadAll();
 }
 
@@ -177,7 +171,7 @@ auto Game::Run() -> int {
     // Frame uniforms must be set before the renderer submits.
     lighting_.Update(ecs_, ctx);
     render_.Update(ecs_, assets_, ctx);
-    ui_.Update(ecs_, ctx);
+    ui_.Update(ecs_, assets_, ctx);
 
     ecs_.Flush();
   }

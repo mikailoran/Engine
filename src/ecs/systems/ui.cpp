@@ -4,6 +4,7 @@
 #include <entry/entry.h>
 #include <imgui/imgui.h>
 
+#include <cassert>
 #include <cstdint>
 #include <format>
 
@@ -18,17 +19,12 @@
 #include "resource/asset_registry.h"
 #include "resource/mesh_handle.h"
 
-void UiSystem::Init(AssetRegistry& asset_registry) {
-  imguiCreate();
-  asset_registry_ = &asset_registry;
-}
+namespace {
 
-void UiSystem::Shutdown() { imguiDestroy(); }
-
-auto UiSystem::SpawnEntity(Ecs& ecs) -> Entity {
+/** @brief Spawns a configurable bunny. @return The new entity. */
+auto SpawnEntity(Ecs& ecs, AssetRegistry& assets) -> Entity {
   // TODO: remove paths
-  const MeshHandle mesh_handle =
-      asset_registry_->LoadMesh("assets/meshes/bunny.bin");
+  const MeshHandle mesh_handle = assets.LoadMesh("assets/meshes/bunny.bin");
   const auto entity = ecs.CreateEntity();
   ecs.AddComponent(entity, Transform{.position = {0.0F, 3.0F, 0.0F}});
   ecs.AddComponent(entity, RigidBody{});
@@ -39,7 +35,25 @@ auto UiSystem::SpawnEntity(Ecs& ecs) -> Entity {
   return entity;
 }
 
-void UiSystem::Update(Ecs& ecs, const FrameContext& ctx) {
+/** @brief Runs imguiCreate. @return The context it made current. */
+auto CreateImguiContext() -> ImGuiContext* {
+  imguiCreate();
+  auto* context = ImGui::GetCurrentContext();
+  assert(context != nullptr && "imguiCreate made no ImGui context");
+  return context;
+}
+
+}  // namespace
+
+UiSystem::UiSystem() : context_(CreateImguiContext()) {}
+
+UiSystem::~UiSystem() { imguiDestroy(); }
+
+void UiSystem::Update(Ecs& ecs, AssetRegistry& assets,
+                      const FrameContext& ctx) {
+  // Draw into this system's context, not whichever is current
+  ImGui::SetCurrentContext(context_);
+
   // Wait for windowing set up to finish
   if (ctx.width <= 1 || ctx.height <= 1) {
     return;
@@ -63,7 +77,7 @@ void UiSystem::Update(Ecs& ecs, const FrameContext& ctx) {
   ImGui::Begin("Settings", nullptr, 0);
 
   if (ImGui::Button("Spawn Entity")) {
-    SpawnEntity(ecs);
+    SpawnEntity(ecs, assets);
   }
 
   // Sliders of transforms of entities

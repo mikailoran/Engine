@@ -12,9 +12,16 @@
 #include "ecs/core/frame_context.h"
 #include "ecs/core/types.h"
 
-void Physics::Init() {}
+namespace {
 
-void Physics::Step(Ecs& ecs, const float fixed_dt) {
+constexpr float kGravity = -9.81F;
+// Restitution factor when bouncing on the floor.
+constexpr float kRestitutionFactor = 0.6F;
+// Rest threshold to avoid jitters.
+constexpr float kRestThreshold = 0.2F;
+
+/** @brief Simulates exactly one step of @p fixed_dt seconds. */
+void Step(Ecs& ecs, const float fixed_dt) {
   ecs.View<Transform, RigidBody, Spin>().ForEach(
       [fixed_dt](Entity, Transform& transform, RigidBody& rigid_body,
                  const Spin& spin) -> void {
@@ -43,6 +50,8 @@ void Physics::Step(Ecs& ecs, const float fixed_dt) {
         }
       });
 }
+
+}  // namespace
 
 void Physics::Update(Ecs& ecs, const FrameContext& ctx) {
   // A long hitch would otherwise queue more steps than the frame can afford.

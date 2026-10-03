@@ -1,5 +1,9 @@
 #pragma once
 
+#include <optional>
+
+#include "ecs/core/types.h"
+
 class Ecs;
 struct FrameContext;
 
@@ -7,30 +11,39 @@ struct FrameContext;
  * @brief Controls camera entities from user input.
  *
  * Currently using examples-common free-look camera. The system copies its
- * resulting pose into the components.
+ * resulting pose into the components. Owns that camera, a process-wide
+ * global, so at most one instance may exist.
  */
 class CameraControl {
  public:
-  CameraControl() = default;
+  /** @brief Creates the underlying camera and sets its initial pose. */
+  CameraControl();
+
+  /** @brief Destroys the underlying camera. */
+  ~CameraControl();
+
+  // Owns a global: copying or moving would destroy it twice
   CameraControl(const CameraControl&) = delete;
   auto operator=(const CameraControl&) -> CameraControl& = delete;
+  CameraControl(CameraControl&&) = delete;
+  auto operator=(CameraControl&&) -> CameraControl& = delete;
 
   /**
-   * @brief Creates the underlying camera and sets its initial pose.
-   */
-  void Init();
-
-  /**
-   * @brief Gathers input and writes the resulting pose into tracked camera
-   * entity's Transform and Camera.
+   * @brief Gathers input and writes the resulting pose into the nominated
+   * camera entity's Transform and Camera. Does nothing until SetCamera.
    *
    * @param ecs World to write components through.
    * @param ctx Per-frame inputs.
    */
   void Update(Ecs& ecs, const FrameContext& ctx);
 
-  // Destroys the underlying camera.
-  void Shutdown();
+  /**
+   * @brief Nominates the entity to drive. It must carry a Transform and a
+   * Camera.
+   */
+  void SetCamera(Entity camera);
 
  private:
+  // Entity receiving the pose; empty until SetCamera.
+  std::optional<Entity> camera_;
 };
