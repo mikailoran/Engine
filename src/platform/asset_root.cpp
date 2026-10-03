@@ -1,4 +1,4 @@
-#include "asset_root.h"
+#include "platform/asset_root.h"
 
 #include <bx/filepath.h>
 #include <bx/string.h>

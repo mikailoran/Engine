@@ -6,8 +6,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "mesh_handle.h"
-#include "texture_handle.h"
+#include "resource/mesh_handle.h"
+#include "resource/texture_handle.h"
 
 struct Mesh;
 

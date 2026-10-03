@@ -1,8 +1,8 @@
-#include "entity_manager.h"
+#include "ecs/core/entity_manager.h"
 
 #include <cassert>
 
-#include "types.h"
+#include "ecs/core/types.h"
 
 EntityManager::EntityManager() {
   for (EntityType entity_id = 0; entity_id < kMaxEntities; ++entity_id) {

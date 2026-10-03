@@ -6,7 +6,7 @@
 #include <span>
 #include <utility>
 
-#include "types.h"
+#include "ecs/core/types.h"
 
 /** @brief Type-erased base so ComponentManager can hold every component array
  * together. */

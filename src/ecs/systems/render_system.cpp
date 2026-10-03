@@ -1,4 +1,4 @@
-#include "render_system.h"
+#include "ecs/systems/render_system.h"
 
 #include <bgfx/bgfx.h>
 #include <bgfx/defines.h>
@@ -9,14 +9,14 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "../../resource/asset_registry.h"
-#include "../../resource/texture_handle.h"
-#include "../components/camera.h"
-#include "../components/renderable.h"
-#include "../components/transform.h"
-#include "../core/ecs.h"
-#include "../core/frame_context.h"
-#include "../core/types.h"
+#include "ecs/components/camera.h"
+#include "ecs/components/renderable.h"
+#include "ecs/components/transform.h"
+#include "ecs/core/ecs.h"
+#include "ecs/core/frame_context.h"
+#include "ecs/core/types.h"
+#include "resource/asset_registry.h"
+#include "resource/texture_handle.h"
 
 namespace {
 

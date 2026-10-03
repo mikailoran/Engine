@@ -3,7 +3,7 @@
 #include <array>
 #include <queue>
 
-#include "types.h"
+#include "ecs/core/types.h"
 
 /**
  * @brief Hands out entity ids and tracks which of them are in use.

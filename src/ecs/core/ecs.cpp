@@ -1,6 +1,6 @@
-#include "ecs.h"
+#include "ecs/core/ecs.h"
 
-#include "types.h"
+#include "ecs/core/types.h"
 
 Entity Ecs::CreateEntity() { return entity_manager_.CreateEntity(); }
 

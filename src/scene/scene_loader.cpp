@@ -1,4 +1,4 @@
-#include "scene_loader.h"
+#include "scene/scene_loader.h"
 
 #include <cassert>
 #include <filesystem>
@@ -9,8 +9,8 @@
 #include <string>
 #include <utility>
 
-#include "../ecs/core/ecs.h"
-#include "../platform/asset_root.h"
+#include "ecs/core/ecs.h"
+#include "platform/asset_root.h"
 
 namespace {
 

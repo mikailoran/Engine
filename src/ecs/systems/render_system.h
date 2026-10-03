@@ -2,7 +2,7 @@
 
 #include <bgfx/bgfx.h>
 
-#include "../core/types.h"
+#include "ecs/core/types.h"
 
 class Ecs;
 class AssetRegistry;

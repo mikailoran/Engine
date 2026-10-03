@@ -4,9 +4,9 @@
 #include <memory>
 #include <unordered_map>
 
-#include "component_array.h"
-#include "types.h"
-#include "view.h"
+#include "ecs/core/component_array.h"
+#include "ecs/core/types.h"
+#include "ecs/core/view.h"
 
 class ComponentManager {
  public:

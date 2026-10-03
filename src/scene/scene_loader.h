@@ -6,7 +6,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "../ecs/core/types.h"
+#include "ecs/core/types.h"
 
 class Ecs;
 class AssetRegistry;

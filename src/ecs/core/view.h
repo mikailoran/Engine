@@ -10,8 +10,8 @@
 #include <span>
 #include <tuple>
 
-#include "component_array.h"
-#include "types.h"
+#include "ecs/core/component_array.h"
+#include "ecs/core/types.h"
 
 // TODO: Make View become a range. Currently, we can only pass functions to
 // views (internal iteration). Making View returning ranges would allow external

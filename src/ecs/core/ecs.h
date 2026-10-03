@@ -2,10 +2,10 @@
 
 #include <vector>
 
-#include "component_manager.h"
-#include "entity_manager.h"
-#include "types.h"
-#include "view.h"
+#include "ecs/core/component_manager.h"
+#include "ecs/core/entity_manager.h"
+#include "ecs/core/types.h"
+#include "ecs/core/view.h"
 
 /** @brief Facade over the entity, component and system managers. */
 class Ecs {

@@ -1,21 +1,21 @@
-#include "ui.h"
+#include "ecs/systems/ui.h"
 
 #include <dear-imgui/imgui.h>
 
 #include <cstdint>
 
-#include "../../resource/asset_registry.h"
-#include "../../resource/mesh_handle.h"
-#include "../components/configurable.h"
-#include "../components/renderable.h"
-#include "../components/rigid_body.h"
-#include "../components/spin.h"
-#include "../components/transform.h"
-#include "../core/ecs.h"
-#include "../core/frame_context.h"
-#include "../core/types.h"
+#include "ecs/components/configurable.h"
+#include "ecs/components/renderable.h"
+#include "ecs/components/rigid_body.h"
+#include "ecs/components/spin.h"
+#include "ecs/components/transform.h"
+#include "ecs/core/ecs.h"
+#include "ecs/core/frame_context.h"
+#include "ecs/core/types.h"
 #include "entry/entry.h"
 #include "imgui/imgui.h"
+#include "resource/asset_registry.h"
+#include "resource/mesh_handle.h"
 
 void UiSystem::Init(AssetRegistry& asset_registry) {
   imguiCreate();

@@ -1,4 +1,4 @@
-#include "lighting_system.h"
+#include "ecs/systems/lighting_system.h"
 
 #include <bgfx/bgfx.h>
 #include <bx/math.h>
@@ -7,10 +7,10 @@
 #include <cassert>
 #include <cstddef>
 
-#include "../components/directional_light.h"
-#include "../core/ecs.h"
-#include "../core/frame_context.h"
-#include "../core/types.h"
+#include "ecs/components/directional_light.h"
+#include "ecs/core/ecs.h"
+#include "ecs/core/frame_context.h"
+#include "ecs/core/types.h"
 
 namespace {
 
