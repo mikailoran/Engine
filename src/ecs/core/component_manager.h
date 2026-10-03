@@ -3,6 +3,7 @@
 #include <cassert>
 #include <memory>
 #include <unordered_map>
+#include <utility>
 
 #include "ecs/core/component_array.h"
 #include "ecs/core/types.h"
@@ -62,7 +63,7 @@ void ComponentManager::RegisterComponent() {
 
 template <class Component>
 void ComponentManager::AddComponent(Entity entity, Component component) {
-  GetComponentArray<Component>().InsertData(entity, component);
+  GetComponentArray<Component>().InsertData(entity, std::move(component));
 }
 
 template <class Component>

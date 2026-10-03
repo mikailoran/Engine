@@ -1,5 +1,6 @@
 #pragma once
 
+#include <utility>
 #include <vector>
 
 #include "ecs/core/component_manager.h"
@@ -85,7 +86,7 @@ void Ecs::RegisterComponent() {
 
 template <class Component>
 void Ecs::AddComponent(Entity entity, Component component) {
-  component_manager_.AddComponent(entity, component);
+  component_manager_.AddComponent(entity, std::move(component));
 }
 
 template <class Component>
