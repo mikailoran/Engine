@@ -86,9 +86,11 @@ auto DrawInspector(Ecs& ecs, AssetRegistry& assets) -> void {
                                                const Selected&) -> void {
     ImGui::PushID(static_cast<int>(entity));
     ImGui::TextUnformatted(std::format("Entity {}", entity).c_str());
+    ImGui::SameLine();
     if (ImGui::Button("Destroy")) {
       ecs.DestroyEntity(entity);
     }
+    ImGui::SeparatorText("Components");
     DrawComponent<Transform>(
         ecs, entity, "Transform", [](Transform& transform) -> void {
           ImGui::DragFloat3("Position", &transform.position.x, 0.1F);
@@ -174,17 +176,19 @@ void UiSystem::Update(Ecs& ecs, AssetRegistry& assets,
       mouse.m_mz, static_cast<std::uint16_t>(ctx.width),
       static_cast<std::uint16_t>(ctx.height));
 
-  const auto width = static_cast<float>(ctx.width);
-  const auto height = static_cast<float>(ctx.height);
-  ImGui::SetNextWindowPos(ImVec2(width - (width / 5.0f) - 10.0f, 10.0f),
-                          ImGuiCond_FirstUseEver);
-  ImGui::SetNextWindowSize(ImVec2(width / 5.0f, height / 3.5f),
+  const auto screen_width = static_cast<float>(ctx.width);
+  const auto screen_height = static_cast<float>(ctx.height);
+  const auto window_width = screen_width / 5.0F;
+  const auto window_height = screen_height * 0.9F;
+  ImGui::SetNextWindowPos(ImVec2(10.0f, 50.0f), ImGuiCond_FirstUseEver);
+  ImGui::SetNextWindowSize(ImVec2(window_width, window_height),
                            ImGuiCond_FirstUseEver);
   ImGui::Begin("Settings", nullptr, 0);
 
   if (ImGui::Button("Spawn Entity")) {
     SpawnEntity(ecs, assets);
   }
+  ImGui::Separator();
   DrawInspector(ecs, assets);
   ImGui::End();
 
