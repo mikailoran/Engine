@@ -29,8 +29,9 @@ class CameraControl {
   auto operator=(CameraControl&&) -> CameraControl& = delete;
 
   /**
-   * @brief Gathers input and writes the resulting pose into the nominated
-   * camera entity's Transform and Camera. Does nothing until SetCamera.
+   * @brief Gathers input and writes the resulting pose, view and projection
+   * into the nominated camera entity's Transform and Camera. Does nothing
+   * until SetCamera.
    *
    * @param ecs World to write components through.
    * @param ctx Per-frame inputs.

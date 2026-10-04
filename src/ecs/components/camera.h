@@ -2,6 +2,8 @@
 
 #include <bx/math.h>
 
+#include <array>
+
 /**
  * @brief View and projection parameters for a camera entity.
  */
@@ -20,4 +22,8 @@ struct Camera {
 
   // Far clip distance.
   float far_plane{100.0F};
+
+  // Derived, not configuration: written each frame by CameraControl.
+  std::array<float, 16> view{};
+  std::array<float, 16> proj{};
 };

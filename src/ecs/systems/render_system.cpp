@@ -91,12 +91,8 @@ void RenderSystem::Update(Ecs& ecs, const AssetRegistry& assets,
   DrawDebugOverlay(ctx);
   bgfx::setFrameUniform(u_time_.Get(), &ctx.time);
 
-  // View and projection for view 0 taken from the camera entity's components.
-  // The CameraControl system writes those each frame.
+  // View and projection for view 0, written by CameraControl this frame
   {
-    const auto aspect =
-        static_cast<float>(ctx.width) / static_cast<float>(ctx.height);
-
     std::array<float, kMtxSize> view{};
     std::array<float, kMtxSize> proj{};
     std::array<float, 4> eye_pos{0.0F, 0.0F, 0.0F, 0.0F};
@@ -106,12 +102,12 @@ void RenderSystem::Update(Ecs& ecs, const AssetRegistry& assets,
       const auto& camera = ecs.GetComponent<Camera>(*camera_);
       eye_pos = {transform.position.x, transform.position.y,
                  transform.position.z, 0.0F};
-
-      bx::mtxLookAt(view.data(), transform.position, camera.target, camera.up);
-      bx::mtxProj(proj.data(), camera.fov_degrees, aspect, camera.near_plane,
-                  camera.far_plane, bgfx::getCaps()->homogeneousDepth);
+      view = camera.view;
+      proj = camera.proj;
     } else {
       // No camera set: view from the world origin with the stock projection.
+      const auto aspect =
+          static_cast<float>(ctx.width) / static_cast<float>(ctx.height);
       bx::mtxIdentity(view.data());
       bx::mtxProj(proj.data(), kFallbackFovDegrees, aspect, kFallbackNearPlane,
                   kFallbackFarPlane, bgfx::getCaps()->homogeneousDepth);
@@ -126,11 +122,7 @@ void RenderSystem::Update(Ecs& ecs, const AssetRegistry& assets,
   ecs.View<Transform, Renderable>().ForEach(
       [this, &ecs, &assets](Entity entity, const Transform& transform,
                             const Renderable& renderable) -> void {
-        std::array<float, kMtxSize> mtx{};
-        bx::mtxSRT(
-            mtx.data(), transform.scale.x, transform.scale.y, transform.scale.z,
-            transform.rotation.x, transform.rotation.y, transform.rotation.z,
-            transform.position.x, transform.position.y, transform.position.z);
+        const auto mtx = ModelMatrix(transform);
 
         const auto program = bgfx::isValid(renderable.program)
                                  ? renderable.program
