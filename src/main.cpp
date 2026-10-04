@@ -14,6 +14,7 @@
 #include "ecs/components/directional_light.h"
 #include "ecs/components/renderable.h"
 #include "ecs/components/rigid_body.h"
+#include "ecs/components/selected.h"
 #include "ecs/components/spin.h"
 #include "ecs/components/transform.h"
 #include "ecs/core/ecs.h"
@@ -117,12 +118,13 @@ class Game {
 Game::Game() {
   // --- ECS: components --------------------------------------------------
   ecs_.RegisterComponent<Camera>();
+  ecs_.RegisterComponent<Renderable>();
+  ecs_.RegisterComponent<DirectionalLight>();
   ecs_.RegisterComponent<Transform>();
   ecs_.RegisterComponent<RigidBody>();
   ecs_.RegisterComponent<Spin>();
-  ecs_.RegisterComponent<Renderable>();
   ecs_.RegisterComponent<Configurable>();
-  ecs_.RegisterComponent<DirectionalLight>();
+  ecs_.RegisterComponent<Selected>();
 
   // --- Assets and entities ----------------------------------------------
   const auto camera_entity = ecs_.CreateEntity();

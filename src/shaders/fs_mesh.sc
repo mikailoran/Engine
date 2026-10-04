@@ -5,6 +5,8 @@ $input v_wpos, v_normal
 uniform vec4 u_time;
 // Linear RGBA surface color, set per draw by RenderSystem.
 uniform vec4 u_color;
+// Highlighted object color
+uniform vec4 u_highlight;
 // Camera world position.
 uniform vec4 u_eyePos;
 // World direction toward the sun, normalized.
@@ -43,6 +45,13 @@ void main()
 		* pow(max(dot(n, h), 0.0), 64.0);
 	vec3 ambient = albedo * mix(u_groundColor.xyz, u_skyColor.xyz, n.y*0.5 + 0.5);
 
-	gl_FragColor.xyz = pow(ambient + diffuse + spec, vec3_splat(1.0/2.2) );
+	vec3 lit = ambient + diffuse + spec;
+	lit = mix(lit, u_highlight.xyz, u_highlight.w);
+	
+	// Rim highlight (fesnel). Replace mix with this
+	// float rim = pow(1.0 - max(dot(n, v), 0.0), 3.0);
+	// lit += u_highlight.xyz * u_highlight.w * rim;
+
+	gl_FragColor.xyz = pow(lit, vec3_splat(1.0/2.2) );
 	gl_FragColor.w = 1.0;
 }

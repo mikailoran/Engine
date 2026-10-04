@@ -59,6 +59,8 @@ class RenderSystem {
   // Per-draw surface color, set from Renderable::color before each submit.
   UniqueHandle<bgfx::UniformHandle> u_color_;
 
+  UniqueHandle<bgfx::UniformHandle> u_highlight_;
+
   // Per-frame camera world position.
   UniqueHandle<bgfx::UniformHandle> u_eye_pos_;
 
