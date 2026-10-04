@@ -1,6 +1,7 @@
 #include "ecs/core/entity_manager.h"
 
 #include <cassert>
+#include <stdexcept>
 
 #include "ecs/core/types.h"
 
@@ -13,6 +14,10 @@ EntityManager::EntityManager() {
 auto EntityManager::CreateEntity() -> Entity {
   assert(living_entity_count_ < kMaxEntities &&
          "Too many entities in existence.");
+  // front() on an empty queue is UB once the assert is compiled out
+  if (available_entities_.empty()) {
+    throw std::length_error("entity limit reached");
+  }
 
   auto id = available_entities_.front();
   available_entities_.pop();

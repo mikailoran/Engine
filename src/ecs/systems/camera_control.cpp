@@ -18,28 +18,24 @@ constexpr float kStartVerticalAngle = 0.0F;
 
 }  // namespace
 
-void CameraControl::Init() {
+CameraControl::CameraControl() {
   cameraCreate();
   cameraSetPosition(kStartPosition);
   cameraSetVerticalAngle(kStartVerticalAngle);
 }
 
 void CameraControl::Update(Ecs& ecs, const FrameContext& ctx) {
-  if (ctx.mouse == nullptr) {
+  if (ctx.mouse == nullptr || !camera_) {
     return;
   }
 
   cameraUpdate(ctx.dt, *ctx.mouse);
 
   // Mirror the resulting pose into the components.
-  const auto position = cameraGetPosition();
-  const auto at = cameraGetAt();
-
-  ecs.View<Transform, Camera>().ForEach(
-      [&position, &at](Entity, Transform& transform, Camera& camera) -> void {
-        transform.position = position;
-        camera.target = at;
-      });
+  ecs.GetComponent<Transform>(*camera_).position = cameraGetPosition();
+  ecs.GetComponent<Camera>(*camera_).target = cameraGetAt();
 }
 
-void CameraControl::Shutdown() { cameraDestroy(); }
+CameraControl::~CameraControl() { cameraDestroy(); }
+
+void CameraControl::SetCamera(Entity camera) { camera_ = camera; }

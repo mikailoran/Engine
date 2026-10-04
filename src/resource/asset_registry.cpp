@@ -7,9 +7,15 @@
 #include <cassert>
 #include <cstdint>
 #include <filesystem>
+#include <memory>
+#include <stdexcept>
+#include <utility>
 
 #include "resource/mesh_handle.h"
 #include "resource/texture_handle.h"
+#include "resource/unique_handle.h"
+
+void MeshUnloader::operator()(Mesh* mesh) const noexcept { meshUnload(mesh); }
 
 auto AssetRegistry::LoadMesh(const std::filesystem::path& path) -> MeshHandle {
   // Mesh previously loaded: return handle from map
@@ -17,11 +23,14 @@ auto AssetRegistry::LoadMesh(const std::filesystem::path& path) -> MeshHandle {
     return it->second;
   }
 
-  auto* mesh = meshLoad(path.c_str());
-  assert(mesh && "Trying to load invalid mesh.");
+  // Owned before anything else can throw
+  std::unique_ptr<Mesh, MeshUnloader> mesh(meshLoad(path.c_str()));
+  if (!mesh) {
+    throw std::runtime_error("cannot load mesh: " + path.string());
+  }
 
   const MeshHandle handle{static_cast<std::uint16_t>(meshes_.size())};
-  meshes_.push_back(mesh);
+  meshes_.push_back(std::move(mesh));
   mesh_by_path_.emplace(path, handle);
   return handle;
 }
@@ -31,7 +40,7 @@ auto AssetRegistry::LoadMesh(const std::filesystem::path& path) -> MeshHandle {
   assert(IsValid(handle) && "Trying to get invalid mesh handle.");
   assert(handle.idx < meshes_.size() && "Mesh handle out of range.");
 
-  return meshes_.at(handle.idx);
+  return meshes_.at(handle.idx).get();
 }
 
 auto AssetRegistry::LoadTexture(const std::filesystem::path& path)
@@ -44,11 +53,13 @@ auto AssetRegistry::LoadTexture(const std::filesystem::path& path)
   // Default sampler addressing is repeat, which tiling relies on
   constexpr uint64_t kFlags = BGFX_TEXTURE_SRGB | BGFX_SAMPLER_MIN_ANISOTROPIC |
                               BGFX_SAMPLER_MAG_ANISOTROPIC;
-  const auto texture = loadTexture(path.c_str(), kFlags);
-  assert(bgfx::isValid(texture) && "Trying to load invalid texture.");
+  UniqueHandle texture(loadTexture(path.c_str(), kFlags));
+  if (!texture) {
+    throw std::runtime_error("cannot load texture: " + path.string());
+  }
 
   const TextureHandle handle{static_cast<std::uint16_t>(textures_.size())};
-  textures_.push_back(texture);
+  textures_.push_back(std::move(texture));
   texture_by_path_.emplace(path, handle);
   return handle;
 }
@@ -58,19 +69,5 @@ auto AssetRegistry::LoadTexture(const std::filesystem::path& path)
   assert(IsValid(handle) && "Trying to get invalid texture handle.");
   assert(handle.idx < textures_.size() && "Texture handle out of range.");
 
-  return textures_.at(handle.idx);
-}
-
-void AssetRegistry::UnloadAll() {
-  for (Mesh* mesh : meshes_) {
-    meshUnload(mesh);
-  }
-  meshes_.clear();
-  mesh_by_path_.clear();
-
-  for (const auto texture : textures_) {
-    bgfx::destroy(texture);
-  }
-  textures_.clear();
-  texture_by_path_.clear();
+  return textures_.at(handle.idx).Get();
 }

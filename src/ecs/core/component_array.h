@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cassert>
+#include <concepts>
 #include <limits>
 #include <span>
 #include <utility>
@@ -28,12 +29,22 @@ class ComponentArrayInterface {
 };
 
 /**
+ * @brief A type ComponentArray can store.
+ *
+ * Default-initializable because every slot is constructed up front and reset
+ * on removal; movable because components are moved in and compacted.
+ */
+template <class T>
+concept ComponentType = std::default_initializable<T> && std::movable<T>;
+
+/**
  * @brief Sparse-set storage for one component type.
  *
- * Components are packed in [0, Size()); removal swaps the last one into the
- * hole, so dense order is not entity-id order.
+ * Components are packed in [0, Size()); removal moves the last one into the
+ * hole, so dense order is not entity-id order. Slots past Size() hold
+ * default-constructed components, so removal releases what a component owns.
  */
-template <class Component>
+template <ComponentType Component>
 class ComponentArray : public ComponentArrayInterface {
  public:
   /** @brief Creates an empty component array with every entity marked absent.
@@ -52,7 +63,7 @@ class ComponentArray : public ComponentArrayInterface {
   /** @brief Adds @p entity's component. @pre Has(entity) is false. */
   void InsertData(Entity entity, Component component);
 
-  /** @brief Removes @p entity's component. @pre Has(entity) is true. */
+  /** @brief Removes and releases @p entity's component. @pre Has(entity). */
   void RemoveData(Entity entity);
 
   /** @brief Returns @p entity's component. @pre Has(entity) is true. */
@@ -84,22 +95,22 @@ class ComponentArray : public ComponentArrayInterface {
 
 // Implementation
 
-template <class Component>
+template <ComponentType Component>
 ComponentArray<Component>::ComponentArray() {
   sparse_.fill(kInvalidIndex);
 }
 
-template <class Component>
+template <ComponentType Component>
 auto ComponentArray<Component>::Size() const -> std::size_t {
   return current_size_;
 }
 
-template <class Component>
+template <ComponentType Component>
 auto ComponentArray<Component>::Entities() const -> std::span<const Entity> {
   return std::span(dense_).first(Size());
 }
 
-template <class Component>
+template <ComponentType Component>
 void ComponentArray<Component>::InsertData(Entity entity, Component component) {
   assert(!Has(entity) && "Component added to same entity more than once.");
 
@@ -110,21 +121,25 @@ void ComponentArray<Component>::InsertData(Entity entity, Component component) {
   ++current_size_;
 }
 
-template <class Component>
+template <ComponentType Component>
 void ComponentArray<Component>::RemoveData(Entity entity) {
   assert(Has(entity) && "Trying to remove non-existent component.");
 
-  // Swap deleted element with last element of component array
   const auto removed_entity_index = sparse_.at(entity);
   const auto last_entity_index = current_size_ - 1;
-  // TODO: self swap would corrupt entities with non-trivial move semantics
-  std::swap(components_.at(removed_entity_index),
-            components_.at(last_entity_index));
 
-  // Update sparse set arrays to reflect change to moved entity
-  const auto entity_of_last_element = dense_.at(last_entity_index);
-  sparse_.at(entity_of_last_element) = removed_entity_index;
-  dense_.at(removed_entity_index) = entity_of_last_element;
+  // Move the last element into the hole, unless the removed one is last
+  if (removed_entity_index != last_entity_index) {
+    components_.at(removed_entity_index) =
+        std::move(components_.at(last_entity_index));
+
+    const auto entity_of_last_element = dense_.at(last_entity_index);
+    sparse_.at(entity_of_last_element) = removed_entity_index;
+    dense_.at(removed_entity_index) = entity_of_last_element;
+  }
+
+  // Reset the vacated slot so it releases what it owned
+  components_.at(last_entity_index) = Component{};
 
   // Remove the deleted entity from the sparse set
   sparse_.at(entity) = kInvalidIndex;
@@ -132,7 +147,7 @@ void ComponentArray<Component>::RemoveData(Entity entity) {
   --current_size_;
 }
 
-template <class Component>
+template <ComponentType Component>
 auto ComponentArray<Component>::GetData(Entity entity) -> Component& {
   assert(Has(entity) &&
          "Trying to retrieve a component the entity does not have.");
@@ -140,7 +155,7 @@ auto ComponentArray<Component>::GetData(Entity entity) -> Component& {
   return components_.at(sparse_.at(entity));
 }
 
-template <class Component>
+template <ComponentType Component>
 auto ComponentArray<Component>::GetData(Entity entity) const
     -> const Component& {
   assert(Has(entity) &&
@@ -149,12 +164,12 @@ auto ComponentArray<Component>::GetData(Entity entity) const
   return components_.at(sparse_.at(entity));
 }
 
-template <class Component>
+template <ComponentType Component>
 auto ComponentArray<Component>::Has(Entity entity) const -> bool {
   return sparse_.at(entity) != kInvalidIndex;
 }
 
-template <class Component>
+template <ComponentType Component>
 void ComponentArray<Component>::EntityDestroyed(Entity entity) {
   if (Has(entity)) {
     RemoveData(entity);

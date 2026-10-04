@@ -1,11 +1,14 @@
-// Component storage: round-trip, mutation, and data integrity across removals.
+// Component storage: round-trip, mutation, data integrity across removals, and
+// release of what a removed component owns.
 
 #include <gtest/gtest.h>
 
+#include <memory>
 #include <set>
 #include <stdexcept>
 #include <string>
 
+#include "ecs/core/component_array.h"
 #include "ecs/core/ecs.h"
 #include "ecs/core/types.h"
 
@@ -24,6 +27,63 @@ struct Health {
 struct Name {
   std::string value;
 };
+
+/// Owns a shared resource, so its release shows in the use_count.
+struct Owner {
+  std::shared_ptr<int> resource;
+};
+
+/// Counts self-move-assignments, which leave many types unspecified.
+class SelfMoveCounter {
+ public:
+  /** @brief Starts with no counter attached. */
+  SelfMoveCounter() = default;
+
+  /** @brief Reports self-moves to @p counter, which must outlive this. */
+  explicit SelfMoveCounter(int* counter) : self_moves_(counter) {}
+
+  ~SelfMoveCounter() = default;
+  SelfMoveCounter(const SelfMoveCounter&) = default;
+  auto operator=(const SelfMoveCounter&) -> SelfMoveCounter& = default;
+  SelfMoveCounter(SelfMoveCounter&&) noexcept = default;
+
+  /** @brief Moves @p other's counter in, counting a move onto itself. */
+  auto operator=(SelfMoveCounter&& other) noexcept -> SelfMoveCounter& {
+    if (this == &other && self_moves_ != nullptr) {
+      ++*self_moves_;
+    }
+    self_moves_ = other.self_moves_;
+    return *this;
+  }
+
+ private:
+  int* self_moves_{nullptr};
+};
+
+/// Not storable: has no default constructor.
+struct NoDefault {
+  /** @brief Requires an argument, so cannot be default-constructed. */
+  explicit NoDefault(int /*initial*/) {}
+};
+
+/// Not storable: can be neither copied nor moved.
+class NotMovable {
+ public:
+  NotMovable() = default;
+  ~NotMovable() = default;
+  NotMovable(const NotMovable&) = delete;
+  auto operator=(const NotMovable&) -> NotMovable& = delete;
+  NotMovable(NotMovable&&) = delete;
+  auto operator=(NotMovable&&) -> NotMovable& = delete;
+};
+
+// What ComponentArray accepts, checked at compile time
+static_assert(ComponentType<Position>);
+static_assert(ComponentType<Name>);
+static_assert(ComponentType<Owner>);
+static_assert(ComponentType<SelfMoveCounter>);
+static_assert(!ComponentType<NoDefault>);
+static_assert(!ComponentType<NotMovable>);
 
 /** @brief Collects the entities a @p Component view visits. */
 template <class Component>
@@ -210,4 +270,53 @@ TEST(ComponentStorage, HasComponentThrowsForAnIdOutOfRange) {
 
   EXPECT_THROW(static_cast<void>(ecs.HasComponent<Position>(kMaxEntities)),
                std::out_of_range);
+}
+
+TEST(ComponentStorage, RemovingTheOnlyComponentReleasesWhatItOwns) {
+  Ecs ecs;
+  ecs.RegisterComponent<Owner>();
+  const auto entity = ecs.CreateEntity();
+  const auto resource = std::make_shared<int>(1);
+  ecs.AddComponent(entity, Owner{resource});
+
+  ecs.RemoveComponent<Owner>(entity);
+
+  EXPECT_EQ(resource.use_count(), 1);
+}
+
+// The hole is filled by the last element, which must not keep the removed
+// component's resource alive in the vacated slot.
+TEST(ComponentStorage, RemovingTheMiddleReleasesOnlyWhatItOwns) {
+  Ecs ecs;
+  ecs.RegisterComponent<Owner>();
+  const auto first = ecs.CreateEntity();
+  const auto middle = ecs.CreateEntity();
+  const auto last = ecs.CreateEntity();
+  const auto first_resource = std::make_shared<int>(1);
+  const auto middle_resource = std::make_shared<int>(2);
+  const auto last_resource = std::make_shared<int>(3);
+  ecs.AddComponent(first, Owner{first_resource});
+  ecs.AddComponent(middle, Owner{middle_resource});
+  ecs.AddComponent(last, Owner{last_resource});
+
+  ecs.RemoveComponent<Owner>(middle);
+
+  EXPECT_EQ(middle_resource.use_count(), 1);
+  EXPECT_EQ(first_resource.use_count(), 2);
+  EXPECT_EQ(last_resource.use_count(), 2);
+  EXPECT_EQ(ecs.GetComponent<Owner>(first).resource, first_resource);
+  EXPECT_EQ(ecs.GetComponent<Owner>(last).resource, last_resource);
+}
+
+// Removing the last element makes it its own swap partner.
+TEST(ComponentStorage, RemovalNeverSelfMoveAssignsAComponent) {
+  Ecs ecs;
+  ecs.RegisterComponent<SelfMoveCounter>();
+  const auto entity = ecs.CreateEntity();
+  int self_moves = 0;
+  ecs.AddComponent(entity, SelfMoveCounter{&self_moves});
+
+  ecs.RemoveComponent<SelfMoveCounter>(entity);
+
+  EXPECT_EQ(self_moves, 0);
 }

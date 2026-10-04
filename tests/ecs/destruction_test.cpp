@@ -5,6 +5,7 @@
 
 #include <gtest/gtest.h>
 
+#include <memory>
 #include <set>
 
 #include "ecs/core/ecs.h"
@@ -18,6 +19,11 @@ struct Position {
 
 struct Health {
   int value{0};
+};
+
+/// Owns a shared resource, so its release shows in the use_count.
+struct Owner {
+  std::shared_ptr<int> resource;
 };
 
 }  // namespace
@@ -90,4 +96,17 @@ TEST(Destruction, FreesTheIdForReuse) {
     created.insert(ecs.CreateEntity());
   }
   EXPECT_TRUE(created.contains(entity));
+}
+
+TEST(Destruction, ReleasesWhatTheEntitysComponentsOwn) {
+  Ecs ecs;
+  ecs.RegisterComponent<Owner>();
+  const auto entity = ecs.CreateEntity();
+  const auto resource = std::make_shared<int>(1);
+  ecs.AddComponent(entity, Owner{resource});
+
+  ecs.DestroyEntity(entity);
+  ecs.Flush();
+
+  EXPECT_EQ(resource.use_count(), 1);
 }
