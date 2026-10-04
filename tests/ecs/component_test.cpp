@@ -145,6 +145,43 @@ TEST(ComponentStorage, HasComponentReflectsAddAndRemove) {
   EXPECT_FALSE(ecs.HasComponent<Position>(entity));
 }
 
+TEST(ComponentStorage, TryGetReturnsTheStoredComponent) {
+  Ecs ecs;
+  ecs.RegisterComponent<Position>();
+  const auto entity = ecs.CreateEntity();
+  ecs.AddComponent(entity, Position{.x = 3.0F, .y = 4.0F});
+
+  auto* position = ecs.TryGetComponent<Position>(entity);
+
+  ASSERT_NE(position, nullptr);
+  EXPECT_EQ(position, &ecs.GetComponent<Position>(entity));
+  EXPECT_FLOAT_EQ(position->x, 3.0F);
+  EXPECT_FLOAT_EQ(position->y, 4.0F);
+}
+
+TEST(ComponentStorage, TryGetReturnsNullWithoutTheComponent) {
+  Ecs ecs;
+  ecs.RegisterComponent<Position>();
+  ecs.RegisterComponent<Health>();
+  const auto entity = ecs.CreateEntity();
+
+  EXPECT_EQ(ecs.TryGetComponent<Position>(entity), nullptr);
+
+  ecs.AddComponent(entity, Position{});
+  EXPECT_EQ(ecs.TryGetComponent<Health>(entity), nullptr);
+
+  ecs.RemoveComponent<Position>(entity);
+  EXPECT_EQ(ecs.TryGetComponent<Position>(entity), nullptr);
+}
+
+TEST(ComponentStorage, TryGetThrowsForAnIdOutOfRange) {
+  Ecs ecs;
+  ecs.RegisterComponent<Position>();
+
+  EXPECT_THROW(static_cast<void>(ecs.TryGetComponent<Position>(kMaxEntities)),
+               std::out_of_range);
+}
+
 TEST(ComponentStorage, ComponentTypesAreIndependent) {
   Ecs ecs;
   ecs.RegisterComponent<Position>();
