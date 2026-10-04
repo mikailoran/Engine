@@ -11,6 +11,9 @@ endif()
 # Build build/compile_commands.json for clangd and clang-tidy.
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# No RTTI anywhere; directory-wide so every dependency below inherits it
+add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>)
+
 # Opt-in bgfx samples; each builds only by name (e.g. example-01-cubes)
 option(ENGINE_BGFX_EXAMPLES "Define bgfx's example targets (built only on request)" OFF)
 set(BGFX_BUILD_EXAMPLES ${ENGINE_BGFX_EXAMPLES} CACHE BOOL "" FORCE)
@@ -50,6 +53,20 @@ FetchContent_Declare(nlohmann_json
   DOWNLOAD_EXTRACT_TIMESTAMP TRUE
   SYSTEM)
 FetchContent_MakeAvailable(nlohmann_json)
+
+# --- Jolt Physics -----------------------------------------------------------
+FetchContent_Declare(JoltPhysics
+  URL https://github.com/jrouwe/JoltPhysics/archive/refs/tags/v5.6.0.tar.gz
+  URL_HASH SHA256=6e069ee0172478cc78182047aac87e5310ba14a67a53348ae14cc37801fd3f8e
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+  SOURCE_SUBDIR Build
+  SYSTEM)
+# LTO on Jolt alone breaks the Release link of a non-LTO engine
+set(INTERPROCEDURAL_OPTIMIZATION OFF CACHE BOOL "" FORCE)
+# GPU/CPU compute only serves Jolt's hair simulation
+set(JPH_USE_VK OFF CACHE BOOL "" FORCE)
+set(JPH_USE_CPU_COMPUTE OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(JoltPhysics)
 
 # --- Runtime layout ---------------------------------------------------------
 # Everything loaded at runtime is generated, and it is emitted here, beside the
@@ -100,7 +117,7 @@ add_executable(engine src/main.cpp
 # example-common publicly exposes examples/common plus bgfx, bx and bimg with
 # their include directories, which is what makes "entry/entry.h" resolve.
 target_link_libraries(engine PRIVATE example-common ecs_core
-  nlohmann_json::nlohmann_json)
+  nlohmann_json::nlohmann_json Jolt)
 
 target_compile_options(engine PRIVATE -Wall -Wextra -Wpedantic)
 
