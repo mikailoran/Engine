@@ -22,9 +22,8 @@ constexpr float kRestThreshold = 0.2F;
 
 /** @brief Simulates exactly one step of @p fixed_dt seconds. */
 void Step(Ecs& ecs, const float fixed_dt) {
-  ecs.View<Transform, RigidBody, Spin>().ForEach(
-      [fixed_dt](Entity, Transform& transform, RigidBody& rigid_body,
-                 const Spin& spin) -> void {
+  ecs.View<Transform, RigidBody>().ForEach(
+      [fixed_dt](Entity, Transform& transform, RigidBody& rigid_body) -> void {
         bx::Vec3 acceleration = rigid_body.acceleration;
         if (rigid_body.has_gravity) {
           acceleration = bx::add(acceleration, {0.0F, kGravity, 0.0F});
@@ -44,7 +43,10 @@ void Step(Ecs& ecs, const float fixed_dt) {
                   ? 0.0F
                   : rigid_body.velocity.y * -kRestitutionFactor;
         }
+      });
 
+  ecs.View<Transform, Spin>().ForEach(
+      [fixed_dt](Entity, Transform& transform, Spin& spin) -> void {
         if (spin.should_spin) {
           transform.rotation.y += spin.radians_per_second * fixed_dt;
         }

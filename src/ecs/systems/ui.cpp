@@ -1,16 +1,19 @@
 #include "ecs/systems/ui.h"
 
+#include <bx/math.h>
 #include <dear-imgui/imgui.h>
 #include <entry/entry.h>
 #include <imgui/imgui.h>
 
 #include <cassert>
+#include <concepts>
 #include <cstdint>
 #include <format>
+#include <limits>
 
-#include "ecs/components/configurable.h"
 #include "ecs/components/renderable.h"
 #include "ecs/components/rigid_body.h"
+#include "ecs/components/selected.h"
 #include "ecs/components/spin.h"
 #include "ecs/components/transform.h"
 #include "ecs/core/ecs.h"
@@ -18,10 +21,11 @@
 #include "platform/frame_context.h"
 #include "resource/asset_registry.h"
 #include "resource/mesh_handle.h"
+#include "resource/texture_handle.h"
 
 namespace {
 
-/** @brief Spawns a configurable bunny. @return The new entity. */
+/** @brief Spawns a bunny. @return The new entity. */
 auto SpawnEntity(Ecs& ecs, AssetRegistry& assets) -> Entity {
   // TODO: remove paths
   const MeshHandle mesh_handle = assets.LoadMesh("assets/meshes/bunny.bin");
@@ -29,10 +33,109 @@ auto SpawnEntity(Ecs& ecs, AssetRegistry& assets) -> Entity {
   ecs.AddComponent(entity, Transform{.position = {0.0F, 3.0F, 0.0F}});
   ecs.AddComponent(entity, RigidBody{});
   ecs.AddComponent(entity, Spin{});
-  ecs.AddComponent(entity, Configurable{});
   ecs.AddComponent(entity, Renderable{.mesh_handle = mesh_handle});
 
   return entity;
+}
+
+/**
+ * @brief Draws @p Component's section if @p entity has one; its close button
+ * removes it.
+ */
+template <class Component, std::invocable<Component&> Fn>
+auto DrawComponent(Ecs& ecs, Entity entity, const char* name, Fn draw) -> void {
+  auto* component = ecs.TryGetComponent<Component>(entity);
+  if (component == nullptr) {
+    return;
+  }
+
+  bool keep = true;
+  if (ImGui::CollapsingHeader(name, &keep, ImGuiTreeNodeFlags_DefaultOpen)) {
+    ImGui::PushID(name);
+    draw(*component);
+    ImGui::PopID();
+  }
+  // Last use of component: removal invalidates the pointer
+  if (!keep) {
+    ecs.RemoveComponent<Component>(entity);
+  }
+}
+
+/** @brief Menu item that adds @p make()'s result if @p entity lacks one. */
+template <class Component, std::invocable<> Make>
+auto AddComponentMenuItem(Ecs& ecs, Entity entity, const char* name, Make make)
+    -> void {
+  if (!ecs.HasComponent<Component>(entity) && ImGui::MenuItem(name)) {
+    ecs.AddComponent(entity, make());
+  }
+}
+
+/** @brief Menu item that adds a default @p Component if @p entity lacks one. */
+template <class Component>
+auto AddComponentMenuItem(Ecs& ecs, Entity entity, const char* name) -> void {
+  AddComponentMenuItem<Component>(ecs, entity, name,
+                                  []() -> Component { return Component{}; });
+}
+
+/**
+ * @brief Draws the selected entity's components, its Destroy button and its
+ * Add Component menu.
+ */
+auto DrawInspector(Ecs& ecs, AssetRegistry& assets) -> void {
+  ecs.View<Selected>().ForEach([&ecs, &assets](Entity entity,
+                                               const Selected&) -> void {
+    ImGui::PushID(static_cast<int>(entity));
+    ImGui::TextUnformatted(std::format("Entity {}", entity).c_str());
+    ImGui::SameLine();
+    if (ImGui::Button("Destroy")) {
+      ecs.DestroyEntity(entity);
+    }
+    ImGui::SeparatorText("Components");
+    DrawComponent<Transform>(
+        ecs, entity, "Transform", [](Transform& transform) -> void {
+          ImGui::DragFloat3("Position", &transform.position.x, 0.1F);
+          ImGui::DragFloat3("Rotation", &transform.rotation.x, bx::toRad(1.0F));
+          ImGui::DragFloat3("Scale", &transform.scale.x, 0.1F, 0.01F,
+                            std::numeric_limits<float>::max(), "%.2f",
+                            ImGuiSliderFlags_AlwaysClamp);
+        });
+    DrawComponent<RigidBody>(
+        ecs, entity, "Rigid Body", [](RigidBody& rigid_body) -> void {
+          ImGui::Checkbox("Gravity", &rigid_body.has_gravity);
+          ImGui::DragFloat3("Acceleration", &rigid_body.acceleration.x, 0.1F);
+          ImGui::DragFloat3("Velocity", &rigid_body.velocity.x, 0.1F);
+        });
+    DrawComponent<Renderable>(
+        ecs, entity, "Renderable", [](Renderable& renderable) -> void {
+          ImGui::ColorEdit3("Color", renderable.color.data());
+          if (IsValid(renderable.texture)) {
+            ImGui::DragFloat("Texture Scale", &renderable.texture_scale, 0.1F,
+                             0.01F, 10.0F, "%.2f",
+                             ImGuiSliderFlags_AlwaysClamp);
+          }
+        });
+    DrawComponent<Spin>(ecs, entity, "Spin", [](Spin& spin) -> void {
+      ImGui::Checkbox("Spin", &spin.should_spin);
+    });
+
+    // After the sections, so a new component's header appears next frame
+    if (ImGui::Button("Add Component")) {
+      ImGui::OpenPopup("add_component");
+    }
+    if (ImGui::BeginPopup("add_component")) {
+      AddComponentMenuItem<Transform>(ecs, entity, "Transform");
+      AddComponentMenuItem<RigidBody>(ecs, entity, "Rigid Body");
+      // A default Renderable has no mesh, which the renderer asserts on
+      AddComponentMenuItem<Renderable>(
+          ecs, entity, "Renderable", [&assets]() -> Renderable {
+            return {.mesh_handle = assets.LoadMesh("assets/meshes/cube.bin")};
+          });
+      AddComponentMenuItem<Spin>(ecs, entity, "Spin");
+      ImGui::EndPopup();
+    }
+
+    ImGui::PopID();
+  });
 }
 
 /** @brief Runs imguiCreate. @return The context it made current. */
@@ -73,43 +176,20 @@ void UiSystem::Update(Ecs& ecs, AssetRegistry& assets,
       mouse.m_mz, static_cast<std::uint16_t>(ctx.width),
       static_cast<std::uint16_t>(ctx.height));
 
-  const auto width = static_cast<float>(ctx.width);
-  const auto height = static_cast<float>(ctx.height);
-  ImGui::SetNextWindowPos(ImVec2(width - (width / 5.0f) - 10.0f, 10.0f),
-                          ImGuiCond_FirstUseEver);
-  ImGui::SetNextWindowSize(ImVec2(width / 5.0f, height / 3.5f),
+  const auto screen_width = static_cast<float>(ctx.width);
+  const auto screen_height = static_cast<float>(ctx.height);
+  const auto window_width = screen_width / 5.0F;
+  const auto window_height = screen_height * 0.9F;
+  ImGui::SetNextWindowPos(ImVec2(10.0f, 50.0f), ImGuiCond_FirstUseEver);
+  ImGui::SetNextWindowSize(ImVec2(window_width, window_height),
                            ImGuiCond_FirstUseEver);
   ImGui::Begin("Settings", nullptr, 0);
 
   if (ImGui::Button("Spawn Entity")) {
     SpawnEntity(ecs, assets);
   }
-
-  // Sliders of transforms of entities
-  ecs.View<Configurable, Transform, Spin, RigidBody, Renderable>().ForEach(
-      [&ecs](Entity entity, Configurable&, Transform& transform, Spin& spin,
-             RigidBody& rigid_body, Renderable& renderable) -> void {
-        ImGui::PushID(static_cast<int>(entity));
-
-        ImGui::TextUnformatted(std::format("Entity {}", entity).c_str());
-        if (ImGui::Button("Destroy")) {
-          ecs.DestroyEntity(entity);
-        }
-        ImGui::SliderFloat("x", &transform.position.x, -10.0F, 10.0F);
-        ImGui::SliderFloat("y", &transform.position.y, 0.0F, 10.0F);
-        ImGui::SliderFloat("Scale", &transform.scale.x, 0.1F, 10.0F);
-        if (ImGui::CollapsingHeader("Color Picker")) {
-          ImGui::ColorPicker3(renderable.color.data());
-        }
-        ImGui::Checkbox("Gravity", &rigid_body.has_gravity);
-        ImGui::SameLine();
-        ImGui::Checkbox("Spin", &spin.should_spin);
-        ImGui::NewLine();
-
-        ImGui::PopID();
-        transform.scale.z = transform.scale.y = transform.scale.x;
-      });
-
+  ImGui::Separator();
+  DrawInspector(ecs, assets);
   ImGui::End();
 
   imguiEndFrame();
