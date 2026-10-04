@@ -68,6 +68,13 @@ class Ecs {
   [[nodiscard]] auto HasComponent(Entity entity) const -> bool;
 
   /**
+   * @brief Returns @p entity's @p Component, or null if it has none.
+   * @pre Registered.
+   */
+  template <class Component>
+  [[nodiscard]] auto TryGetComponent(Entity entity) -> Component*;
+
+  /**
    * @brief Views the entities that have every one of @p Components.
    * @pre Every type in @p Components is registered.
    */
@@ -110,6 +117,14 @@ auto Ecs::GetComponent(Entity entity) const -> const Component& {
 template <class Component>
 auto Ecs::HasComponent(Entity entity) const -> bool {
   return component_manager_.HasComponent<Component>(entity);
+}
+
+template <class Component>
+auto Ecs::TryGetComponent(Entity entity) -> Component* {
+  if (HasComponent<Component>(entity)) {
+    return &component_manager_.GetComponent<Component>(entity);
+  }
+  return nullptr;
 }
 
 template <class... Components>

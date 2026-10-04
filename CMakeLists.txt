@@ -70,7 +70,6 @@ add_executable(engine src/main.cpp
   src/ecs/components/rigid_body.h
   src/ecs/components/spin.h
   src/ecs/components/transform.h
-  src/ecs/components/configurable.h
   src/ecs/components/selected.h
   src/ecs/systems/camera_control.cpp
   src/ecs/systems/camera_control.h

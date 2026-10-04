@@ -1,5 +1,6 @@
 #include "ecs/systems/ui.h"
 
+#include <bx/math.h>
 #include <dear-imgui/imgui.h>
 #include <entry/entry.h>
 #include <imgui/imgui.h>
@@ -7,10 +8,11 @@
 #include <cassert>
 #include <cstdint>
 #include <format>
+#include <limits>
 
-#include "ecs/components/configurable.h"
 #include "ecs/components/renderable.h"
 #include "ecs/components/rigid_body.h"
+#include "ecs/components/selected.h"
 #include "ecs/components/spin.h"
 #include "ecs/components/transform.h"
 #include "ecs/core/ecs.h"
@@ -18,10 +20,11 @@
 #include "platform/frame_context.h"
 #include "resource/asset_registry.h"
 #include "resource/mesh_handle.h"
+#include "resource/texture_handle.h"
 
 namespace {
 
-/** @brief Spawns a configurable bunny. @return The new entity. */
+/** @brief Spawns a bunny. @return The new entity. */
 auto SpawnEntity(Ecs& ecs, AssetRegistry& assets) -> Entity {
   // TODO: remove paths
   const MeshHandle mesh_handle = assets.LoadMesh("assets/meshes/bunny.bin");
@@ -29,7 +32,6 @@ auto SpawnEntity(Ecs& ecs, AssetRegistry& assets) -> Entity {
   ecs.AddComponent(entity, Transform{.position = {0.0F, 3.0F, 0.0F}});
   ecs.AddComponent(entity, RigidBody{});
   ecs.AddComponent(entity, Spin{});
-  ecs.AddComponent(entity, Configurable{});
   ecs.AddComponent(entity, Renderable{.mesh_handle = mesh_handle});
 
   return entity;
@@ -85,31 +87,37 @@ void UiSystem::Update(Ecs& ecs, AssetRegistry& assets,
     SpawnEntity(ecs, assets);
   }
 
-  // Sliders of transforms of entities
-  ecs.View<Configurable, Transform, Spin, RigidBody, Renderable>().ForEach(
-      [&ecs](Entity entity, Configurable&, Transform& transform, Spin& spin,
-             RigidBody& rigid_body, Renderable& renderable) -> void {
-        ImGui::PushID(static_cast<int>(entity));
+  ecs.View<Selected>().ForEach([&ecs](Entity entity, const Selected&) -> void {
+    ImGui::PushID(static_cast<int>(entity));
+    ImGui::TextUnformatted(std::format("Entity {}", entity).c_str());
+    if (ImGui::Button("Destroy")) {
+      ecs.DestroyEntity(entity);
+    }
+    if (auto* transform = ecs.TryGetComponent<Transform>(entity)) {
+      ImGui::DragFloat3("Position", &transform->position.x, 0.1F);
+      ImGui::DragFloat3("Rotation", &transform->rotation.x, bx::toRad(1.0F));
+      ImGui::DragFloat3("Scale", &transform->scale.x, 0.1F, 0.01F,
+                        std::numeric_limits<float>::max(), "%.2f",
+                        ImGuiSliderFlags_AlwaysClamp);
+    }
+    if (auto* renderable = ecs.TryGetComponent<Renderable>(entity)) {
+      if (IsValid(renderable->texture)) {
+        ImGui::DragFloat("Texture Scale", &renderable->texture_scale, 0.1F,
+                         0.01F, 10.0F, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+      }
+      if (ImGui::CollapsingHeader("Color Picker")) {
+        ImGui::ColorPicker3(renderable->color.data());
+      }
+    }
+    if (auto* rigid_body = ecs.TryGetComponent<RigidBody>(entity)) {
+      ImGui::Checkbox("Gravity", &rigid_body->has_gravity);
+    }
+    if (auto* spin = ecs.TryGetComponent<Spin>(entity)) {
+      ImGui::Checkbox("Spin", &spin->should_spin);
+    }
 
-        ImGui::TextUnformatted(std::format("Entity {}", entity).c_str());
-        if (ImGui::Button("Destroy")) {
-          ecs.DestroyEntity(entity);
-        }
-        ImGui::SliderFloat("x", &transform.position.x, -10.0F, 10.0F);
-        ImGui::SliderFloat("y", &transform.position.y, 0.0F, 10.0F);
-        ImGui::SliderFloat("Scale", &transform.scale.x, 0.1F, 10.0F);
-        if (ImGui::CollapsingHeader("Color Picker")) {
-          ImGui::ColorPicker3(renderable.color.data());
-        }
-        ImGui::Checkbox("Gravity", &rigid_body.has_gravity);
-        ImGui::SameLine();
-        ImGui::Checkbox("Spin", &spin.should_spin);
-        ImGui::NewLine();
-
-        ImGui::PopID();
-        transform.scale.z = transform.scale.y = transform.scale.x;
-      });
-
+    ImGui::PopID();
+  });
   ImGui::End();
 
   imguiEndFrame();
