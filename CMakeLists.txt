@@ -85,7 +85,6 @@ add_executable(engine src/main.cpp
   src/ecs/components/renderable.h
   src/ecs/components/directional_light.h
   src/ecs/components/rigid_body.h
-  src/ecs/components/spin.h
   src/ecs/components/transform.h
   src/ecs/components/selected.h
   src/ecs/systems/camera_control.cpp

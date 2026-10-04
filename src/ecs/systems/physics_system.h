@@ -3,7 +3,7 @@
 class Ecs;
 struct FrameContext;
 
-/** @brief Fixed-step gravity, floor bounce and spin for rigid bodies. */
+/** @brief Fixed-step gravity and floor bounce for rigid bodies. */
 class Physics {
  public:
   /**

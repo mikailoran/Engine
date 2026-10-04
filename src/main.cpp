@@ -14,7 +14,6 @@
 #include "ecs/components/renderable.h"
 #include "ecs/components/rigid_body.h"
 #include "ecs/components/selected.h"
-#include "ecs/components/spin.h"
 #include "ecs/components/transform.h"
 #include "ecs/core/ecs.h"
 #include "ecs/systems/camera_control.h"
@@ -123,7 +122,6 @@ Game::Game() {
   ecs_.RegisterComponent<DirectionalLight>();
   ecs_.RegisterComponent<Transform>();
   ecs_.RegisterComponent<RigidBody>();
-  ecs_.RegisterComponent<Spin>();
   ecs_.RegisterComponent<Selected>();
 
   // --- Assets and entities ----------------------------------------------

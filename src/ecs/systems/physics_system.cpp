@@ -6,7 +6,6 @@
 #include <cstdlib>
 
 #include "ecs/components/rigid_body.h"
-#include "ecs/components/spin.h"
 #include "ecs/components/transform.h"
 #include "ecs/core/ecs.h"
 #include "ecs/core/types.h"
@@ -42,13 +41,6 @@ void Step(Ecs& ecs, const float fixed_dt) {
               std::abs(rigid_body.velocity.y) < kRestThreshold
                   ? 0.0F
                   : rigid_body.velocity.y * -kRestitutionFactor;
-        }
-      });
-
-  ecs.View<Transform, Spin>().ForEach(
-      [fixed_dt](Entity, Transform& transform, Spin& spin) -> void {
-        if (spin.should_spin) {
-          transform.rotation.y += spin.radians_per_second * fixed_dt;
         }
       });
 }

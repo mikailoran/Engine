@@ -14,7 +14,6 @@
 #include "ecs/components/renderable.h"
 #include "ecs/components/rigid_body.h"
 #include "ecs/components/selected.h"
-#include "ecs/components/spin.h"
 #include "ecs/components/transform.h"
 #include "ecs/core/ecs.h"
 #include "ecs/core/types.h"
@@ -32,7 +31,6 @@ auto SpawnEntity(Ecs& ecs, AssetRegistry& assets) -> Entity {
   const auto entity = ecs.CreateEntity();
   ecs.AddComponent(entity, Transform{.position = {0.0F, 3.0F, 0.0F}});
   ecs.AddComponent(entity, RigidBody{});
-  ecs.AddComponent(entity, Spin{});
   ecs.AddComponent(entity, Renderable{.mesh_handle = mesh_handle});
 
   return entity;
@@ -114,9 +112,6 @@ auto DrawInspector(Ecs& ecs, AssetRegistry& assets) -> void {
                              ImGuiSliderFlags_AlwaysClamp);
           }
         });
-    DrawComponent<Spin>(ecs, entity, "Spin", [](Spin& spin) -> void {
-      ImGui::Checkbox("Spin", &spin.should_spin);
-    });
 
     // After the sections, so a new component's header appears next frame
     if (ImGui::Button("Add Component")) {
@@ -130,7 +125,6 @@ auto DrawInspector(Ecs& ecs, AssetRegistry& assets) -> void {
           ecs, entity, "Renderable", [&assets]() -> Renderable {
             return {.mesh_handle = assets.LoadMesh("assets/meshes/cube.bin")};
           });
-      AddComponentMenuItem<Spin>(ecs, entity, "Spin");
       ImGui::EndPopup();
     }
 
