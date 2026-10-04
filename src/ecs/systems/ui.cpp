@@ -10,7 +10,9 @@
 #include <cstdint>
 #include <format>
 #include <limits>
+#include <string>
 
+#include "ecs/components/collider.h"
 #include "ecs/components/renderable.h"
 #include "ecs/components/rigid_body.h"
 #include "ecs/components/selected.h"
@@ -31,6 +33,7 @@ auto SpawnEntity(Ecs& ecs, AssetRegistry& assets) -> Entity {
   const auto entity = ecs.CreateEntity();
   ecs.AddComponent(entity, Transform{.position = {0.0F, 3.0F, 0.0F}});
   ecs.AddComponent(entity, RigidBody{});
+  ecs.AddComponent(entity, Collider{});
   ecs.AddComponent(entity, Renderable{.mesh_handle = mesh_handle});
 
   return entity;
@@ -103,6 +106,14 @@ auto DrawInspector(Ecs& ecs, AssetRegistry& assets) -> void {
           ImGui::DragFloat3("Acceleration", &rigid_body.acceleration.x, 0.1F);
           ImGui::DragFloat3("Velocity", &rigid_body.velocity.x, 0.1F);
         });
+    DrawComponent<Collider>(
+        ecs, entity, "Collider", [](const Collider& collider) -> void {
+          // Read-only: Physics owns the body id
+          const std::string body = collider.body_id == Collider::kNoBody
+                                       ? "none"
+                                       : std::format("{}", collider.body_id);
+          ImGui::TextUnformatted(std::format("Body: {}", body).c_str());
+        });
     DrawComponent<Renderable>(
         ecs, entity, "Renderable", [](Renderable& renderable) -> void {
           ImGui::ColorEdit3("Color", renderable.color.data());
@@ -120,6 +131,7 @@ auto DrawInspector(Ecs& ecs, AssetRegistry& assets) -> void {
     if (ImGui::BeginPopup("add_component")) {
       AddComponentMenuItem<Transform>(ecs, entity, "Transform");
       AddComponentMenuItem<RigidBody>(ecs, entity, "Rigid Body");
+      AddComponentMenuItem<Collider>(ecs, entity, "Collider");
       // A default Renderable has no mesh, which the renderer asserts on
       AddComponentMenuItem<Renderable>(
           ecs, entity, "Renderable", [&assets]() -> Renderable {

@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <string>
 
+#include "ecs/components/collider.h"
 #include "ecs/components/directional_light.h"
 #include "ecs/components/renderable.h"
 #include "ecs/components/transform.h"
@@ -90,10 +91,18 @@ void LoadDirectionalLight(const json& data, Entity entity, Ecs& ecs,
   ecs.AddComponent(entity, light);
 }
 
+/** @brief Adds a Collider; it takes no fields, since the mesh sets its size. */
+void LoadCollider(const json& data, Entity entity, Ecs& ecs,
+                  AssetRegistry& /*assets*/) {
+  CheckKeys(data, {});
+  ecs.AddComponent(entity, Collider{});
+}
+
 }  // namespace
 
 void RegisterBuiltinLoaders(SceneLoader& loader) {
   loader.Register("transform", LoadTransform);
   loader.Register("renderable", LoadRenderable);
   loader.Register("directional_light", LoadDirectionalLight);
+  loader.Register("collider", LoadCollider);
 }

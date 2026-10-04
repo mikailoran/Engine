@@ -10,6 +10,7 @@
 #include <stdexcept>
 
 #include "ecs/components/camera.h"
+#include "ecs/components/collider.h"
 #include "ecs/components/directional_light.h"
 #include "ecs/components/renderable.h"
 #include "ecs/components/rigid_body.h"
@@ -122,6 +123,7 @@ Game::Game() {
   ecs_.RegisterComponent<DirectionalLight>();
   ecs_.RegisterComponent<Transform>();
   ecs_.RegisterComponent<RigidBody>();
+  ecs_.RegisterComponent<Collider>();
   ecs_.RegisterComponent<Selected>();
 
   // --- Assets and entities ----------------------------------------------
