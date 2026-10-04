@@ -61,9 +61,29 @@ auto DrawComponent(Ecs& ecs, Entity entity, const char* name, Fn draw) -> void {
   }
 }
 
-/** @brief Draws the selected entity's components and its Destroy button. */
-auto DrawInspector(Ecs& ecs) -> void {
-  ecs.View<Selected>().ForEach([&ecs](Entity entity, const Selected&) -> void {
+/** @brief Menu item that adds @p make()'s result if @p entity lacks one. */
+template <class Component, std::invocable<> Make>
+auto AddComponentMenuItem(Ecs& ecs, Entity entity, const char* name, Make make)
+    -> void {
+  if (!ecs.HasComponent<Component>(entity) && ImGui::MenuItem(name)) {
+    ecs.AddComponent(entity, make());
+  }
+}
+
+/** @brief Menu item that adds a default @p Component if @p entity lacks one. */
+template <class Component>
+auto AddComponentMenuItem(Ecs& ecs, Entity entity, const char* name) -> void {
+  AddComponentMenuItem<Component>(ecs, entity, name,
+                                  []() -> Component { return Component{}; });
+}
+
+/**
+ * @brief Draws the selected entity's components, its Destroy button and its
+ * Add Component menu.
+ */
+auto DrawInspector(Ecs& ecs, AssetRegistry& assets) -> void {
+  ecs.View<Selected>().ForEach([&ecs, &assets](Entity entity,
+                                               const Selected&) -> void {
     ImGui::PushID(static_cast<int>(entity));
     ImGui::TextUnformatted(std::format("Entity {}", entity).c_str());
     if (ImGui::Button("Destroy")) {
@@ -95,6 +115,22 @@ auto DrawInspector(Ecs& ecs) -> void {
     DrawComponent<Spin>(ecs, entity, "Spin", [](Spin& spin) -> void {
       ImGui::Checkbox("Spin", &spin.should_spin);
     });
+
+    // After the sections, so a new component's header appears next frame
+    if (ImGui::Button("Add Component")) {
+      ImGui::OpenPopup("add_component");
+    }
+    if (ImGui::BeginPopup("add_component")) {
+      AddComponentMenuItem<Transform>(ecs, entity, "Transform");
+      AddComponentMenuItem<RigidBody>(ecs, entity, "Rigid Body");
+      // A default Renderable has no mesh, which the renderer asserts on
+      AddComponentMenuItem<Renderable>(
+          ecs, entity, "Renderable", [&assets]() -> Renderable {
+            return {.mesh_handle = assets.LoadMesh("assets/meshes/cube.bin")};
+          });
+      AddComponentMenuItem<Spin>(ecs, entity, "Spin");
+      ImGui::EndPopup();
+    }
 
     ImGui::PopID();
   });
@@ -149,7 +185,7 @@ void UiSystem::Update(Ecs& ecs, AssetRegistry& assets,
   if (ImGui::Button("Spawn Entity")) {
     SpawnEntity(ecs, assets);
   }
-  DrawInspector(ecs);
+  DrawInspector(ecs, assets);
   ImGui::End();
 
   imguiEndFrame();
