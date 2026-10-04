@@ -6,6 +6,7 @@
 #include <imgui/imgui.h>
 
 #include <cassert>
+#include <concepts>
 #include <cstdint>
 #include <format>
 #include <limits>
@@ -35,6 +36,68 @@ auto SpawnEntity(Ecs& ecs, AssetRegistry& assets) -> Entity {
   ecs.AddComponent(entity, Renderable{.mesh_handle = mesh_handle});
 
   return entity;
+}
+
+/**
+ * @brief Draws @p Component's section if @p entity has one; its close button
+ * removes it.
+ */
+template <class Component, std::invocable<Component&> Fn>
+auto DrawComponent(Ecs& ecs, Entity entity, const char* name, Fn draw) -> void {
+  auto* component = ecs.TryGetComponent<Component>(entity);
+  if (component == nullptr) {
+    return;
+  }
+
+  bool keep = true;
+  if (ImGui::CollapsingHeader(name, &keep, ImGuiTreeNodeFlags_DefaultOpen)) {
+    ImGui::PushID(name);
+    draw(*component);
+    ImGui::PopID();
+  }
+  // Last use of component: removal invalidates the pointer
+  if (!keep) {
+    ecs.RemoveComponent<Component>(entity);
+  }
+}
+
+/** @brief Draws the selected entity's components and its Destroy button. */
+auto DrawInspector(Ecs& ecs) -> void {
+  ecs.View<Selected>().ForEach([&ecs](Entity entity, const Selected&) -> void {
+    ImGui::PushID(static_cast<int>(entity));
+    ImGui::TextUnformatted(std::format("Entity {}", entity).c_str());
+    if (ImGui::Button("Destroy")) {
+      ecs.DestroyEntity(entity);
+    }
+    DrawComponent<Transform>(
+        ecs, entity, "Transform", [](Transform& transform) -> void {
+          ImGui::DragFloat3("Position", &transform.position.x, 0.1F);
+          ImGui::DragFloat3("Rotation", &transform.rotation.x, bx::toRad(1.0F));
+          ImGui::DragFloat3("Scale", &transform.scale.x, 0.1F, 0.01F,
+                            std::numeric_limits<float>::max(), "%.2f",
+                            ImGuiSliderFlags_AlwaysClamp);
+        });
+    DrawComponent<RigidBody>(
+        ecs, entity, "Rigid Body", [](RigidBody& rigid_body) -> void {
+          ImGui::Checkbox("Gravity", &rigid_body.has_gravity);
+          ImGui::DragFloat3("Acceleration", &rigid_body.acceleration.x, 0.1F);
+          ImGui::DragFloat3("Velocity", &rigid_body.velocity.x, 0.1F);
+        });
+    DrawComponent<Renderable>(
+        ecs, entity, "Renderable", [](Renderable& renderable) -> void {
+          ImGui::ColorEdit3("Color", renderable.color.data());
+          if (IsValid(renderable.texture)) {
+            ImGui::DragFloat("Texture Scale", &renderable.texture_scale, 0.1F,
+                             0.01F, 10.0F, "%.2f",
+                             ImGuiSliderFlags_AlwaysClamp);
+          }
+        });
+    DrawComponent<Spin>(ecs, entity, "Spin", [](Spin& spin) -> void {
+      ImGui::Checkbox("Spin", &spin.should_spin);
+    });
+
+    ImGui::PopID();
+  });
 }
 
 /** @brief Runs imguiCreate. @return The context it made current. */
@@ -86,38 +149,7 @@ void UiSystem::Update(Ecs& ecs, AssetRegistry& assets,
   if (ImGui::Button("Spawn Entity")) {
     SpawnEntity(ecs, assets);
   }
-
-  ecs.View<Selected>().ForEach([&ecs](Entity entity, const Selected&) -> void {
-    ImGui::PushID(static_cast<int>(entity));
-    ImGui::TextUnformatted(std::format("Entity {}", entity).c_str());
-    if (ImGui::Button("Destroy")) {
-      ecs.DestroyEntity(entity);
-    }
-    if (auto* transform = ecs.TryGetComponent<Transform>(entity)) {
-      ImGui::DragFloat3("Position", &transform->position.x, 0.1F);
-      ImGui::DragFloat3("Rotation", &transform->rotation.x, bx::toRad(1.0F));
-      ImGui::DragFloat3("Scale", &transform->scale.x, 0.1F, 0.01F,
-                        std::numeric_limits<float>::max(), "%.2f",
-                        ImGuiSliderFlags_AlwaysClamp);
-    }
-    if (auto* renderable = ecs.TryGetComponent<Renderable>(entity)) {
-      if (IsValid(renderable->texture)) {
-        ImGui::DragFloat("Texture Scale", &renderable->texture_scale, 0.1F,
-                         0.01F, 10.0F, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-      }
-      if (ImGui::CollapsingHeader("Color Picker")) {
-        ImGui::ColorPicker3(renderable->color.data());
-      }
-    }
-    if (auto* rigid_body = ecs.TryGetComponent<RigidBody>(entity)) {
-      ImGui::Checkbox("Gravity", &rigid_body->has_gravity);
-    }
-    if (auto* spin = ecs.TryGetComponent<Spin>(entity)) {
-      ImGui::Checkbox("Spin", &spin->should_spin);
-    }
-
-    ImGui::PopID();
-  });
+  DrawInspector(ecs);
   ImGui::End();
 
   imguiEndFrame();
