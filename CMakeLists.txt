@@ -93,6 +93,10 @@ add_executable(engine src/main.cpp
   src/ecs/systems/lighting_system.cpp
   src/ecs/systems/physics_system.h
   src/ecs/systems/physics_system.cpp
+  src/physics/jolt_runtime.h
+  src/physics/jolt_runtime.cpp
+  src/physics/layers.h
+  src/physics/layers.cpp
   src/ecs/systems/render_system.h
   src/ecs/systems/render_system.cpp
   src/ecs/systems/selection_system.h

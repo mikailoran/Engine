@@ -1,5 +1,6 @@
 #include "ecs/systems/physics_system.h"
 
+#include <Jolt/Core/Core.h>
 #include <bx/math.h>
 
 #include <algorithm>
@@ -45,7 +46,18 @@ void Step(Ecs& ecs, const float fixed_dt) {
       });
 }
 
+// Jolt drops body pairs and contacts beyond these
+constexpr JPH::uint kMaxBodyPairs = 65536;
+constexpr JPH::uint kMaxContactConstraints = 10240;
+
 }  // namespace
+
+Physics::Physics() {
+  // 0 body mutexes lets Jolt pick a default
+  world_.Init(static_cast<JPH::uint>(kMaxEntities), 0, kMaxBodyPairs,
+              kMaxContactConstraints, layers_.BroadPhase(),
+              layers_.ObjectVsBroadPhase(), layers_.ObjectPairs());
+}
 
 void Physics::Update(Ecs& ecs, const FrameContext& ctx) {
   // A long hitch would otherwise queue more steps than the frame can afford.
