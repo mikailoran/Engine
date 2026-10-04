@@ -34,6 +34,12 @@ class UiSystem {
    */
   void Update(Ecs& ecs, AssetRegistry& assets, const FrameContext& ctx);
 
+  /**
+   * @brief Whether the UI wants the mouse, as of the last Update.
+   * @return True when the cursor is over or dragging a UI window.
+   */
+  [[nodiscard]] auto WantsMouse() const -> bool;
+
  private:
   // Created by imguiCreate and freed by imguiDestroy; never null.
   ImGuiContext* context_{nullptr};

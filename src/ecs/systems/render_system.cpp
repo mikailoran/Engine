@@ -14,10 +14,11 @@
 
 #include "ecs/components/camera.h"
 #include "ecs/components/renderable.h"
+#include "ecs/components/selected.h"
 #include "ecs/components/transform.h"
 #include "ecs/core/ecs.h"
-#include "ecs/core/frame_context.h"
 #include "ecs/core/types.h"
+#include "platform/frame_context.h"
 #include "resource/asset_registry.h"
 #include "resource/texture_handle.h"
 
@@ -27,6 +28,8 @@ namespace {
 constexpr std::size_t kMtxSize = 16;
 
 constexpr uint32_t kClearColor = 0x303030ff;  // RGBA
+constexpr std::array<float, 4> kHighlightColor{0.0F, 0.0F, 1.0F, 0.5F};
+constexpr std::array<float, 4> kNoHighlight{0.0F, 0.0F, 0.0F, 0.0F};
 // Only used when no camera entity has been nominated.
 constexpr float kFallbackFovDegrees = 60.0F;
 constexpr float kFallbackNearPlane = 0.1F;
@@ -40,6 +43,18 @@ void DebugText(std::uint16_t x, std::uint16_t y, std::uint8_t attr,
   bgfx::dbgTextPrintf(x, y, attr, "%s", text.c_str());
 }
 
+/** @brief Draws generic debug info to the window. */
+auto DrawDebugOverlay(const FrameContext& ctx) -> void {
+  const bgfx::Stats* stats = bgfx::getStats();
+  bgfx::dbgTextClear();
+  DebugText(0, 0, 0x0f,
+            std::format("Backbuffer {}W x {}H", stats->width, stats->height));
+  // First frame has dt == 0.
+  const float fps = ctx.dt > 0.0F ? 1.0F / ctx.dt : 0.0F;
+  DebugText(0, 1, 0x0f,
+            std::format("Frame {:.2f} ms ({:.0f} fps)", ctx.dt * 1000.0F, fps));
+}
+
 /** @brief Creates the 1x1 opaque white texture bound for untextured draws. */
 auto CreateWhiteTexture() -> bgfx::TextureHandle {
   constexpr uint32_t kWhite = 0xffffffff;
@@ -47,7 +62,6 @@ auto CreateWhiteTexture() -> bgfx::TextureHandle {
                                BGFX_TEXTURE_NONE,
                                bgfx::copy(&kWhite, sizeof(kWhite)));
 }
-
 }  // namespace
 
 RenderSystem::RenderSystem()
@@ -55,6 +69,7 @@ RenderSystem::RenderSystem()
       u_time_(bgfx::createUniform("u_time", bgfx::UniformFreq::Frame,
                                   bgfx::UniformType::Vec4)),
       u_color_(bgfx::createUniform("u_color", bgfx::UniformType::Vec4)),
+      u_highlight_(bgfx::createUniform("u_highlight", bgfx::UniformType::Vec4)),
       u_eye_pos_(bgfx::createUniform("u_eyePos", bgfx::UniformFreq::Frame,
                                      bgfx::UniformType::Vec4)),
       s_albedo_(bgfx::createUniform("s_albedo", bgfx::UniformType::Sampler)),
@@ -73,24 +88,11 @@ RenderSystem::RenderSystem()
 
 void RenderSystem::Update(Ecs& ecs, const AssetRegistry& assets,
                           const FrameContext& ctx) {
-  // Debug overlay.
-  const bgfx::Stats* stats = bgfx::getStats();
-  bgfx::dbgTextClear();
-  DebugText(0, 3, 0x0f,
-            std::format("Backbuffer {}W x {}H", stats->width, stats->height));
-  // First frame has dt == 0.
-  const float fps = ctx.dt > 0.0F ? 1.0F / ctx.dt : 0.0F;
-  DebugText(0, 4, 0x0f,
-            std::format("Frame {:.2f} ms ({:.0f} fps)", ctx.dt * 1000.0F, fps));
-
+  DrawDebugOverlay(ctx);
   bgfx::setFrameUniform(u_time_.Get(), &ctx.time);
 
-  // View and projection for view 0 taken from the camera entity's components.
-  // The CameraControl system writes those each frame.
+  // View and projection for view 0, written by CameraControl this frame
   {
-    const auto aspect =
-        static_cast<float>(ctx.width) / static_cast<float>(ctx.height);
-
     std::array<float, kMtxSize> view{};
     std::array<float, kMtxSize> proj{};
     std::array<float, 4> eye_pos{0.0F, 0.0F, 0.0F, 0.0F};
@@ -100,31 +102,27 @@ void RenderSystem::Update(Ecs& ecs, const AssetRegistry& assets,
       const auto& camera = ecs.GetComponent<Camera>(*camera_);
       eye_pos = {transform.position.x, transform.position.y,
                  transform.position.z, 0.0F};
-
-      bx::mtxLookAt(view.data(), transform.position, camera.target, camera.up);
-      bx::mtxProj(proj.data(), camera.fov_degrees, aspect, camera.near_plane,
-                  camera.far_plane, bgfx::getCaps()->homogeneousDepth);
+      view = camera.view;
+      proj = camera.proj;
     } else {
       // No camera set: view from the world origin with the stock projection.
+      const auto aspect =
+          static_cast<float>(ctx.width) / static_cast<float>(ctx.height);
       bx::mtxIdentity(view.data());
       bx::mtxProj(proj.data(), kFallbackFovDegrees, aspect, kFallbackNearPlane,
                   kFallbackFarPlane, bgfx::getCaps()->homogeneousDepth);
     }
+    bgfx::setFrameUniform(u_eye_pos_.Get(), eye_pos.data());
 
     bgfx::setViewTransform(0, view.data(), proj.data());
-    bgfx::setFrameUniform(u_eye_pos_.Get(), eye_pos.data());
     bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(ctx.width),
                       static_cast<uint16_t>(ctx.height));
   }
 
   ecs.View<Transform, Renderable>().ForEach(
-      [this, &assets](Entity, const Transform& transform,
-                      const Renderable& renderable) -> void {
-        std::array<float, kMtxSize> mtx{};
-        bx::mtxSRT(
-            mtx.data(), transform.scale.x, transform.scale.y, transform.scale.z,
-            transform.rotation.x, transform.rotation.y, transform.rotation.z,
-            transform.position.x, transform.position.y, transform.position.z);
+      [this, &ecs, &assets](Entity entity, const Transform& transform,
+                            const Renderable& renderable) -> void {
+        const auto mtx = ModelMatrix(transform);
 
         const auto program = bgfx::isValid(renderable.program)
                                  ? renderable.program
@@ -140,6 +138,10 @@ void RenderSystem::Update(Ecs& ecs, const AssetRegistry& assets,
         // meshSubmit only discards state after its last group, so the color and
         // texture hold for every group of the mesh.
         bgfx::setUniform(u_color_.Get(), renderable.color.data());
+        // TODO: How to avoid getting selected entity's Component?
+        const auto highlight =
+            ecs.HasComponent<Selected>(entity) ? kHighlightColor : kNoHighlight;
+        bgfx::setUniform(u_highlight_.Get(), highlight.data());
         bgfx::setUniform(u_tex_params_.Get(), tex_params.data());
         bgfx::setTexture(0, s_albedo_.Get(), texture);
         meshSubmit(mesh, renderable.view, program, mtx.data(),

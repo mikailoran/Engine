@@ -14,19 +14,21 @@
 #include "ecs/components/directional_light.h"
 #include "ecs/components/renderable.h"
 #include "ecs/components/rigid_body.h"
+#include "ecs/components/selected.h"
 #include "ecs/components/spin.h"
 #include "ecs/components/transform.h"
 #include "ecs/core/ecs.h"
-#include "ecs/core/frame_context.h"
 #include "ecs/systems/camera_control.h"
 #include "ecs/systems/lighting_system.h"
 #include "platform/asset_root.h"
+#include "platform/frame_context.h"
 #include "resource/asset_registry.h"
 #include "scene/builtin_loaders.h"
 #include "scene/scene_loader.h"
 // TODO: Rename "physics_system.h" into "physics.h"
 #include "ecs/systems/physics_system.h"
 #include "ecs/systems/render_system.h"
+#include "ecs/systems/selection_system.h"
 #include "ecs/systems/ui.h"
 
 namespace {
@@ -108,6 +110,7 @@ class Game {
   Ecs ecs_;
 
   CameraControl camera_control_;
+  SelectionSystem selection_;
   Physics physics_;
   LightingSystem lighting_;
   RenderSystem render_;
@@ -117,18 +120,20 @@ class Game {
 Game::Game() {
   // --- ECS: components --------------------------------------------------
   ecs_.RegisterComponent<Camera>();
+  ecs_.RegisterComponent<Renderable>();
+  ecs_.RegisterComponent<DirectionalLight>();
   ecs_.RegisterComponent<Transform>();
   ecs_.RegisterComponent<RigidBody>();
   ecs_.RegisterComponent<Spin>();
-  ecs_.RegisterComponent<Renderable>();
   ecs_.RegisterComponent<Configurable>();
-  ecs_.RegisterComponent<DirectionalLight>();
+  ecs_.RegisterComponent<Selected>();
 
   // --- Assets and entities ----------------------------------------------
   const auto camera_entity = ecs_.CreateEntity();
   ecs_.AddComponent(camera_entity, Transform{.position = {0.0F, 1.0F, -5.0F}});
   ecs_.AddComponent(camera_entity, Camera{});
   camera_control_.SetCamera(camera_entity);
+  selection_.SetCamera(camera_entity);
   render_.SetCamera(camera_entity);
 
   // Load the debug scene's decor as ordinary entities
@@ -155,6 +160,8 @@ auto Game::Run() -> int {
 
     // The camera pose must settle before the renderer reads it.
     camera_control_.Update(ecs_, ctx);
+    // UI runs last, so this is last frame's answer
+    selection_.Update(ecs_, assets_, ctx, ui_.WantsMouse());
     physics_.Update(ecs_, ctx);
     // Frame uniforms must be set before the renderer submits.
     lighting_.Update(ecs_, ctx);

@@ -1,13 +1,14 @@
 #include "ecs/systems/camera_control.h"
 
+#include <bgfx/bgfx.h>
 #include <bx/math.h>
 #include <camera.h>
 
 #include "ecs/components/camera.h"
 #include "ecs/components/transform.h"
 #include "ecs/core/ecs.h"
-#include "ecs/core/frame_context.h"
 #include "ecs/core/types.h"
+#include "platform/frame_context.h"
 
 namespace {
 
@@ -25,15 +26,28 @@ CameraControl::CameraControl() {
 }
 
 void CameraControl::Update(Ecs& ecs, const FrameContext& ctx) {
-  if (ctx.mouse == nullptr || !camera_) {
+  if (!camera_) {
     return;
   }
 
-  cameraUpdate(ctx.dt, *ctx.mouse);
+  auto& transform = ecs.GetComponent<Transform>(*camera_);
+  auto& camera = ecs.GetComponent<Camera>(*camera_);
 
-  // Mirror the resulting pose into the components.
-  ecs.GetComponent<Transform>(*camera_).position = cameraGetPosition();
-  ecs.GetComponent<Camera>(*camera_).target = cameraGetAt();
+  if (ctx.mouse != nullptr) {
+    cameraUpdate(ctx.dt, *ctx.mouse);
+
+    // Mirror the resulting pose into the components.
+    transform.position = cameraGetPosition();
+    camera.target = cameraGetAt();
+  }
+
+  // Derive view and projection for this frame's readers
+  const auto aspect =
+      static_cast<float>(ctx.width) / static_cast<float>(ctx.height);
+  bx::mtxLookAt(camera.view.data(), transform.position, camera.target,
+                camera.up);
+  bx::mtxProj(camera.proj.data(), camera.fov_degrees, aspect, camera.near_plane,
+              camera.far_plane, bgfx::getCaps()->homogeneousDepth);
 }
 
 CameraControl::~CameraControl() { cameraDestroy(); }
