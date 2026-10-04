@@ -8,6 +8,7 @@
 #include <stdexcept>
 #include <string>
 
+#include "ecs/core/component_array.h"
 #include "ecs/core/ecs.h"
 #include "ecs/core/types.h"
 
@@ -58,6 +59,31 @@ class SelfMoveCounter {
  private:
   int* self_moves_{nullptr};
 };
+
+/// Not storable: has no default constructor.
+struct NoDefault {
+  /** @brief Requires an argument, so cannot be default-constructed. */
+  explicit NoDefault(int /*initial*/) {}
+};
+
+/// Not storable: can be neither copied nor moved.
+class NotMovable {
+ public:
+  NotMovable() = default;
+  ~NotMovable() = default;
+  NotMovable(const NotMovable&) = delete;
+  auto operator=(const NotMovable&) -> NotMovable& = delete;
+  NotMovable(NotMovable&&) = delete;
+  auto operator=(NotMovable&&) -> NotMovable& = delete;
+};
+
+// What ComponentArray accepts, checked at compile time
+static_assert(ComponentType<Position>);
+static_assert(ComponentType<Name>);
+static_assert(ComponentType<Owner>);
+static_assert(ComponentType<SelfMoveCounter>);
+static_assert(!ComponentType<NoDefault>);
+static_assert(!ComponentType<NotMovable>);
 
 /** @brief Collects the entities a @p Component view visits. */
 template <class Component>
