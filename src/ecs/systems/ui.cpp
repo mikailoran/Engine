@@ -14,8 +14,8 @@
 #include "ecs/components/spin.h"
 #include "ecs/components/transform.h"
 #include "ecs/core/ecs.h"
-#include "ecs/core/frame_context.h"
 #include "ecs/core/types.h"
+#include "platform/frame_context.h"
 #include "resource/asset_registry.h"
 #include "resource/mesh_handle.h"
 

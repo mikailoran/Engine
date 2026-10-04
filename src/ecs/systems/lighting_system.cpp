@@ -9,8 +9,8 @@
 
 #include "ecs/components/directional_light.h"
 #include "ecs/core/ecs.h"
-#include "ecs/core/frame_context.h"
 #include "ecs/core/types.h"
+#include "platform/frame_context.h"
 
 namespace {
 

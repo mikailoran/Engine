@@ -28,7 +28,6 @@ add_library(ecs_core STATIC
   src/ecs/core/component_manager.h
   src/ecs/core/ecs.h
   src/ecs/core/entity_manager.h
-  src/ecs/core/frame_context.h
   src/ecs/core/types.h
   src/ecs/core/view.h)
 
@@ -89,6 +88,7 @@ add_executable(engine src/main.cpp
   src/resource/asset_registry.cpp
   src/platform/asset_root.h
   src/platform/asset_root.cpp
+  src/platform/frame_context.h
   src/scene/scene_loader.h
   src/scene/scene_loader.cpp
   src/scene/builtin_loaders.h
