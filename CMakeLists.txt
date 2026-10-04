@@ -11,13 +11,12 @@ endif()
 # Build build/compile_commands.json for clangd and clang-tidy.
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Configure the bgfx.cmake wrapper before pulling it in. The ~50 sample
-# executables are skipped, but example-common is still requested: it carries the
-# entry platform layer that main.cpp uses for windowing and input.
-# BGFX_BUILD_TOOLS stays ON both for shaderc and because the wrapper forces
-# example-common ON alongside it.
-set(BGFX_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+# Opt-in bgfx samples; each builds only by name (e.g. example-01-cubes)
+option(ENGINE_BGFX_EXAMPLES "Define bgfx's example targets (built only on request)" OFF)
+set(BGFX_BUILD_EXAMPLES ${ENGINE_BGFX_EXAMPLES} CACHE BOOL "" FORCE)
+# example-common provides the entry layer main.cpp uses for windowing and input
 set(BGFX_BUILD_EXAMPLE_COMMON ON CACHE BOOL "" FORCE)
+# Tools stay ON for shaderc, and the wrapper ties example-common to them
 set(BGFX_BUILD_TOOLS ON CACHE BOOL "" FORCE)
 add_subdirectory(third_party/bgfx.cmake SYSTEM)
 

@@ -1,0 +1,22 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			// Debug the CMake Tools launch target; pick an example-* target first
+			"name": "bgfx example",
+			"type": "cppdbg",
+			"request": "launch",
+			"program": "${command:cmake.launchTargetPath}",
+			// Examples load assets relative to the working directory
+			"cwd": "${workspaceFolder}/third_party/bgfx.cmake/bgfx/examples/runtime",
+			"MIMode": "gdb",
+			"setupCommands": [
+				{
+					"description": "Enable pretty-printing for gdb",
+					"text": "-enable-pretty-printing",
+					"ignoreFailures": true
+				}
+			]
+		}
+	]
+}
