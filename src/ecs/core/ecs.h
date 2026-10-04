@@ -13,7 +13,10 @@ class Ecs {
  public:
   Ecs() = default;
 
-  /** @brief Creates an entity with no components. */
+  /**
+   * @brief Creates an entity with no components.
+   * @throws std::length_error If kMaxEntities entities are alive.
+   */
   auto CreateEntity() -> Entity;
 
   /**

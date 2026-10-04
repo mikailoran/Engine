@@ -26,6 +26,7 @@ class EntityManager {
    *
    * @return An id not currently in use, < MAX_ENTITIES.
    * @pre Fewer than MAX_ENTITIES entities are alive.
+   * @throws std::length_error If every id is in use.
    */
   auto CreateEntity() -> Entity;
 

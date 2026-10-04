@@ -30,8 +30,9 @@ class ComponentArrayInterface {
 /**
  * @brief Sparse-set storage for one component type.
  *
- * Components are packed in [0, Size()); removal swaps the last one into the
- * hole, so dense order is not entity-id order.
+ * Components are packed in [0, Size()); removal moves the last one into the
+ * hole, so dense order is not entity-id order. Slots past Size() hold
+ * default-constructed components, so removal releases what a component owns.
  */
 template <class Component>
 class ComponentArray : public ComponentArrayInterface {
@@ -52,7 +53,7 @@ class ComponentArray : public ComponentArrayInterface {
   /** @brief Adds @p entity's component. @pre Has(entity) is false. */
   void InsertData(Entity entity, Component component);
 
-  /** @brief Removes @p entity's component. @pre Has(entity) is true. */
+  /** @brief Removes and releases @p entity's component. @pre Has(entity). */
   void RemoveData(Entity entity);
 
   /** @brief Returns @p entity's component. @pre Has(entity) is true. */
@@ -114,17 +115,21 @@ template <class Component>
 void ComponentArray<Component>::RemoveData(Entity entity) {
   assert(Has(entity) && "Trying to remove non-existent component.");
 
-  // Swap deleted element with last element of component array
   const auto removed_entity_index = sparse_.at(entity);
   const auto last_entity_index = current_size_ - 1;
-  // TODO: self swap would corrupt entities with non-trivial move semantics
-  std::swap(components_.at(removed_entity_index),
-            components_.at(last_entity_index));
 
-  // Update sparse set arrays to reflect change to moved entity
-  const auto entity_of_last_element = dense_.at(last_entity_index);
-  sparse_.at(entity_of_last_element) = removed_entity_index;
-  dense_.at(removed_entity_index) = entity_of_last_element;
+  // Move the last element into the hole, unless the removed one is last
+  if (removed_entity_index != last_entity_index) {
+    components_.at(removed_entity_index) =
+        std::move(components_.at(last_entity_index));
+
+    const auto entity_of_last_element = dense_.at(last_entity_index);
+    sparse_.at(entity_of_last_element) = removed_entity_index;
+    dense_.at(removed_entity_index) = entity_of_last_element;
+  }
+
+  // Reset the vacated slot so it releases what it owned
+  components_.at(last_entity_index) = Component{};
 
   // Remove the deleted entity from the sparse set
   sparse_.at(entity) = kInvalidIndex;
