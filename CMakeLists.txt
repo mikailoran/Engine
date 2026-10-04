@@ -80,6 +80,8 @@ add_executable(engine src/main.cpp
   src/ecs/systems/physics_system.cpp
   src/ecs/systems/render_system.h
   src/ecs/systems/render_system.cpp
+  src/ecs/systems/selection_system.h
+  src/ecs/systems/selection_system.cpp
   src/ecs/systems/ui.h
   src/ecs/systems/ui.cpp
   src/resource/mesh_handle.h
