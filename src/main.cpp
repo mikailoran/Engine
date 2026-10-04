@@ -28,6 +28,7 @@
 // TODO: Rename "physics_system.h" into "physics.h"
 #include "ecs/systems/physics_system.h"
 #include "ecs/systems/render_system.h"
+#include "ecs/systems/selection_system.h"
 #include "ecs/systems/ui.h"
 
 namespace {
@@ -109,6 +110,7 @@ class Game {
   Ecs ecs_;
 
   CameraControl camera_control_;
+  SelectionSystem selection_;
   Physics physics_;
   LightingSystem lighting_;
   RenderSystem render_;
@@ -131,6 +133,7 @@ Game::Game() {
   ecs_.AddComponent(camera_entity, Transform{.position = {0.0F, 1.0F, -5.0F}});
   ecs_.AddComponent(camera_entity, Camera{});
   camera_control_.SetCamera(camera_entity);
+  selection_.SetCamera(camera_entity);
   render_.SetCamera(camera_entity);
 
   // Load the debug scene's decor as ordinary entities
@@ -157,6 +160,8 @@ auto Game::Run() -> int {
 
     // The camera pose must settle before the renderer reads it.
     camera_control_.Update(ecs_, ctx);
+    // UI runs last, so this is last frame's answer
+    selection_.Update(ecs_, assets_, ctx, ui_.WantsMouse());
     physics_.Update(ecs_, ctx);
     // Frame uniforms must be set before the renderer submits.
     lighting_.Update(ecs_, ctx);

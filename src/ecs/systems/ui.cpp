@@ -49,6 +49,11 @@ UiSystem::UiSystem() : context_(CreateImguiContext()) {}
 
 UiSystem::~UiSystem() { imguiDestroy(); }
 
+auto UiSystem::WantsMouse() const -> bool {
+  ImGui::SetCurrentContext(context_);
+  return ImGui::GetIO().WantCaptureMouse;
+}
+
 void UiSystem::Update(Ecs& ecs, AssetRegistry& assets,
                       const FrameContext& ctx) {
   // Draw into this system's context, not whichever is current
