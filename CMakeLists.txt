@@ -89,6 +89,7 @@ add_executable(engine src/main.cpp
   src/platform/asset_root.h
   src/platform/asset_root.cpp
   src/platform/frame_context.h
+  src/platform/screen.h
   src/scene/scene_loader.h
   src/scene/scene_loader.cpp
   src/scene/builtin_loaders.h
