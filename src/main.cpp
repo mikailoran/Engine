@@ -160,7 +160,7 @@ auto Game::Run() -> int {
     camera_control_.Update(ecs_, ctx);
     // UI runs last, so this is last frame's answer
     selection_.Update(ecs_, assets_, ctx, ui_.WantsMouse());
-    physics_.Update(ecs_, ctx);
+    physics_.Update(ecs_, assets_, ctx);
     // Frame uniforms must be set before the renderer submits.
     lighting_.Update(ecs_, ctx);
     render_.Update(ecs_, assets_, ctx);
