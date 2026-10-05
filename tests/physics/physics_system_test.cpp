@@ -16,7 +16,7 @@
 #include <vector>
 
 #include "ecs/components/collider.h"
-#include "ecs/components/physics_body.h"
+#include "ecs/components/physics_link.h"
 #include "ecs/components/rigid_body.h"
 #include "ecs/components/transform.h"
 #include "ecs/core/ecs.h"
@@ -71,14 +71,14 @@ auto Upness(const Transform& transform) -> float {
  * @brief An ECS world wired to a PhysicsWorld, owned in Game's order: Jolt's
  * runtime, then the physics world, then the ECS and the system.
  */
-class PhysicsScene {
+class PhysicsHarness {
  public:
   /** @brief Registers the components physics reads and writes. */
-  PhysicsScene() {
+  PhysicsHarness() {
     ecs_.RegisterComponent<Transform>();
     ecs_.RegisterComponent<Collider>();
     ecs_.RegisterComponent<RigidBody>();
-    ecs_.RegisterComponent<PhysicsBody>();
+    ecs_.RegisterComponent<PhysicsLink>();
   }
 
   /** @brief Runs @p frames frames of exactly one 60 Hz step each. */
@@ -86,7 +86,7 @@ class PhysicsScene {
     FrameContext ctx{};
     ctx.dt = 1.0F / 60.0F;
     for (int i = 0; i < frames; ++i) {
-      physics_.Update(ecs_, world_, ctx);
+      system_.Update(ecs_, world_, ctx);
       ecs_.Flush();
     }
   }
@@ -145,8 +145,8 @@ class PhysicsScene {
   /** @brief How many entities are linked to a body. */
   auto LinkCount() -> std::size_t {
     std::size_t count = 0;
-    ecs_.View<PhysicsBody>().ForEach(
-        [&count](Entity, const PhysicsBody&) -> void { ++count; });
+    ecs_.View<PhysicsLink>().ForEach(
+        [&count](Entity, const PhysicsLink&) -> void { ++count; });
     return count;
   }
 
@@ -154,13 +154,13 @@ class PhysicsScene {
   JoltRuntime runtime_;
   PhysicsWorld world_{runtime_, static_cast<std::uint32_t>(kMaxEntities)};
   Ecs ecs_;
-  Physics physics_;
+  PhysicsSystem system_;
 };
 
 // --- Bodies follow the components ------------------------------------------
 
 TEST(Physics, CreatesOneBodyPerCollider) {
-  PhysicsScene scene;
+  PhysicsHarness scene;
   scene.AddFloor();
   scene.AddWallEast();
   scene.AddRamp();
@@ -171,7 +171,7 @@ TEST(Physics, CreatesOneBodyPerCollider) {
 }
 
 TEST(Physics, DestroyedEntityLosesItsBody) {
-  PhysicsScene scene;
+  PhysicsHarness scene;
   const Entity box = scene.AddDynamic(At({0.0F, 5.0F, 0.0F}));
   scene.Run(1);
   ASSERT_EQ(scene.BodyCount(), 1U);
@@ -182,7 +182,7 @@ TEST(Physics, DestroyedEntityLosesItsBody) {
 }
 
 TEST(Physics, RemovingColliderFreezesEntityAndReAddingRevivesIt) {
-  PhysicsScene scene;
+  PhysicsHarness scene;
   const Entity box = scene.AddDynamic(At({0.0F, 5.0F, 0.0F}));
   scene.Run(1);
   scene.Entities().RemoveComponent<Collider>(box);
@@ -197,50 +197,50 @@ TEST(Physics, RemovingColliderFreezesEntityAndReAddingRevivesIt) {
 }
 
 TEST(Physics, RemovingRigidBodyKeepsTheBodyButMakesItStatic) {
-  PhysicsScene scene;
+  PhysicsHarness scene;
   const Entity box = scene.AddDynamic(At({0.0F, 5.0F, 0.0F}));
   scene.Run(1);
-  const BodyHandle body = scene.Get<PhysicsBody>(box).body;
+  const BodyHandle body = scene.Get<PhysicsLink>(box).body;
 
   scene.Entities().RemoveComponent<RigidBody>(box);
   scene.Run(1);
   const float static_y = scene.Get<Transform>(box).position.y;
   scene.Run(30);
-  EXPECT_EQ(scene.Get<PhysicsBody>(box).body, body);
+  EXPECT_EQ(scene.Get<PhysicsLink>(box).body, body);
   EXPECT_EQ(scene.Get<Transform>(box).position.y, static_y);
 
   scene.Entities().AddComponent(box, RigidBody{});
   scene.Run(30);
-  EXPECT_EQ(scene.Get<PhysicsBody>(box).body, body);
+  EXPECT_EQ(scene.Get<PhysicsLink>(box).body, body);
   EXPECT_LT(scene.Get<Transform>(box).position.y, static_y - 0.5F);
 }
 
 TEST(Physics, SameFrameColliderSwapKeepsBodyAndTakesNewShape) {
-  PhysicsScene scene;
+  PhysicsHarness scene;
   scene.AddFloor();
   const Entity box = scene.AddDynamic(At({0.0F, 0.5F, 0.0F}),
                                       WithRestitution(Collider{}, 0.0F));
   scene.Run(60);
-  const BodyHandle body = scene.Get<PhysicsBody>(box).body;
+  const BodyHandle body = scene.Get<PhysicsLink>(box).body;
 
   scene.Entities().RemoveComponent<Collider>(box);
   scene.Entities().AddComponent(box, WithRestitution(Sphere(1.0F), 0.0F));
   scene.Run(120);
-  EXPECT_EQ(scene.Get<PhysicsBody>(box).body, body);
+  EXPECT_EQ(scene.Get<PhysicsLink>(box).body, body);
   // Now a radius 1 sphere, so it rests a unit above the floor
   EXPECT_NEAR(scene.Get<Transform>(box).position.y, 1.0F, 0.03F);
 }
 
 TEST(Physics, ReusedEntityIdGetsAFreshBody) {
-  PhysicsScene scene;
+  PhysicsHarness scene;
   const Entity doomed = scene.AddDynamic(At({3.0F, 4.0F, 3.0F}));
   scene.Run(1);
-  const BodyHandle old_body = scene.Get<PhysicsBody>(doomed).body;
+  const BodyHandle old_body = scene.Get<PhysicsLink>(doomed).body;
   scene.Entities().DestroyEntity(doomed);
   scene.Entities().Flush();
 
   // Ids are recycled FIFO: draw them until the doomed one comes back, before
-  // Physics has seen the destruction
+  // PhysicsSystem has seen the destruction
   std::vector<Entity> fillers;
   Entity reused = scene.Entities().CreateEntity();
   while (reused != doomed) {
@@ -255,30 +255,30 @@ TEST(Physics, ReusedEntityIdGetsAFreshBody) {
   }
   scene.Run(1);
 
-  EXPECT_NE(scene.Get<PhysicsBody>(reused).body, old_body);
+  EXPECT_NE(scene.Get<PhysicsLink>(reused).body, old_body);
   EXPECT_EQ(scene.Get<Transform>(reused).position.x, -5.0F);
   EXPECT_EQ(scene.BodyCount(), 1U);
 }
 
 TEST(Physics, CopiedLinkGetsItsOwnBody) {
-  PhysicsScene scene;
+  PhysicsHarness scene;
   scene.AddFloor();
   const Entity original = scene.AddDynamic(At({-14.0F, 0.5F, -4.0F}));
   scene.Run(1);
-  const BodyHandle body = scene.Get<PhysicsBody>(original).body;
+  const BodyHandle body = scene.Get<PhysicsLink>(original).body;
 
   const Entity copy = scene.AddStatic(At({14.0F, 4.0F, 14.0F}));
-  scene.Entities().AddComponent(copy, scene.Get<PhysicsBody>(original));
+  scene.Entities().AddComponent(copy, scene.Get<PhysicsLink>(original));
   scene.Run(2);
 
-  EXPECT_EQ(scene.Get<PhysicsBody>(original).body, body);
-  EXPECT_NE(scene.Get<PhysicsBody>(copy).body, body);
+  EXPECT_EQ(scene.Get<PhysicsLink>(original).body, body);
+  EXPECT_NE(scene.Get<PhysicsLink>(copy).body, body);
   EXPECT_NEAR(scene.Get<Transform>(original).position.x, -14.0F, 0.01F);
   EXPECT_EQ(scene.BodyCount(), scene.LinkCount());
 }
 
 TEST(Physics, ChurnLeaksNoBodies) {
-  PhysicsScene scene;
+  PhysicsHarness scene;
   scene.AddFloor();
   // More cycles than the world's capacity: a leak would run Jolt out of bodies
   for (int i = 0; i < 6000; ++i) {
@@ -295,7 +295,7 @@ TEST(Physics, ChurnLeaksNoBodies) {
 // --- Simulation ------------------------------------------------------------
 
 TEST(Physics, DropReboundsWithRestitution) {
-  PhysicsScene scene;
+  PhysicsHarness scene;
   scene.AddFloor();
   // Bottom at y = 3; restitution 0.6 should rebound ~0.6^2 * 3 = 1.08 m
   const Entity box = scene.AddDynamic(At({-10.0F, 3.5F, -3.0F}));
@@ -316,7 +316,7 @@ TEST(Physics, DropReboundsWithRestitution) {
 }
 
 TEST(Physics, OffCentreBoxRestsUprightOnItsBottom) {
-  PhysicsScene scene;
+  PhysicsHarness scene;
   scene.AddFloor();
   // Like the bunny: the shape sits above the entity's origin
   const bx::Aabb bounds{.min = {-0.5F, 0.0F, -0.5F}, .max = {0.5F, 1.5F, 0.5F}};
@@ -329,7 +329,7 @@ TEST(Physics, OffCentreBoxRestsUprightOnItsBottom) {
 }
 
 TEST(Physics, FloorFrictionStopsASlide) {
-  PhysicsScene scene;
+  PhysicsHarness scene;
   scene.AddFloor();
   const Entity box = scene.AddDynamic(At({0.0F, 0.5F, 0.0F}));
   scene.Run(60);
@@ -344,7 +344,7 @@ TEST(Physics, FloorFrictionStopsASlide) {
 }
 
 TEST(Physics, WallStopsABody) {
-  PhysicsScene scene;
+  PhysicsHarness scene;
   scene.AddFloor();
   scene.AddWallEast();
   const Entity box = scene.AddDynamic(At({0.0F, 0.5F, 0.0F}));
@@ -356,7 +356,7 @@ TEST(Physics, WallStopsABody) {
 }
 
 TEST(Physics, AccelerationMovesABody) {
-  PhysicsScene scene;
+  PhysicsHarness scene;
   const Entity box = scene.AddDynamic(At({0.0F, 5.0F, 0.0F}));
   scene.Get<RigidBody>(box).has_gravity = false;
   scene.Get<RigidBody>(box).acceleration = {5.0F, 0.0F, 0.0F};
@@ -368,7 +368,7 @@ TEST(Physics, AccelerationMovesABody) {
 }
 
 TEST(Physics, TiltedCubeTipsOntoAFace) {
-  PhysicsScene scene;
+  PhysicsHarness scene;
   scene.AddFloor();
   // Not 45 degrees: a cube landing exactly on its edge stays balanced
   const Entity cube = scene.AddDynamic(
@@ -381,7 +381,7 @@ TEST(Physics, TiltedCubeTipsOntoAFace) {
 // The collider must tilt the way the renderer draws: a box dropped off-centre
 // lands on the ramp's rendered top face, not ~1 m above or below it
 TEST(Physics, RampContactMatchesTheRenderedTilt) {
-  PhysicsScene scene;
+  PhysicsHarness scene;
   const Entity ramp = scene.AddRamp();
   const std::array<float, 16> mtx = ModelMatrix(scene.Get<Transform>(ramp));
   const bx::Vec3 top_point = bx::mulH({0.0F, 0.5F, 0.0F}, mtx.data());
@@ -404,7 +404,7 @@ TEST(Physics, RampContactMatchesTheRenderedTilt) {
 }
 
 TEST(Physics, SphereRestsAtItsLargestScaledRadius) {
-  PhysicsScene scene;
+  PhysicsHarness scene;
   scene.AddFloor();
   // Spheres cannot stretch: radius 0.5 scaled by the largest axis, 2
   const Entity ball =
@@ -416,7 +416,7 @@ TEST(Physics, SphereRestsAtItsLargestScaledRadius) {
 }
 
 TEST(Physics, SphereRollsDownTheRamp) {
-  PhysicsScene scene;
+  PhysicsHarness scene;
   scene.AddRamp(0.0F);
   const Entity ball = scene.AddDynamic(At({0.0F, 2.5F, 15.0F}),
                                        WithRestitution(Sphere(0.5F), 0.0F));
@@ -442,7 +442,7 @@ TEST(Physics, SphereRollsDownTheRamp) {
 // --- Edits made outside physics --------------------------------------------
 
 TEST(Physics, PositionEditTeleportsTheBody) {
-  PhysicsScene scene;
+  PhysicsHarness scene;
   scene.AddFloor();
   const Entity box = scene.AddDynamic(At({0.0F, 0.5F, 0.0F}));
   scene.Run(60);
@@ -454,7 +454,7 @@ TEST(Physics, PositionEditTeleportsTheBody) {
 }
 
 TEST(Physics, GravityToggleFloatsAndDropsTheBody) {
-  PhysicsScene scene;
+  PhysicsHarness scene;
   const Entity box = scene.AddDynamic(At({0.0F, 5.0F, 0.0F}));
   scene.Get<RigidBody>(box).has_gravity = false;
   scene.Run(120);
@@ -468,24 +468,24 @@ TEST(Physics, GravityToggleFloatsAndDropsTheBody) {
 }
 
 TEST(Physics, ScaleEditReshapesTheSameBody) {
-  PhysicsScene scene;
+  PhysicsHarness scene;
   scene.AddFloor();
   const Entity box = scene.AddDynamic(At({0.0F, 2.0F, 0.0F}),
                                       WithRestitution(Collider{}, 0.0F));
   scene.Run(180);
   const float rest_y = scene.Get<Transform>(box).position.y;
-  const BodyHandle body = scene.Get<PhysicsBody>(box).body;
+  const BodyHandle body = scene.Get<PhysicsLink>(box).body;
 
   scene.Get<Transform>(box).scale = {2.0F, 2.0F, 2.0F};
   scene.Run(180);
-  EXPECT_EQ(scene.Get<PhysicsBody>(box).body, body);
+  EXPECT_EQ(scene.Get<PhysicsLink>(box).body, body);
   EXPECT_NEAR(scene.Get<Transform>(box).position.y, 2.0F * rest_y, 0.05F);
 }
 
 // --- Sleeping bodies wake when what they rest on changes -------------------
 
 /** @brief A grippy small box asleep on the ramp. @return The box. */
-auto SleepingBoxOnRamp(PhysicsScene& scene, Entity ramp) -> Entity {
+auto SleepingBoxOnRamp(PhysicsHarness& scene, Entity ramp) -> Entity {
   scene.Get<Collider>(ramp).restitution = 0.0F;
   Collider grippy = WithRestitution(Collider{}, 0.0F);
   grippy.friction = 10.0F;  // sqrt(10 * 0.2) = 1.4 > tan(15 deg): holds
@@ -498,7 +498,7 @@ auto SleepingBoxOnRamp(PhysicsScene& scene, Entity ramp) -> Entity {
 }
 
 TEST(Physics, StaticFrictionEditWakesWhatRestsOnIt) {
-  PhysicsScene scene;
+  PhysicsHarness scene;
   const Entity ramp = scene.AddRamp();
   const Entity box = SleepingBoxOnRamp(scene, ramp);
   const bx::Vec3 rest = scene.Get<Transform>(box).position;
@@ -511,7 +511,7 @@ TEST(Physics, StaticFrictionEditWakesWhatRestsOnIt) {
 }
 
 TEST(Physics, DynamicFrictionEditWakesTheBody) {
-  PhysicsScene scene;
+  PhysicsHarness scene;
   const Entity ramp = scene.AddRamp();
   const Entity box = SleepingBoxOnRamp(scene, ramp);
   const bx::Vec3 rest = scene.Get<Transform>(box).position;
@@ -522,7 +522,7 @@ TEST(Physics, DynamicFrictionEditWakesTheBody) {
 }
 
 /** @brief A box asleep on a static platform. @return The box. */
-auto SleepingBoxOnPlatform(PhysicsScene& scene, Entity& platform) -> Entity {
+auto SleepingBoxOnPlatform(PhysicsHarness& scene, Entity& platform) -> Entity {
   platform =
       scene.AddStatic(At({12.0F, 2.0F, -12.0F},
                          bx::Quaternion{bx::InitIdentity}, {4.0F, 0.2F, 4.0F}),
@@ -536,7 +536,7 @@ auto SleepingBoxOnPlatform(PhysicsScene& scene, Entity& platform) -> Entity {
 }
 
 TEST(Physics, LoweringASupportWakesWhatSleepsOnIt) {
-  PhysicsScene scene;
+  PhysicsHarness scene;
   Entity platform = 0;
   const Entity box = SleepingBoxOnPlatform(scene, platform);
   const float rest_y = scene.Get<Transform>(box).position.y;
@@ -546,7 +546,7 @@ TEST(Physics, LoweringASupportWakesWhatSleepsOnIt) {
 }
 
 TEST(Physics, ThinningASupportWakesWhatSleepsOnIt) {
-  PhysicsScene scene;
+  PhysicsHarness scene;
   Entity platform = 0;
   const Entity box = SleepingBoxOnPlatform(scene, platform);
   const float rest_y = scene.Get<Transform>(box).position.y;
@@ -557,7 +557,7 @@ TEST(Physics, ThinningASupportWakesWhatSleepsOnIt) {
 }
 
 TEST(Physics, DestroyingASupportWakesWhatSleepsOnIt) {
-  PhysicsScene scene;
+  PhysicsHarness scene;
   Entity platform = 0;
   const Entity box = SleepingBoxOnPlatform(scene, platform);
   const float rest_y = scene.Get<Transform>(box).position.y;

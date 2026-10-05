@@ -7,7 +7,7 @@
  * collisions. Without a Collider it has no effect.
  */
 struct RigidBody {
-  /// World-space velocity in m/s. Physics writes it back every frame.
+  /// World-space velocity in m/s. PhysicsSystem writes it back every frame.
   bx::Vec3 velocity{0.0f};
 
   /// Extra world-space acceleration in m/s^2, applied on top of gravity.

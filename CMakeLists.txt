@@ -138,7 +138,7 @@ set(ENGINE_RUNTIME_DIR ${CMAKE_BINARY_DIR})
 add_executable(engine src/main.cpp
   src/ecs/components/camera.h
   src/ecs/components/collider.h
-  src/ecs/components/physics_body.h
+  src/ecs/components/physics_link.h
   src/ecs/components/renderable.h
   src/ecs/components/directional_light.h
   src/ecs/components/rigid_body.h

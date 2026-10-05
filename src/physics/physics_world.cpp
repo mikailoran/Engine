@@ -274,6 +274,8 @@ auto PhysicsWorld::GetVelocity(BodyHandle body) const -> bx::Vec3 {
   return ToBx(impl_->system.GetBodyInterface().GetLinearVelocity(ToJolt(body)));
 }
 
+// TODO: if the per-frame sync shows in profiles, read via
+// GetBodyInterfaceNoLock() here and in Bodies(); safe between Steps
 auto PhysicsWorld::UserData(BodyHandle body) const
     -> std::optional<std::uint64_t> {
   const JPH::BodyInterface& body_interface = impl_->system.GetBodyInterface();

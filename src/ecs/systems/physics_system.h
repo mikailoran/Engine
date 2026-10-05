@@ -9,11 +9,11 @@ struct FrameContext;
  * Transform, and steps the world at a fixed rate.
  *
  * A Collider alone makes a static body; with a RigidBody it is dynamic. Each
- * body's entity gets a PhysicsBody that only this system writes. Bodies are
+ * body's entity gets a PhysicsLink that only this system writes. Bodies are
  * created and destroyed as components come and go, edits made outside physics
  * are pushed in, and dynamic bodies' motion is read back.
  */
-class Physics {
+class PhysicsSystem {
  public:
   /**
    * @brief Syncs bodies with the ECS, then advances the world at a fixed rate.

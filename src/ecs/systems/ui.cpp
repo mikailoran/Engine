@@ -14,7 +14,7 @@
 #include <string>
 
 #include "ecs/components/collider.h"
-#include "ecs/components/physics_body.h"
+#include "ecs/components/physics_link.h"
 #include "ecs/components/renderable.h"
 #include "ecs/components/rigid_body.h"
 #include "ecs/components/selected.h"
@@ -152,8 +152,8 @@ auto DrawInspector(Ecs& ecs, AssetRegistry& assets) -> void {
                            1.0F, "%.1f", ImGuiSliderFlags_AlwaysClamp);
           ImGui::DragFloat("Friction", &collider.friction, 0.1F, 0.0F, 1.0F,
                            "%.1f", ImGuiSliderFlags_AlwaysClamp);
-          // Read-only: Physics owns the link to the body
-          const auto* link = ecs.TryGetComponent<PhysicsBody>(entity);
+          // Read-only: PhysicsSystem owns the link to the body
+          const auto* link = ecs.TryGetComponent<PhysicsLink>(entity);
           const std::string body =
               link == nullptr ? "none" : std::format("{}", link->body.Value());
           ImGui::TextUnformatted(std::format("Body: {}", body).c_str());

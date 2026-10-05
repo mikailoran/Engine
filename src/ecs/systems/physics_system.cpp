@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "ecs/components/collider.h"
-#include "ecs/components/physics_body.h"
+#include "ecs/components/physics_link.h"
 #include "ecs/components/rigid_body.h"
 #include "ecs/components/transform.h"
 #include "ecs/core/ecs.h"
@@ -64,13 +64,13 @@ auto MaterialOf(const Collider& collider) -> Material {
 }
 
 /**
- * @brief Destroys bodies no PhysicsBody links to: their entity was destroyed,
- * or its id was reused by an entity that has not been given a body yet.
+ * @brief Destroys bodies that no PhysicsLink points to: their entity was
+ * destroyed, or its id was reused by an entity not yet given a body.
  */
 void SweepOrphans(Ecs& ecs, PhysicsWorld& world) {
   for (const BodyEntry& entry : world.Bodies()) {
     const auto* link =
-        ecs.TryGetComponent<PhysicsBody>(static_cast<Entity>(entry.user_data));
+        ecs.TryGetComponent<PhysicsLink>(static_cast<Entity>(entry.user_data));
     if (link == nullptr || link->body != entry.body) {
       world.DestroyBody(entry.body);
     }
@@ -79,13 +79,13 @@ void SweepOrphans(Ecs& ecs, PhysicsWorld& world) {
 
 /**
  * @brief Unlinks entities that lost their Collider or Transform, destroying
- * their bodies. Also drops a PhysicsBody that does not own its body, such as
+ * their bodies. Also drops a PhysicsLink that does not own its body, such as
  * a copy, so the entity gets its own.
  */
 void DetachBodies(Ecs& ecs, PhysicsWorld& world) {
   std::vector<Entity> unlinked;
-  ecs.View<PhysicsBody>().ForEach(
-      [&](Entity entity, const PhysicsBody& link) -> void {
+  ecs.View<PhysicsLink>().ForEach(
+      [&](Entity entity, const PhysicsLink& link) -> void {
         const bool owns = world.UserData(link.body) == Tag(entity);
         if (owns && ecs.HasComponent<Collider>(entity) &&
             ecs.HasComponent<Transform>(entity)) {
@@ -98,7 +98,7 @@ void DetachBodies(Ecs& ecs, PhysicsWorld& world) {
       });
   // Removing a viewed component inside ForEach asserts, so remove after
   for (const Entity entity : unlinked) {
-    ecs.RemoveComponent<PhysicsBody>(entity);
+    ecs.RemoveComponent<PhysicsLink>(entity);
   }
 }
 
@@ -107,7 +107,7 @@ void AttachBodies(Ecs& ecs, PhysicsWorld& world) {
   std::vector<Entity> unlinked;
   ecs.View<Collider, Transform>().ForEach(
       [&](Entity entity, const Collider&, const Transform&) -> void {
-        if (!ecs.HasComponent<PhysicsBody>(entity)) {
+        if (!ecs.HasComponent<PhysicsLink>(entity)) {
           unlinked.push_back(entity);
         }
       });
@@ -134,7 +134,7 @@ void AttachBodies(Ecs& ecs, PhysicsWorld& world) {
       world.SetAcceleration(body, rigid_body->acceleration);
     }
     ecs.AddComponent(
-        entity, PhysicsBody{.body = body,
+        entity, PhysicsLink{.body = body,
                             .transform = transform,
                             .collider = collider,
                             .rigid_body = dynamic ? std::optional(*rigid_body)
@@ -146,7 +146,7 @@ void AttachBodies(Ecs& ecs, PhysicsWorld& world) {
  * @brief Pushes RigidBody edits; adding or removing one switches the body
  * between static and dynamic. @p rigid_body is null when absent.
  */
-void PushMotion(PhysicsWorld& world, PhysicsBody& link,
+void PushMotion(PhysicsWorld& world, PhysicsLink& link,
                 const RigidBody* rigid_body) {
   const bool dynamic = rigid_body != nullptr;
   if (dynamic != link.rigid_body.has_value()) {
@@ -173,10 +173,13 @@ void PushMotion(PhysicsWorld& world, PhysicsBody& link,
       dynamic ? std::optional(*rigid_body) : std::optional<RigidBody>{};
 }
 
-/** @brief Pushes edits made outside physics into each body. */
+/**
+ * @brief Pushes edits made outside physics into each body, then refreshes the
+ * link's copies to match.
+ */
 void PushEdits(Ecs& ecs, PhysicsWorld& world) {
-  ecs.View<PhysicsBody, Collider, Transform>().ForEach(
-      [&](Entity entity, PhysicsBody& link, const Collider& collider,
+  ecs.View<PhysicsLink, Collider, Transform>().ForEach(
+      [&](Entity entity, PhysicsLink& link, const Collider& collider,
           const Transform& transform) -> void {
         if (!Same(transform.position, link.transform.position) ||
             !Same(transform.rotation, link.transform.rotation)) {
@@ -199,8 +202,8 @@ void PushEdits(Ecs& ecs, PhysicsWorld& world) {
 
 /** @brief Copies dynamic bodies' poses and velocities back to the ECS. */
 void PullResults(Ecs& ecs, const PhysicsWorld& world) {
-  ecs.View<PhysicsBody, Transform>().ForEach(
-      [&](Entity entity, PhysicsBody& link, Transform& transform) -> void {
+  ecs.View<PhysicsLink, Transform>().ForEach(
+      [&](Entity entity, PhysicsLink& link, Transform& transform) -> void {
         auto* rigid_body = ecs.TryGetComponent<RigidBody>(entity);
         if (!link.rigid_body.has_value() || rigid_body == nullptr) {
           return;
@@ -217,7 +220,8 @@ void PullResults(Ecs& ecs, const PhysicsWorld& world) {
 
 }  // namespace
 
-void Physics::Update(Ecs& ecs, PhysicsWorld& world, const FrameContext& ctx) {
+void PhysicsSystem::Update(Ecs& ecs, PhysicsWorld& world,
+                           const FrameContext& ctx) {
   SweepOrphans(ecs, world);
   DetachBodies(ecs, world);
   AttachBodies(ecs, world);
