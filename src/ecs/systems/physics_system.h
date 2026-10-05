@@ -31,8 +31,12 @@ struct Transform;
  */
 class Physics {
  public:
-  /** @brief Brings up Jolt and an empty Jolt physics world. */
-  Physics();
+  /**
+   * @brief Brings up an empty Jolt physics world.
+   * @param runtime Jolt's process-wide state; must outlive this. Only taken to
+   * prove Jolt is set up.
+   */
+  explicit Physics(const JoltRuntime& runtime);
 
   /**
    * @brief Syncs bodies with the ECS, then advances them at a fixed rate.
@@ -105,9 +109,7 @@ class Physics {
   /// Scratch memory Jolt uses within one step, in bytes.
   static constexpr JPH::uint kTempAllocatorBytes = 10U * 1024U * 1024U;
 
-  // Order matters: the runtime backs every Jolt allocation, so it comes
-  // first, and the world references the layers, so it follows them
-  JoltRuntime runtime_;
+  // The world references the layers, so it must follow them
   CollisionLayers layers_;
   JPH::PhysicsSystem world_;
   JPH::TempAllocatorImpl temp_allocator_{kTempAllocatorBytes};

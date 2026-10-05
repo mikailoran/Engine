@@ -35,6 +35,7 @@
 #include "ecs/components/transform.h"
 #include "ecs/core/ecs.h"
 #include "ecs/core/types.h"
+#include "physics/jolt_runtime.h"
 #include "physics/layers.h"
 #include "platform/frame_context.h"
 #include "resource/asset_registry.h"
@@ -133,7 +134,7 @@ auto MakeBoxShape(const bx::Aabb& bounds, const bx::Vec3& scale)
 
 }  // namespace
 
-Physics::Physics() {
+Physics::Physics(const JoltRuntime& /*runtime*/) {
   // 0 body mutexes lets Jolt pick a default
   const auto num_body_mutexes = 0U;
   world_.Init(static_cast<JPH::uint>(kMaxEntities), num_body_mutexes,

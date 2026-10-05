@@ -19,6 +19,7 @@
 #include "ecs/core/ecs.h"
 #include "ecs/systems/camera_control.h"
 #include "ecs/systems/lighting_system.h"
+#include "physics/jolt_runtime.h"
 #include "platform/asset_root.h"
 #include "platform/frame_context.h"
 #include "resource/asset_registry.h"
@@ -104,13 +105,15 @@ class Game {
 
   // Before anything that creates GPU resources
   BgfxContext bgfx_context_{window_};
+  // Before anything that uses Jolt
+  JoltRuntime jolt_runtime_;
 
   AssetRegistry assets_;
   Ecs ecs_;
 
   CameraControl camera_control_;
   SelectionSystem selection_;
-  Physics physics_;
+  Physics physics_{jolt_runtime_};
   LightingSystem lighting_;
   RenderSystem render_;
   UiSystem ui_;
