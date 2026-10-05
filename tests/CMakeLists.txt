@@ -24,5 +24,19 @@ set_target_properties(ecs_tests PROPERTIES
   CXX_EXTENSIONS OFF
 )
 
+add_executable(math_tests
+  math/rotation_test.cpp)
+
+target_link_libraries(math_tests PRIVATE engine_math GTest::gtest_main)
+
+target_compile_options(math_tests PRIVATE -Wall -Wextra -Wpedantic)
+
+set_target_properties(math_tests PROPERTIES
+  CXX_STANDARD 20
+  CXX_STANDARD_REQUIRED ON
+  CXX_EXTENSIONS OFF
+)
+
 include(GoogleTest)
 gtest_discover_tests(ecs_tests)
+gtest_discover_tests(math_tests)
