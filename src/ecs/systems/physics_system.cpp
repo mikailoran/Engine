@@ -162,7 +162,7 @@ void Physics::Update(Ecs& ecs, const AssetRegistry& assets,
                      const FrameContext& ctx) {
   RemoveStaleBodies(ecs);
   CreateBodies(ecs, assets);
-  PushEdits(ecs);
+  PushEdits(ecs, assets);
 
   // A long hitch would otherwise queue more steps than the frame can afford.
   accumulator_ += std::min(ctx.dt, kMaxFrameDt);
@@ -191,14 +191,14 @@ void Physics::RemoveStaleBodies(Ecs& ecs) {
     // A mismatched id means the entity was reused or re-added its Collider
     const bool stale = collider == nullptr || transform == nullptr ||
                        !ecs.HasComponent<Renderable>(entity) ||
-                       collider->body_id != id ||
-                       ecs.HasComponent<RigidBody>(entity) != record.dynamic ||
-                       !Same(transform->scale, record.scale);
+                       collider->body_id != id;
     if (!stale) {
       ++it;
       continue;
     }
 
+    // Whatever rested on it would otherwise sleep on in mid-air
+    WakeTouching(body_interface, record.id);
     body_interface.RemoveBody(record.id);
     body_interface.DestroyBody(record.id);
     // Lets CreateBodies rebuild it if the entity still qualifies
@@ -240,6 +240,8 @@ void Physics::CreateBodies(Ecs& ecs, const AssetRegistry& assets) {
         settings.mFriction = collider.friction;
         settings.mGravityFactor = has_gravity ? 1.0F : 0.0F;
         settings.mLinearVelocity = ToJolt(velocity);
+        // Lets a static body turn dynamic in place when given a RigidBody
+        settings.mAllowDynamicOrKinematic = true;
 
         const JPH::BodyID id = body_interface.CreateAndAddBody(
             settings, is_dynamic ? JPH::EActivation::Activate
@@ -261,46 +263,99 @@ void Physics::CreateBodies(Ecs& ecs, const AssetRegistry& assets) {
       });
 }
 
-void Physics::PushEdits(Ecs& ecs) {
-  JPH::BodyInterface& body_interface = world_.GetBodyInterface();
+void Physics::PushEdits(Ecs& ecs, const AssetRegistry& assets) {
   for (auto& [entity, record] : bodies_) {
-    const auto& transform = ecs.GetComponent<Transform>(entity);
-    if (!Same(transform.position, record.position) ||
-        !Same(transform.rotation, record.rotation)) {
-      body_interface.SetPositionAndRotation(
-          record.id, ToJolt(transform.position),
-          ToJoltRotation(transform.rotation),
-          record.dynamic ? JPH::EActivation::Activate
-                         : JPH::EActivation::DontActivate);
-      record.position = transform.position;
-      record.rotation = transform.rotation;
-    }
-    const auto& collider = ecs.GetComponent<Collider>(entity);
-    if (collider.restitution != record.restitution ||
-        collider.friction != record.friction) {
-      body_interface.SetRestitution(record.id, collider.restitution);
-      body_interface.SetFriction(record.id, collider.friction);
-      record.restitution = collider.restitution;
-      record.friction = collider.friction;
-      // Neither setter wakes anything, so a resting body would ignore the edit
-      WakeTouching(body_interface, record.id);
-    }
+    const Renderable& renderable = ecs.GetComponent<Renderable>(entity);
+    PushPoseAndShape(record, ecs.GetComponent<Transform>(entity),
+                     *assets.GetMesh(renderable.mesh_handle));
+    PushMaterial(record, ecs.GetComponent<Collider>(entity));
+    PushMotion(record, ecs.TryGetComponent<RigidBody>(entity));
+  }
+}
 
-    if (!record.dynamic) {
-      continue;
+void Physics::PushPoseAndShape(BodyRecord& record, const Transform& transform,
+                               const Mesh& mesh) {
+  const bool moved = !Same(transform.position, record.position) ||
+                     !Same(transform.rotation, record.rotation);
+  const bool resized = !Same(transform.scale, record.scale);
+  if (!moved && !resized) {
+    return;
+  }
+
+  JPH::BodyInterface& body_interface = world_.GetBodyInterface();
+  const JPH::EActivation activation = record.dynamic
+                                          ? JPH::EActivation::Activate
+                                          : JPH::EActivation::DontActivate;
+  // Wake what touches the old pose and shape, then the new ones
+  WakeTouching(body_interface, record.id);
+  if (moved) {
+    body_interface.SetPositionAndRotation(record.id, ToJolt(transform.position),
+                                          ToJoltRotation(transform.rotation),
+                                          activation);
+    record.position = transform.position;
+    record.rotation = transform.rotation;
+  }
+  if (resized) {
+    // Reshaping in place keeps the body's id, velocity and contacts
+    if (const auto shape = MakeBoxShape(MeshBounds(mesh), transform.scale)) {
+      body_interface.SetShape(record.id, shape, true, activation);
+      record.scale = transform.scale;
     }
-    const auto& rigid_body = ecs.GetComponent<RigidBody>(entity);
-    if (!Same(rigid_body.velocity, record.velocity)) {
-      body_interface.SetLinearVelocity(record.id, ToJolt(rigid_body.velocity));
-      record.velocity = rigid_body.velocity;
-    }
-    if (rigid_body.has_gravity != record.has_gravity) {
+  }
+  WakeTouching(body_interface, record.id);
+}
+
+void Physics::PushMaterial(BodyRecord& record, const Collider& collider) {
+  if (collider.restitution == record.restitution &&
+      collider.friction == record.friction) {
+    return;
+  }
+  JPH::BodyInterface& body_interface = world_.GetBodyInterface();
+  body_interface.SetRestitution(record.id, collider.restitution);
+  body_interface.SetFriction(record.id, collider.friction);
+  record.restitution = collider.restitution;
+  record.friction = collider.friction;
+  // Neither setter wakes anything, so a resting body would ignore the edit
+  WakeTouching(body_interface, record.id);
+}
+
+void Physics::PushMotion(BodyRecord& record, const RigidBody* rigid_body) {
+  JPH::BodyInterface& body_interface = world_.GetBodyInterface();
+  const bool is_dynamic = rigid_body != nullptr;
+  if (is_dynamic != record.dynamic) {
+    // A RigidBody added or removed switches the body's motion in place
+    body_interface.SetObjectLayer(record.id, is_dynamic
+                                                 ? object_layer::kMoving
+                                                 : object_layer::kNonMoving);
+    body_interface.SetMotionType(
+        record.id,
+        is_dynamic ? JPH::EMotionType::Dynamic : JPH::EMotionType::Static,
+        JPH::EActivation::Activate);
+    record.dynamic = is_dynamic;
+    if (is_dynamic) {
+      // Static bodies were built without gravity or velocity
       body_interface.SetGravityFactor(record.id,
-                                      rigid_body.has_gravity ? 1.0F : 0.0F);
-      // Unlike a velocity change, this does not wake a sleeping body
-      body_interface.ActivateBody(record.id);
-      record.has_gravity = rigid_body.has_gravity;
+                                      rigid_body->has_gravity ? 1.0F : 0.0F);
+      body_interface.SetLinearVelocity(record.id, ToJolt(rigid_body->velocity));
+      record.has_gravity = rigid_body->has_gravity;
+      record.velocity = rigid_body->velocity;
     }
+    return;
+  }
+  if (!is_dynamic) {
+    return;
+  }
+
+  if (!Same(rigid_body->velocity, record.velocity)) {
+    body_interface.SetLinearVelocity(record.id, ToJolt(rigid_body->velocity));
+    record.velocity = rigid_body->velocity;
+  }
+  if (rigid_body->has_gravity != record.has_gravity) {
+    body_interface.SetGravityFactor(record.id,
+                                    rigid_body->has_gravity ? 1.0F : 0.0F);
+    // Unlike a velocity change, this does not wake a sleeping body
+    body_interface.ActivateBody(record.id);
+    record.has_gravity = rigid_body->has_gravity;
   }
 }
 

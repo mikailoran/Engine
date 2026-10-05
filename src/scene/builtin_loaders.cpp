@@ -91,11 +91,27 @@ void LoadDirectionalLight(const json& data, Entity entity, Ecs& ecs,
   ecs.AddComponent(entity, light);
 }
 
-/** @brief Adds a Collider; it takes no fields, since the mesh sets its size. */
+/**
+ * @brief Adds a Collider; "restitution" and "friction" are optional. Its size
+ * comes from the mesh.
+ */
 void LoadCollider(const json& data, Entity entity, Ecs& ecs,
                   AssetRegistry& /*assets*/) {
-  CheckKeys(data, {});
-  ecs.AddComponent(entity, Collider{});
+  CheckKeys(data, {"restitution", "friction"});
+  Collider collider{};
+  if (data.contains("restitution")) {
+    collider.restitution = data.at("restitution").get<float>();
+    if (collider.restitution < 0.0F || collider.restitution > 1.0F) {
+      throw std::runtime_error("restitution must be within [0, 1]");
+    }
+  }
+  if (data.contains("friction")) {
+    collider.friction = data.at("friction").get<float>();
+    if (collider.friction < 0.0F) {
+      throw std::runtime_error("friction must not be negative");
+    }
+  }
+  ecs.AddComponent(entity, collider);
 }
 
 }  // namespace

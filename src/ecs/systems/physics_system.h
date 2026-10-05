@@ -16,7 +16,11 @@
 
 class AssetRegistry;
 class Ecs;
+struct Collider;
 struct FrameContext;
+struct Mesh;
+struct RigidBody;
+struct Transform;
 
 /**
  * @brief Simulates every Collider entity as a Jolt body, at a fixed rate.
@@ -48,7 +52,7 @@ class Physics {
     JPH::BodyID id;
     bool dynamic{false};
     bool has_gravity{true};
-    /// Scale the shape was built for; a change rebuilds the body.
+    /// Scale the shape was built for; a change reshapes the body.
     bx::Vec3 scale{1.0F};
     bx::Vec3 position{0.0F};
     bx::Vec3 rotation{0.0F};
@@ -57,14 +61,33 @@ class Physics {
     float friction{0.0F};
   };
 
-  /** @brief Destroys bodies whose entity, components or shape changed. */
+  /**
+   * @brief Destroys bodies whose entity or required components are gone, or
+   * whose Collider was replaced.
+   */
   void RemoveStaleBodies(Ecs& ecs);
 
   /** @brief Creates a body for each Collider that has none. */
   void CreateBodies(Ecs& ecs, const AssetRegistry& assets);
 
-  /** @brief Pushes Transform and RigidBody edits made outside physics. */
-  void PushEdits(Ecs& ecs);
+  /**
+   * @brief Pushes edits made outside physics into the existing bodies: pose,
+   * scale, material, and a RigidBody being added or removed.
+   */
+  void PushEdits(Ecs& ecs, const AssetRegistry& assets);
+
+  /** @brief Pushes pose and scale edits, waking what the body touched. */
+  void PushPoseAndShape(BodyRecord& record, const Transform& transform,
+                        const Mesh& mesh);
+
+  /** @brief Pushes restitution and friction edits. */
+  void PushMaterial(BodyRecord& record, const Collider& collider);
+
+  /**
+   * @brief Pushes RigidBody edits; adding or removing one switches the body
+   * between static and dynamic. @p rigid_body is null when absent.
+   */
+  void PushMotion(BodyRecord& record, const RigidBody* rigid_body);
 
   /** @brief Applies each RigidBody's acceleration over one step. */
   void ApplyAccelerations(Ecs& ecs);
