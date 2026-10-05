@@ -435,6 +435,9 @@
             0.25,
             1
           ]
+        },
+        "collider": {
+          "shape": "sphere"
         }
       }
     },
@@ -461,6 +464,9 @@
             0.35,
             1
           ]
+        },
+        "collider": {
+          "shape": "sphere"
         }
       }
     },
@@ -487,6 +493,9 @@
             0.7,
             1
           ]
+        },
+        "collider": {
+          "shape": "sphere"
         }
       }
     },

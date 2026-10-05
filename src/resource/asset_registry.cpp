@@ -3,10 +3,13 @@
 #include <bgfx/bgfx.h>
 #include <bgfx/defines.h>
 #include <bgfx_utils.h>
+#include <bx/bounds.h>
+#include <bx/math.h>
 
 #include <cassert>
 #include <cstdint>
 #include <filesystem>
+#include <limits>
 #include <memory>
 #include <stdexcept>
 #include <utility>
@@ -41,6 +44,19 @@ auto AssetRegistry::LoadMesh(const std::filesystem::path& path) -> MeshHandle {
   assert(handle.idx < meshes_.size() && "Mesh handle out of range.");
 
   return meshes_.at(handle.idx).get();
+}
+
+auto AssetRegistry::GetMeshBounds(MeshHandle handle) const -> bx::Aabb {
+  const Mesh& mesh = *GetMesh(handle);
+  assert(!mesh.m_groups.empty() && "mesh has no groups");
+  // Inverted, so an empty mesh yields an inverted (empty) box
+  constexpr float kMax = std::numeric_limits<float>::max();
+  bx::Aabb bounds{.min = {kMax, kMax, kMax}, .max = {-kMax, -kMax, -kMax}};
+  for (const Group& group : mesh.m_groups) {
+    bounds.min = bx::min(bounds.min, group.m_aabb.min);
+    bounds.max = bx::max(bounds.max, group.m_aabb.max);
+  }
+  return bounds;
 }
 
 auto AssetRegistry::LoadTexture(const std::filesystem::path& path)

@@ -1,23 +1,27 @@
 #pragma once
 
-#include <cstdint>
+#include <bx/bounds.h>
+#include <bx/math.h>
+
+#include "physics/shape.h"
 
 /**
- * @brief Gives an entity a physics body shaped as a box around its mesh.
+ * @brief Gives an entity a physics body: static on its own, dynamic alongside
+ * a RigidBody. Needs a Transform, whose scale applies to the shape.
  *
- * Needs a Transform and a Renderable. The body is static on its own and
- * dynamic alongside a RigidBody.
+ * The default shape fits the engine's unit primitive meshes.
  */
 struct Collider {
-  /// No body yet; matches Jolt's invalid BodyID.
-  static constexpr std::uint32_t kNoBody = 0xFFFFFFFFU;
-
-  /// Bounciness from 0 to 1. A contact uses the higher of its two bodies'.
-  float restitution{0.6F};
-
-  /// Sliding resistance, 0 or more. A contact uses sqrt(a * b) of its pair's.
-  float friction{0.2F};
-
-  /// Opaque Jolt body id, written by Physics only.
-  std::uint32_t body_id{kNoBody};
+  /// The body's shape before Transform::scale.
+  ShapeDesc shape;
+  /// The body's surface response.
+  Material material;
 };
+
+/** @brief A box Collider fitted around @p bounds, e.g. a mesh's. */
+inline auto BoxColliderAround(const bx::Aabb& bounds) -> Collider {
+  Collider collider{};
+  collider.shape.half_extents = bx::mul(bx::sub(bounds.max, bounds.min), 0.5F);
+  collider.shape.offset = bx::mul(bx::add(bounds.min, bounds.max), 0.5F);
+  return collider;
+}

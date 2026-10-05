@@ -1,16 +1,13 @@
 #pragma once
 
-#include <Jolt/Jolt.h>
-#include <Jolt/Core/Factory.h>
-
 #include <memory>
 
 /**
  * @brief Owns Jolt's process-wide state: allocator, callbacks, factory and
  * registered types.
  *
- * Must be built before, and destroyed after, every other Jolt object. At most
- * one instance may exist.
+ * Must be built before, and destroyed after, every other Jolt object. A second
+ * live instance asserts, and throws std::logic_error in Release.
  */
 class JoltRuntime {
  public:
@@ -27,6 +24,7 @@ class JoltRuntime {
   auto operator=(JoltRuntime&&) -> JoltRuntime& = delete;
 
  private:
-  /// Published through JPH::Factory::sInstance while this object lives.
-  std::unique_ptr<JPH::Factory> factory_;
+  /// Jolt's factory, defined in the .cpp so this header needs no Jolt.
+  struct State;
+  std::unique_ptr<State> state_;
 };

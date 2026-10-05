@@ -45,6 +45,23 @@ set_target_properties(ecs_core PROPERTIES
   CXX_EXTENSIONS OFF
 )
 
+# --- Math -------------------------------------------------------------------
+# Rotation conventions shared by rendering, scenes and physics. A library so
+# math_tests can link it without the engine.
+add_library(engine_math STATIC
+  src/math/rotation.cpp
+  src/math/rotation.h)
+
+target_include_directories(engine_math PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(engine_math PUBLIC bx)
+target_compile_options(engine_math PRIVATE -Wall -Wextra -Wpedantic)
+
+set_target_properties(engine_math PROPERTIES
+  CXX_STANDARD 20
+  CXX_STANDARD_REQUIRED ON
+  CXX_EXTENSIONS OFF
+)
+
 # --- nlohmann/json ----------------------------------------------------------
 include(FetchContent)
 FetchContent_Declare(nlohmann_json
@@ -68,6 +85,45 @@ set(JPH_USE_VK OFF CACHE BOOL "" FORCE)
 set(JPH_USE_CPU_COMPUTE OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(JoltPhysics)
 
+# --- Physics ----------------------------------------------------------------
+# PhysicsWorld's headers are Jolt-free; PRIVATE keeps Jolt's include paths and
+# JPH_* defines out of every target that links this.
+add_library(engine_physics STATIC
+  src/physics/body_handle.h
+  src/physics/jolt_runtime.h
+  src/physics/jolt_runtime.cpp
+  src/physics/layers.h
+  src/physics/layers.cpp
+  src/physics/physics_world.h
+  src/physics/shape.h
+  src/physics/physics_world.cpp)
+
+target_include_directories(engine_physics PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(engine_physics PUBLIC bx PRIVATE Jolt)
+target_compile_options(engine_physics PRIVATE -Wall -Wextra -Wpedantic)
+
+set_target_properties(engine_physics PROPERTIES
+  CXX_STANDARD 20
+  CXX_STANDARD_REQUIRED ON
+  CXX_EXTENSIONS OFF
+)
+
+# --- Physics system ---------------------------------------------------------
+# The ECS side of physics. Needs no bgfx, so physics_tests can link it without
+# example-common.
+add_library(engine_physics_system STATIC
+  src/ecs/systems/physics_system.h
+  src/ecs/systems/physics_system.cpp)
+
+target_link_libraries(engine_physics_system PUBLIC ecs_core engine_physics)
+target_compile_options(engine_physics_system PRIVATE -Wall -Wextra -Wpedantic)
+
+set_target_properties(engine_physics_system PROPERTIES
+  CXX_STANDARD 20
+  CXX_STANDARD_REQUIRED ON
+  CXX_EXTENSIONS OFF
+)
+
 # --- Runtime layout ---------------------------------------------------------
 # Everything loaded at runtime is generated, and it is emitted here, beside the
 # executable. The app then derives its asset root from its own location
@@ -83,6 +139,7 @@ set(ENGINE_RUNTIME_DIR ${CMAKE_BINARY_DIR})
 add_executable(engine src/main.cpp
   src/ecs/components/camera.h
   src/ecs/components/collider.h
+  src/ecs/components/physics_link.h
   src/ecs/components/renderable.h
   src/ecs/components/directional_light.h
   src/ecs/components/rigid_body.h
@@ -92,12 +149,6 @@ add_executable(engine src/main.cpp
   src/ecs/systems/camera_control.h
   src/ecs/systems/lighting_system.h
   src/ecs/systems/lighting_system.cpp
-  src/ecs/systems/physics_system.h
-  src/ecs/systems/physics_system.cpp
-  src/physics/jolt_runtime.h
-  src/physics/jolt_runtime.cpp
-  src/physics/layers.h
-  src/physics/layers.cpp
   src/ecs/systems/render_system.h
   src/ecs/systems/render_system.cpp
   src/ecs/systems/selection_system.h
@@ -120,8 +171,8 @@ add_executable(engine src/main.cpp
 
 # example-common publicly exposes examples/common plus bgfx, bx and bimg with
 # their include directories, which is what makes "entry/entry.h" resolve.
-target_link_libraries(engine PRIVATE example-common ecs_core
-  nlohmann_json::nlohmann_json Jolt)
+target_link_libraries(engine PRIVATE example-common ecs_core engine_math
+  engine_physics engine_physics_system nlohmann_json::nlohmann_json)
 
 target_compile_options(engine PRIVATE -Wall -Wextra -Wpedantic)
 
