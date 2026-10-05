@@ -10,11 +10,11 @@
 #include <stdexcept>
 
 #include "ecs/components/camera.h"
+#include "ecs/components/collider.h"
 #include "ecs/components/directional_light.h"
 #include "ecs/components/renderable.h"
 #include "ecs/components/rigid_body.h"
 #include "ecs/components/selected.h"
-#include "ecs/components/spin.h"
 #include "ecs/components/transform.h"
 #include "ecs/core/ecs.h"
 #include "ecs/systems/camera_control.h"
@@ -123,7 +123,7 @@ Game::Game() {
   ecs_.RegisterComponent<DirectionalLight>();
   ecs_.RegisterComponent<Transform>();
   ecs_.RegisterComponent<RigidBody>();
-  ecs_.RegisterComponent<Spin>();
+  ecs_.RegisterComponent<Collider>();
   ecs_.RegisterComponent<Selected>();
 
   // --- Assets and entities ----------------------------------------------
@@ -160,7 +160,7 @@ auto Game::Run() -> int {
     camera_control_.Update(ecs_, ctx);
     // UI runs last, so this is last frame's answer
     selection_.Update(ecs_, assets_, ctx, ui_.WantsMouse());
-    physics_.Update(ecs_, ctx);
+    physics_.Update(ecs_, assets_, ctx);
     // Frame uniforms must be set before the renderer submits.
     lighting_.Update(ecs_, ctx);
     render_.Update(ecs_, assets_, ctx);

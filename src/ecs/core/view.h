@@ -24,8 +24,8 @@
 /**
  * @brief Non-owning view over the entities that have every listed component.
  *
- * Usage: `ecs.View<Transform, Spin>().Each([](Entity e, Transform &t, Spin &s)
- * { ... });`
+ * Usage: `ecs.View<Transform, RigidBody>().ForEach(
+ * [](Entity e, Transform& t, RigidBody& b) -> void { ... });`
  *
  * @tparam Components Distinct component types an entity must all have.
  */

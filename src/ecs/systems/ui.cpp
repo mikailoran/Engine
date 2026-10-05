@@ -10,11 +10,12 @@
 #include <cstdint>
 #include <format>
 #include <limits>
+#include <string>
 
+#include "ecs/components/collider.h"
 #include "ecs/components/renderable.h"
 #include "ecs/components/rigid_body.h"
 #include "ecs/components/selected.h"
-#include "ecs/components/spin.h"
 #include "ecs/components/transform.h"
 #include "ecs/core/ecs.h"
 #include "ecs/core/types.h"
@@ -32,7 +33,7 @@ auto SpawnEntity(Ecs& ecs, AssetRegistry& assets) -> Entity {
   const auto entity = ecs.CreateEntity();
   ecs.AddComponent(entity, Transform{.position = {0.0F, 3.0F, 0.0F}});
   ecs.AddComponent(entity, RigidBody{});
-  ecs.AddComponent(entity, Spin{});
+  ecs.AddComponent(entity, Collider{});
   ecs.AddComponent(entity, Renderable{.mesh_handle = mesh_handle});
 
   return entity;
@@ -93,17 +94,34 @@ auto DrawInspector(Ecs& ecs, AssetRegistry& assets) -> void {
     ImGui::SeparatorText("Components");
     DrawComponent<Transform>(
         ecs, entity, "Transform", [](Transform& transform) -> void {
-          ImGui::DragFloat3("Position", &transform.position.x, 0.1F);
-          ImGui::DragFloat3("Rotation", &transform.rotation.x, bx::toRad(1.0F));
+          ImGui::DragFloat3("Position", &transform.position.x, 0.1F, 0.0F, 0.0F,
+                            "%.1f");
+          ImGui::DragFloat3("Rotation", &transform.rotation.x, bx::toRad(1.0F),
+                            -bx::kPi2, bx::kPi2, "%.1f");
+          // ImGui ignores bounds unless min < max
           ImGui::DragFloat3("Scale", &transform.scale.x, 0.1F, 0.01F,
-                            std::numeric_limits<float>::max(), "%.2f",
+                            std::numeric_limits<float>::max(), "%.1f",
                             ImGuiSliderFlags_AlwaysClamp);
         });
     DrawComponent<RigidBody>(
         ecs, entity, "Rigid Body", [](RigidBody& rigid_body) -> void {
           ImGui::Checkbox("Gravity", &rigid_body.has_gravity);
-          ImGui::DragFloat3("Acceleration", &rigid_body.acceleration.x, 0.1F);
-          ImGui::DragFloat3("Velocity", &rigid_body.velocity.x, 0.1F);
+          ImGui::DragFloat3("Acceleration", &rigid_body.acceleration.x, 0.1F,
+                            0.0F, 0.0F, "%.1f");
+          ImGui::DragFloat3("Velocity", &rigid_body.velocity.x, 0.1F, 0.0F,
+                            0.0F, "%.1f");
+        });
+    DrawComponent<Collider>(
+        ecs, entity, "Collider", [](Collider& collider) -> void {
+          ImGui::DragFloat("Restitution", &collider.restitution, 0.1F, 0.0F,
+                           1.0F, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+          ImGui::DragFloat("Friction", &collider.friction, 0.1F, 0.0F, 1.0F,
+                           "%.1f", ImGuiSliderFlags_AlwaysClamp);
+          // Read-only: Physics owns the body id
+          const std::string body = collider.body_id == Collider::kNoBody
+                                       ? "none"
+                                       : std::format("{}", collider.body_id);
+          ImGui::TextUnformatted(std::format("Body: {}", body).c_str());
         });
     DrawComponent<Renderable>(
         ecs, entity, "Renderable", [](Renderable& renderable) -> void {
@@ -114,9 +132,6 @@ auto DrawInspector(Ecs& ecs, AssetRegistry& assets) -> void {
                              ImGuiSliderFlags_AlwaysClamp);
           }
         });
-    DrawComponent<Spin>(ecs, entity, "Spin", [](Spin& spin) -> void {
-      ImGui::Checkbox("Spin", &spin.should_spin);
-    });
 
     // After the sections, so a new component's header appears next frame
     if (ImGui::Button("Add Component")) {
@@ -125,12 +140,13 @@ auto DrawInspector(Ecs& ecs, AssetRegistry& assets) -> void {
     if (ImGui::BeginPopup("add_component")) {
       AddComponentMenuItem<Transform>(ecs, entity, "Transform");
       AddComponentMenuItem<RigidBody>(ecs, entity, "Rigid Body");
+      AddComponentMenuItem<Collider>(ecs, entity, "Collider");
       // A default Renderable has no mesh, which the renderer asserts on
+      // TODO: Should the renderer assert on no mesh?
       AddComponentMenuItem<Renderable>(
           ecs, entity, "Renderable", [&assets]() -> Renderable {
             return {.mesh_handle = assets.LoadMesh("assets/meshes/cube.bin")};
           });
-      AddComponentMenuItem<Spin>(ecs, entity, "Spin");
       ImGui::EndPopup();
     }
 
