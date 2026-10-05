@@ -5,6 +5,7 @@
 #include <entry/entry.h>
 #include <imgui/imgui.h>
 
+#include <array>
 #include <cassert>
 #include <concepts>
 #include <cstdint>
@@ -19,6 +20,7 @@
 #include "ecs/components/transform.h"
 #include "ecs/core/ecs.h"
 #include "ecs/core/types.h"
+#include "math/rotation.h"
 #include "platform/frame_context.h"
 #include "resource/asset_registry.h"
 #include "resource/mesh_handle.h"
@@ -96,8 +98,17 @@ auto DrawInspector(Ecs& ecs, AssetRegistry& assets) -> void {
         ecs, entity, "Transform", [](Transform& transform) -> void {
           ImGui::DragFloat3("Position", &transform.position.x, 0.1F, 0.0F, 0.0F,
                             "%.1f");
-          ImGui::DragFloat3("Rotation", &transform.rotation.x, bx::toRad(1.0F),
-                            -bx::kPi2, bx::kPi2, "%.1f");
+          // Edited as Euler degrees; written back only on change, since the
+          // round trip would otherwise rewrite the quaternion every frame
+          const bx::Vec3 euler = QuatToEuler(transform.rotation);
+          std::array<float, 3> degrees{bx::toDeg(euler.x), bx::toDeg(euler.y),
+                                       bx::toDeg(euler.z)};
+          if (ImGui::DragFloat3("Rotation", degrees.data(), 1.0F, 0.0F, 0.0F,
+                                "%.1f")) {
+            transform.rotation =
+                EulerToQuat({bx::toRad(degrees.at(0)), bx::toRad(degrees.at(1)),
+                             bx::toRad(degrees.at(2))});
+          }
           // ImGui ignores bounds unless min < max
           ImGui::DragFloat3("Scale", &transform.scale.x, 0.1F, 0.01F,
                             std::numeric_limits<float>::max(), "%.1f",

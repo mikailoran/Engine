@@ -45,6 +45,23 @@ set_target_properties(ecs_core PROPERTIES
   CXX_EXTENSIONS OFF
 )
 
+# --- Math -------------------------------------------------------------------
+# Rotation conventions shared by rendering, scenes and physics. A library so
+# math_tests can link it without the engine.
+add_library(engine_math STATIC
+  src/math/rotation.cpp
+  src/math/rotation.h)
+
+target_include_directories(engine_math PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(engine_math PUBLIC bx)
+target_compile_options(engine_math PRIVATE -Wall -Wextra -Wpedantic)
+
+set_target_properties(engine_math PROPERTIES
+  CXX_STANDARD 20
+  CXX_STANDARD_REQUIRED ON
+  CXX_EXTENSIONS OFF
+)
+
 # --- nlohmann/json ----------------------------------------------------------
 include(FetchContent)
 FetchContent_Declare(nlohmann_json
@@ -120,7 +137,7 @@ add_executable(engine src/main.cpp
 
 # example-common publicly exposes examples/common plus bgfx, bx and bimg with
 # their include directories, which is what makes "entry/entry.h" resolve.
-target_link_libraries(engine PRIVATE example-common ecs_core
+target_link_libraries(engine PRIVATE example-common ecs_core engine_math
   nlohmann_json::nlohmann_json Jolt)
 
 target_compile_options(engine PRIVATE -Wall -Wextra -Wpedantic)

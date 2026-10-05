@@ -55,7 +55,7 @@ class Physics {
     /// Scale the shape was built for; a change reshapes the body.
     bx::Vec3 scale{1.0F};
     bx::Vec3 position{0.0F};
-    bx::Vec3 rotation{0.0F};
+    bx::Quaternion rotation{bx::InitIdentity};
     bx::Vec3 velocity{0.0F};
     float restitution{0.0F};
     float friction{0.0F};

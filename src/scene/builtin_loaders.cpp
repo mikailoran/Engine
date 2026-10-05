@@ -13,6 +13,7 @@
 #include "ecs/components/transform.h"
 #include "ecs/core/ecs.h"
 #include "ecs/core/types.h"
+#include "math/rotation.h"
 #include "resource/asset_registry.h"
 #include "scene/json_read.h"
 #include "scene/scene_loader.h"
@@ -32,7 +33,8 @@ void LoadTransform(const json& data, Entity entity, Ecs& ecs,
   }
   if (data.contains("rotation_deg")) {
     const auto deg = ReadVec3(data.at("rotation_deg"));
-    transform.rotation = {bx::toRad(deg.x), bx::toRad(deg.y), bx::toRad(deg.z)};
+    transform.rotation =
+        EulerToQuat({bx::toRad(deg.x), bx::toRad(deg.y), bx::toRad(deg.z)});
   }
   if (data.contains("scale")) {
     transform.scale = ReadVec3(data.at("scale"));

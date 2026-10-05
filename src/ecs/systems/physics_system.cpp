@@ -26,7 +26,6 @@
 
 #include <algorithm>
 #include <cassert>
-#include <cmath>
 #include <cstdint>
 #include <limits>
 
@@ -46,9 +45,6 @@ namespace {
 constexpr JPH::uint kMaxBodyPairs = 65536;
 constexpr JPH::uint kMaxContactConstraints = 10240;
 
-/// Below this cos(y), X and Z rotate about the same axis (gimbal lock).
-constexpr float kGimbalEpsilon = 1e-6F;
-
 /// How far past a body's bounds WakeTouching looks for neighbours, in m.
 constexpr float kWakeMargin = 0.1F;
 
@@ -63,32 +59,19 @@ auto Same(const bx::Vec3& a, const bx::Vec3& b) -> bool {
   return a.x == b.x && a.y == b.y && a.z == b.z;
 }
 
-/** @brief Converts Transform's Euler angles to the rotation Jolt applies. */
-auto ToJoltRotation(const bx::Vec3& euler) -> JPH::Quat {
-  // bx's row-vector matrices turn the other way, hence the conjugate
-  const bx::Quaternion q = bx::fromEuler(euler);
-  return {-q.x, -q.y, -q.z, q.w};
+/** @brief Tests two quaternions for exact equality. */
+auto Same(const bx::Quaternion& a, const bx::Quaternion& b) -> bool {
+  return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
 }
 
-/**
- * @brief Converts a Jolt rotation to Euler angles that bx::mtxSRT reproduces.
- *
- * bx::toEuler does not invert bx::fromEuler, so the angles are read off the
- * rotated axes, matching mtxSRT's matrix terms.
- */
-auto ToEuler(JPH::QuatArg rotation) -> bx::Vec3 {
-  const JPH::Vec3 x_axis = rotation.RotateAxisX();
-  const JPH::Vec3 y_axis = rotation.RotateAxisY();
-  const JPH::Vec3 z_axis = rotation.RotateAxisZ();
-  const float sin_y = -z_axis.GetX();
-  const float cos_y = std::hypot(x_axis.GetX(), y_axis.GetX());
-  const float y = std::atan2(sin_y, cos_y);
-  // Gimbal lock: only X + Z is defined, so fold it all into X
-  if (cos_y < kGimbalEpsilon) {
-    return {std::atan2(sin_y * x_axis.GetY(), y_axis.GetY()), y, 0.0F};
-  }
-  return {std::atan2(z_axis.GetY(), z_axis.GetZ()), y,
-          std::atan2(y_axis.GetX(), x_axis.GetX())};
+/** @brief Converts a bx quaternion to Jolt's; both use v' = q v q*. */
+auto ToJolt(const bx::Quaternion& q) -> JPH::Quat {
+  return {q.x, q.y, q.z, q.w};
+}
+
+/** @brief Converts a Jolt quaternion to bx's. */
+auto ToBx(JPH::QuatArg q) -> bx::Quaternion {
+  return {q.GetX(), q.GetY(), q.GetZ(), q.GetW()};
 }
 
 /**
@@ -229,8 +212,7 @@ void Physics::CreateBodies(Ecs& ecs, const AssetRegistry& assets) {
         const auto* rigid_body = ecs.TryGetComponent<RigidBody>(entity);
         const bool is_dynamic = rigid_body != nullptr;
         JPH::BodyCreationSettings settings{
-            shape, ToJolt(transform.position),
-            ToJoltRotation(transform.rotation),
+            shape, ToJolt(transform.position), ToJolt(transform.rotation),
             is_dynamic ? JPH::EMotionType::Dynamic : JPH::EMotionType::Static,
             is_dynamic ? object_layer::kMoving : object_layer::kNonMoving};
         const bool has_gravity = is_dynamic && rigid_body->has_gravity;
@@ -290,7 +272,7 @@ void Physics::PushPoseAndShape(BodyRecord& record, const Transform& transform,
   WakeTouching(body_interface, record.id);
   if (moved) {
     body_interface.SetPositionAndRotation(record.id, ToJolt(transform.position),
-                                          ToJoltRotation(transform.rotation),
+                                          ToJolt(transform.rotation),
                                           activation);
     record.position = transform.position;
     record.rotation = transform.rotation;
@@ -388,7 +370,7 @@ void Physics::ReadBack(Ecs& ecs) {
     auto& transform = ecs.GetComponent<Transform>(entity);
     auto& rigid_body = ecs.GetComponent<RigidBody>(entity);
     transform.position = ToBx(position);
-    transform.rotation = ToEuler(rotation);
+    transform.rotation = ToBx(rotation);
     rigid_body.velocity = ToBx(body_interface.GetLinearVelocity(record.id));
 
     record.position = transform.position;
