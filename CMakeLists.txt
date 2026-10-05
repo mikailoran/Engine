@@ -107,6 +107,22 @@ set_target_properties(engine_physics PROPERTIES
   CXX_EXTENSIONS OFF
 )
 
+# --- Physics system ---------------------------------------------------------
+# The ECS side of physics. Needs no bgfx, so physics_tests can link it without
+# example-common.
+add_library(engine_physics_system STATIC
+  src/ecs/systems/physics_system.h
+  src/ecs/systems/physics_system.cpp)
+
+target_link_libraries(engine_physics_system PUBLIC ecs_core engine_physics)
+target_compile_options(engine_physics_system PRIVATE -Wall -Wextra -Wpedantic)
+
+set_target_properties(engine_physics_system PROPERTIES
+  CXX_STANDARD 20
+  CXX_STANDARD_REQUIRED ON
+  CXX_EXTENSIONS OFF
+)
+
 # --- Runtime layout ---------------------------------------------------------
 # Everything loaded at runtime is generated, and it is emitted here, beside the
 # executable. The app then derives its asset root from its own location
@@ -132,8 +148,6 @@ add_executable(engine src/main.cpp
   src/ecs/systems/camera_control.h
   src/ecs/systems/lighting_system.h
   src/ecs/systems/lighting_system.cpp
-  src/ecs/systems/physics_system.h
-  src/ecs/systems/physics_system.cpp
   src/ecs/systems/render_system.h
   src/ecs/systems/render_system.cpp
   src/ecs/systems/selection_system.h
@@ -157,7 +171,7 @@ add_executable(engine src/main.cpp
 # example-common publicly exposes examples/common plus bgfx, bx and bimg with
 # their include directories, which is what makes "entry/entry.h" resolve.
 target_link_libraries(engine PRIVATE example-common ecs_core engine_math
-  engine_physics nlohmann_json::nlohmann_json)
+  engine_physics engine_physics_system nlohmann_json::nlohmann_json)
 
 target_compile_options(engine PRIVATE -Wall -Wextra -Wpedantic)
 
