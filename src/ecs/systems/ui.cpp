@@ -94,20 +94,29 @@ auto DrawInspector(Ecs& ecs, AssetRegistry& assets) -> void {
     ImGui::SeparatorText("Components");
     DrawComponent<Transform>(
         ecs, entity, "Transform", [](Transform& transform) -> void {
-          ImGui::DragFloat3("Position", &transform.position.x, 0.1F);
-          ImGui::DragFloat3("Rotation", &transform.rotation.x, bx::toRad(1.0F));
+          ImGui::DragFloat3("Position", &transform.position.x, 0.1F, 0.0F, 0.0F,
+                            "%.1f");
+          ImGui::DragFloat3("Rotation", &transform.rotation.x, bx::toRad(1.0F),
+                            -bx::kPi2, bx::kPi2, "%.1f");
+          // ImGui ignores bounds unless min < max
           ImGui::DragFloat3("Scale", &transform.scale.x, 0.1F, 0.01F,
-                            std::numeric_limits<float>::max(), "%.2f",
+                            std::numeric_limits<float>::max(), "%.1f",
                             ImGuiSliderFlags_AlwaysClamp);
         });
     DrawComponent<RigidBody>(
         ecs, entity, "Rigid Body", [](RigidBody& rigid_body) -> void {
           ImGui::Checkbox("Gravity", &rigid_body.has_gravity);
-          ImGui::DragFloat3("Acceleration", &rigid_body.acceleration.x, 0.1F);
-          ImGui::DragFloat3("Velocity", &rigid_body.velocity.x, 0.1F);
+          ImGui::DragFloat3("Acceleration", &rigid_body.acceleration.x, 0.1F,
+                            0.0F, 0.0F, "%.1f");
+          ImGui::DragFloat3("Velocity", &rigid_body.velocity.x, 0.1F, 0.0F,
+                            0.0F, "%.1f");
         });
     DrawComponent<Collider>(
-        ecs, entity, "Collider", [](const Collider& collider) -> void {
+        ecs, entity, "Collider", [](Collider& collider) -> void {
+          ImGui::DragFloat("Restitution", &collider.restitution, 0.1F, 0.0F,
+                           1.0F, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+          ImGui::DragFloat("Friction", &collider.friction, 0.1F, 0.0F, 1.0F,
+                           "%.1f", ImGuiSliderFlags_AlwaysClamp);
           // Read-only: Physics owns the body id
           const std::string body = collider.body_id == Collider::kNoBody
                                        ? "none"
@@ -133,6 +142,7 @@ auto DrawInspector(Ecs& ecs, AssetRegistry& assets) -> void {
       AddComponentMenuItem<RigidBody>(ecs, entity, "Rigid Body");
       AddComponentMenuItem<Collider>(ecs, entity, "Collider");
       // A default Renderable has no mesh, which the renderer asserts on
+      // TODO: Should the renderer assert on no mesh?
       AddComponentMenuItem<Renderable>(
           ecs, entity, "Renderable", [&assets]() -> Renderable {
             return {.mesh_handle = assets.LoadMesh("assets/meshes/cube.bin")};

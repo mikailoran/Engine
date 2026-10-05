@@ -2,16 +2,21 @@
 
 #include <Jolt/Core/Core.h>
 #include <Jolt/Core/Reference.h>
+#include <Jolt/Geometry/AABox.h>
 #include <Jolt/Math/MathTypes.h>
 #include <Jolt/Math/Quat.h>
 #include <Jolt/Math/Real.h>
 #include <Jolt/Math/Vec3.h>
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
+#include <Jolt/Physics/Body/BodyID.h>
 #include <Jolt/Physics/Body/BodyInterface.h>
 #include <Jolt/Physics/Body/MotionType.h>
+#include <Jolt/Physics/Collision/BroadPhase/BroadPhaseLayer.h>
+#include <Jolt/Physics/Collision/ObjectLayer.h>
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
 #include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
 #include <Jolt/Physics/Collision/Shape/Shape.h>
+#include <Jolt/Physics/Collision/TransformedShape.h>
 #include <Jolt/Physics/EActivation.h>
 #include <Jolt/Physics/EPhysicsUpdateError.h>
 #include <Jolt/Physics/PhysicsSettings.h>
@@ -41,11 +46,11 @@ namespace {
 constexpr JPH::uint kMaxBodyPairs = 65536;
 constexpr JPH::uint kMaxContactConstraints = 10240;
 
-/// Bounciness of every body; a contact takes the higher of its pair's.
-constexpr float kRestitution = 0.6F;
-
 /// Below this cos(y), X and Z rotate about the same axis (gimbal lock).
 constexpr float kGimbalEpsilon = 1e-6F;
+
+/// How far past a body's bounds WakeTouching looks for neighbours, in m.
+constexpr float kWakeMargin = 0.1F;
 
 /** @brief Converts a bx vector to Jolt's. */
 auto ToJolt(const bx::Vec3& v) -> JPH::Vec3 { return {v.x, v.y, v.z}; }
@@ -84,6 +89,19 @@ auto ToEuler(JPH::QuatArg rotation) -> bx::Vec3 {
   }
   return {std::atan2(z_axis.GetY(), z_axis.GetZ()), y,
           std::atan2(y_axis.GetX(), x_axis.GetX())};
+}
+
+/**
+ * @brief Wakes @p id's body and every body touching it.
+ *
+ * Static bodies never wake, so for a floor this wakes what rests on it.
+ */
+void WakeTouching(JPH::BodyInterface& body_interface, const JPH::BodyID& id) {
+  JPH::AABox bounds =
+      body_interface.GetTransformedShape(id).GetWorldSpaceBounds();
+  bounds.ExpandBy(JPH::Vec3::sReplicate(kWakeMargin));
+  body_interface.ActivateBodiesInAABox(bounds, JPH::BroadPhaseLayerFilter{},
+                                       JPH::ObjectLayerFilter{});
 }
 
 /** @brief Returns the box around all of @p mesh's groups, in mesh space. */
@@ -134,8 +152,9 @@ auto MakeBoxShape(const bx::Aabb& bounds, const bx::Vec3& scale)
 
 Physics::Physics() {
   // 0 body mutexes lets Jolt pick a default
-  world_.Init(static_cast<JPH::uint>(kMaxEntities), 0, kMaxBodyPairs,
-              kMaxContactConstraints, layers_.BroadPhase(),
+  const auto num_body_mutexes = 0U;
+  world_.Init(static_cast<JPH::uint>(kMaxEntities), num_body_mutexes,
+              kMaxBodyPairs, kMaxContactConstraints, layers_.BroadPhase(),
               layers_.ObjectVsBroadPhase(), layers_.ObjectPairs());
 }
 
@@ -203,39 +222,42 @@ void Physics::CreateBodies(Ecs& ecs, const AssetRegistry& assets) {
         const auto shape =
             MakeBoxShape(MeshBounds(*assets.GetMesh(renderable.mesh_handle)),
                          transform.scale);
-        if (shape == nullptr) {
+        if (!shape) {
           return;
         }
 
         const auto* rigid_body = ecs.TryGetComponent<RigidBody>(entity);
-        const bool dynamic = rigid_body != nullptr;
-        JPH::BodyCreationSettings settings(
+        const bool is_dynamic = rigid_body != nullptr;
+        JPH::BodyCreationSettings settings{
             shape, ToJolt(transform.position),
             ToJoltRotation(transform.rotation),
-            dynamic ? JPH::EMotionType::Dynamic : JPH::EMotionType::Static,
-            dynamic ? object_layer::kMoving : object_layer::kNonMoving);
-        const bool has_gravity = !dynamic || rigid_body->has_gravity;
+            is_dynamic ? JPH::EMotionType::Dynamic : JPH::EMotionType::Static,
+            is_dynamic ? object_layer::kMoving : object_layer::kNonMoving};
+        const bool has_gravity = is_dynamic && rigid_body->has_gravity;
         const bx::Vec3 velocity =
-            dynamic ? rigid_body->velocity : bx::Vec3{0.0F};
-        settings.mRestitution = kRestitution;
+            is_dynamic ? rigid_body->velocity : bx::Vec3{0.0F};
+        settings.mRestitution = collider.restitution;
+        settings.mFriction = collider.friction;
         settings.mGravityFactor = has_gravity ? 1.0F : 0.0F;
         settings.mLinearVelocity = ToJolt(velocity);
 
         const JPH::BodyID id = body_interface.CreateAndAddBody(
-            settings, dynamic ? JPH::EActivation::Activate
-                              : JPH::EActivation::DontActivate);
+            settings, is_dynamic ? JPH::EActivation::Activate
+                                 : JPH::EActivation::DontActivate);
         assert(!id.IsInvalid() && "Jolt is out of bodies");
         if (id.IsInvalid()) {
           return;
         }
         collider.body_id = id.GetIndexAndSequenceNumber();
         bodies_.emplace(entity, BodyRecord{.id = id,
-                                           .dynamic = dynamic,
+                                           .dynamic = is_dynamic,
                                            .has_gravity = has_gravity,
                                            .scale = transform.scale,
                                            .position = transform.position,
                                            .rotation = transform.rotation,
-                                           .velocity = velocity});
+                                           .velocity = velocity,
+                                           .restitution = collider.restitution,
+                                           .friction = collider.friction});
       });
 }
 
@@ -252,6 +274,16 @@ void Physics::PushEdits(Ecs& ecs) {
                          : JPH::EActivation::DontActivate);
       record.position = transform.position;
       record.rotation = transform.rotation;
+    }
+    const auto& collider = ecs.GetComponent<Collider>(entity);
+    if (collider.restitution != record.restitution ||
+        collider.friction != record.friction) {
+      body_interface.SetRestitution(record.id, collider.restitution);
+      body_interface.SetFriction(record.id, collider.friction);
+      record.restitution = collider.restitution;
+      record.friction = collider.friction;
+      // Neither setter wakes anything, so a resting body would ignore the edit
+      WakeTouching(body_interface, record.id);
     }
 
     if (!record.dynamic) {

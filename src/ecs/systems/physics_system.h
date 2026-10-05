@@ -53,6 +53,8 @@ class Physics {
     bx::Vec3 position{0.0F};
     bx::Vec3 rotation{0.0F};
     bx::Vec3 velocity{0.0F};
+    float restitution{0.0F};
+    float friction{0.0F};
   };
 
   /** @brief Destroys bodies whose entity, components or shape changed. */
@@ -95,6 +97,7 @@ class Physics {
 
   // Last, where its 64-byte alignment adds no padding. One thread per core
   // but one by default
+  // TODO: learn about job systems and how to integrate ours to Jolt's
   JPH::JobSystemThreadPool job_system_{JPH::cMaxPhysicsJobs,
                                        JPH::cMaxPhysicsBarriers};
 };
