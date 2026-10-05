@@ -17,9 +17,11 @@
 #include "ecs/components/selected.h"
 #include "ecs/components/transform.h"
 #include "ecs/core/ecs.h"
+#include "ecs/core/types.h"
 #include "ecs/systems/camera_control.h"
 #include "ecs/systems/lighting_system.h"
 #include "physics/jolt_runtime.h"
+#include "physics/physics_world.h"
 #include "platform/asset_root.h"
 #include "platform/frame_context.h"
 #include "resource/asset_registry.h"
@@ -109,11 +111,13 @@ class Game {
   JoltRuntime jolt_runtime_;
 
   AssetRegistry assets_;
+  PhysicsWorld physics_world_{jolt_runtime_,
+                              static_cast<std::uint32_t>(kMaxEntities)};
   Ecs ecs_;
 
   CameraControl camera_control_;
   SelectionSystem selection_;
-  Physics physics_{jolt_runtime_};
+  Physics physics_;
   LightingSystem lighting_;
   RenderSystem render_;
   UiSystem ui_;
@@ -163,7 +167,7 @@ auto Game::Run() -> int {
     camera_control_.Update(ecs_, ctx);
     // UI runs last, so this is last frame's answer
     selection_.Update(ecs_, assets_, ctx, ui_.WantsMouse());
-    physics_.Update(ecs_, assets_, ctx);
+    physics_.Update(ecs_, physics_world_, assets_, ctx);
     // Frame uniforms must be set before the renderer submits.
     lighting_.Update(ecs_, ctx);
     render_.Update(ecs_, assets_, ctx);

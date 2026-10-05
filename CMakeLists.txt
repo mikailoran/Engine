@@ -85,6 +85,27 @@ set(JPH_USE_VK OFF CACHE BOOL "" FORCE)
 set(JPH_USE_CPU_COMPUTE OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(JoltPhysics)
 
+# --- Physics ----------------------------------------------------------------
+# PhysicsWorld's headers are Jolt-free; PRIVATE keeps Jolt's include paths and
+# JPH_* defines out of every target that links this.
+add_library(engine_physics STATIC
+  src/physics/jolt_runtime.h
+  src/physics/jolt_runtime.cpp
+  src/physics/layers.h
+  src/physics/layers.cpp
+  src/physics/physics_world.h
+  src/physics/physics_world.cpp)
+
+target_include_directories(engine_physics PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(engine_physics PUBLIC bx PRIVATE Jolt)
+target_compile_options(engine_physics PRIVATE -Wall -Wextra -Wpedantic)
+
+set_target_properties(engine_physics PROPERTIES
+  CXX_STANDARD 20
+  CXX_STANDARD_REQUIRED ON
+  CXX_EXTENSIONS OFF
+)
+
 # --- Runtime layout ---------------------------------------------------------
 # Everything loaded at runtime is generated, and it is emitted here, beside the
 # executable. The app then derives its asset root from its own location
@@ -111,10 +132,6 @@ add_executable(engine src/main.cpp
   src/ecs/systems/lighting_system.cpp
   src/ecs/systems/physics_system.h
   src/ecs/systems/physics_system.cpp
-  src/physics/jolt_runtime.h
-  src/physics/jolt_runtime.cpp
-  src/physics/layers.h
-  src/physics/layers.cpp
   src/ecs/systems/render_system.h
   src/ecs/systems/render_system.cpp
   src/ecs/systems/selection_system.h
@@ -138,7 +155,7 @@ add_executable(engine src/main.cpp
 # example-common publicly exposes examples/common plus bgfx, bx and bimg with
 # their include directories, which is what makes "entry/entry.h" resolve.
 target_link_libraries(engine PRIVATE example-common ecs_core engine_math
-  nlohmann_json::nlohmann_json Jolt)
+  engine_physics nlohmann_json::nlohmann_json)
 
 target_compile_options(engine PRIVATE -Wall -Wextra -Wpedantic)
 
