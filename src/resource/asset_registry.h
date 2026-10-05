@@ -1,6 +1,7 @@
 #pragma once
 
 #include <bgfx/bgfx.h>
+#include <bx/bounds.h>
 
 #include <filesystem>
 #include <memory>
@@ -52,6 +53,12 @@ class AssetRegistry {
    * @return Mesh owned by this registry, valid for the registry's lifetime.
    */
   auto GetMesh(MeshHandle handle) const -> const Mesh*;
+
+  /**
+   * @brief Returns the box around all of a mesh's groups, in mesh space.
+   * @param handle Handle from LoadMesh; same preconditions as GetMesh.
+   */
+  [[nodiscard]] auto GetMeshBounds(MeshHandle handle) const -> bx::Aabb;
 
   /**
    * @brief Loads a texture, or returns the handle of one already loaded.

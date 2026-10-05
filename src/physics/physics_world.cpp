@@ -14,12 +14,14 @@
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
 #include <Jolt/Physics/Body/BodyID.h>
 #include <Jolt/Physics/Body/BodyInterface.h>
+#include <Jolt/Physics/Body/BodyManager.h>
 #include <Jolt/Physics/Body/MotionType.h>
 #include <Jolt/Physics/Collision/BroadPhase/BroadPhaseLayer.h>
 #include <Jolt/Physics/Collision/ObjectLayer.h>
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
 #include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
 #include <Jolt/Physics/Collision/Shape/Shape.h>
+#include <Jolt/Physics/Collision/Shape/SphereShape.h>
 #include <Jolt/Physics/Collision/TransformedShape.h>
 #include <Jolt/Physics/EActivation.h>
 #include <Jolt/Physics/EPhysicsUpdateError.h>
@@ -30,8 +32,11 @@
 #include <cassert>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <unordered_map>
+#include <vector>
 
+#include "physics/body_handle.h"
 #include "physics/jolt_runtime.h"
 #include "physics/layers.h"
 
@@ -73,28 +78,32 @@ auto IsZero(const bx::Vec3& v) -> bool {
   return v.x == 0.0F && v.y == 0.0F && v.z == 0.0F;
 }
 
+/** @brief Builds the inner shape of @p desc, centred on the origin. */
+auto MakeCentredShape(const ShapeDesc& desc)
+    -> JPH::ShapeSettings::ShapeResult {
+  if (desc.kind == ShapeKind::kSphere) {
+    assert(desc.radius > 0.0F && "sphere radius must be positive");
+    return JPH::SphereShapeSettings(desc.radius).Create();
+  }
+  // Each half extent must cover the box's rounded edges
+  const JPH::Vec3 half_extent =
+      JPH::Vec3::sMax(ToJolt(desc.half_extents),
+                      JPH::Vec3::sReplicate(JPH::cDefaultConvexRadius));
+  return JPH::BoxShapeSettings(half_extent).Create();
+}
+
 /**
  * @brief Builds the Jolt shape for @p desc.
  * @return The shape, or null if Jolt rejected it.
  */
 auto MakeShape(const ShapeDesc& desc) -> JPH::RefConst<JPH::Shape> {
-  // Each half extent must cover the box's rounded edges
-  const JPH::Vec3 half_extent =
-      JPH::Vec3::sMax(ToJolt(desc.half_extents),
-                      JPH::Vec3::sReplicate(JPH::cDefaultConvexRadius));
-
-  // Stack-owned settings, so mark them embedded for Jolt's ref counting
-  JPH::BoxShapeSettings box(half_extent);
-  box.SetEmbedded();
-  const JPH::RotatedTranslatedShapeSettings offset(
-      ToJolt(desc.offset), JPH::Quat::sIdentity(), &box);
-  offset.SetEmbedded();
-
+  JPH::ShapeSettings::ShapeResult result = MakeCentredShape(desc);
   // Most shapes are centred, which needs no offset wrapper
-  const JPH::ShapeSettings& settings =
-      IsZero(desc.offset) ? static_cast<const JPH::ShapeSettings&>(box)
-                          : offset;
-  const JPH::ShapeSettings::ShapeResult result = settings.Create();
+  if (result.IsValid() && !IsZero(desc.offset)) {
+    result = JPH::RotatedTranslatedShapeSettings(
+                 ToJolt(desc.offset), JPH::Quat::sIdentity(), result.Get())
+                 .Create();
+  }
   assert(result.IsValid() && "Jolt rejected a shape");
   return result.IsValid() ? result.Get() : nullptr;
 }
@@ -165,6 +174,7 @@ auto PhysicsWorld::CreateBody(const BodyDesc& desc) -> BodyHandle {
   settings.mFriction = desc.material.friction;
   settings.mGravityFactor = desc.gravity ? 1.0F : 0.0F;
   settings.mLinearVelocity = ToJolt(desc.velocity);
+  settings.mUserData = desc.user_data;
   // Lets a static body turn dynamic in place
   settings.mAllowDynamicOrKinematic = true;
 
@@ -262,6 +272,30 @@ auto PhysicsWorld::GetPose(BodyHandle body) const -> Pose {
 
 auto PhysicsWorld::GetVelocity(BodyHandle body) const -> bx::Vec3 {
   return ToBx(impl_->system.GetBodyInterface().GetLinearVelocity(ToJolt(body)));
+}
+
+auto PhysicsWorld::UserData(BodyHandle body) const
+    -> std::optional<std::uint64_t> {
+  const JPH::BodyInterface& body_interface = impl_->system.GetBodyInterface();
+  const JPH::BodyID id = ToJolt(body);
+  // A destroyed body's id fails the lock, even if its slot was reused
+  if (!body.IsValid() || !body_interface.IsAdded(id)) {
+    return std::nullopt;
+  }
+  return body_interface.GetUserData(id);
+}
+
+auto PhysicsWorld::Bodies() const -> std::vector<BodyEntry> {
+  JPH::BodyIDVector ids;
+  impl_->system.GetBodies(ids);
+  const JPH::BodyInterface& body_interface = impl_->system.GetBodyInterface();
+  std::vector<BodyEntry> bodies;
+  bodies.reserve(ids.size());
+  for (const JPH::BodyID& id : ids) {
+    bodies.push_back({.body = BodyHandle(id.GetIndexAndSequenceNumber()),
+                      .user_data = body_interface.GetUserData(id)});
+  }
+  return bodies;
 }
 
 void PhysicsWorld::Step(float dt) {

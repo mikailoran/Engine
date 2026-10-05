@@ -4,32 +4,12 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
+#include <vector>
+
+#include "physics/body_handle.h"
 
 class JoltRuntime;
-
-/** @brief Opaque id of a body in a PhysicsWorld. Stale ids never alias. */
-class BodyHandle {
- public:
-  static constexpr std::uint32_t kInvalidHandle = 0xFFFFFFFFU;
-
-  /** @brief Names no body. */
-  BodyHandle() = default;
-
-  /** @brief Wraps a raw id; only PhysicsWorld makes valid ones. */
-  explicit BodyHandle(std::uint32_t value) : value_(value) {}
-
-  /** @brief The raw id, for display and comparison. */
-  [[nodiscard]] auto Value() const -> std::uint32_t { return value_; }
-
-  /** @brief Whether this names a body (it may since have been destroyed). */
-  [[nodiscard]] auto IsValid() const -> bool { return value_ != kInvalidHandle; }
-
-  /** @brief Compares the ids. */
-  auto operator==(const BodyHandle&) const -> bool = default;
-
- private:
-  std::uint32_t value_{kInvalidHandle};
-};
 
 /** @brief A body's position and rotation in world space. */
 struct Pose {
@@ -37,11 +17,18 @@ struct Pose {
   bx::Quaternion rotation{bx::InitIdentity};
 };
 
-/** @brief A box in body space, with any scale already applied. */
+// TODO: Shapes already defined in component collider.h
+/** @brief The kind of a body's shape. */
+enum class ShapeKind : std::uint8_t { kBox, kSphere };
+
+/** @brief A shape in body space, with any scale already applied. */
 struct ShapeDesc {
-  /// Half the box's size on each axis, in m.
+  ShapeKind kind{ShapeKind::kBox};
+  /// kBox only: half the box's size on each axis, in m.
   bx::Vec3 half_extents{0.5F};
-  /// Box centre relative to the body's origin, in m.
+  /// kSphere only: radius in m.
+  float radius{0.5F};
+  /// Shape centre relative to the body's origin, in m.
   bx::Vec3 offset{0.0F};
 };
 
@@ -66,6 +53,14 @@ struct BodyDesc {
   bx::Vec3 velocity{0.0F};
   /// Whether world gravity applies; dynamic bodies only.
   bool gravity{true};
+  /// Caller's tag for the body, returned by Bodies and UserData.
+  std::uint64_t user_data{0};
+};
+
+/** @brief A body in the world and the tag it was created with. */
+struct BodyEntry {
+  BodyHandle body;
+  std::uint64_t user_data{0};
 };
 
 /**
@@ -131,6 +126,16 @@ class PhysicsWorld {
 
   /** @brief Returns @p body's linear velocity in m/s. */
   [[nodiscard]] auto GetVelocity(BodyHandle body) const -> bx::Vec3;
+
+  /**
+   * @brief Returns @p body's tag, or nothing if it no longer exists. Stale
+   * handles are safe to pass.
+   */
+  [[nodiscard]] auto UserData(BodyHandle body) const
+      -> std::optional<std::uint64_t>;
+
+  /** @brief Lists every body; a copy, so destroying while looping is safe. */
+  [[nodiscard]] auto Bodies() const -> std::vector<BodyEntry>;
 
   /** @brief Advances the simulation by exactly @p dt seconds. */
   void Step(float dt);

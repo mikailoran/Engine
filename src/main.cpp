@@ -12,6 +12,7 @@
 #include "ecs/components/camera.h"
 #include "ecs/components/collider.h"
 #include "ecs/components/directional_light.h"
+#include "ecs/components/physics_body.h"
 #include "ecs/components/renderable.h"
 #include "ecs/components/rigid_body.h"
 #include "ecs/components/selected.h"
@@ -131,6 +132,7 @@ Game::Game() {
   ecs_.RegisterComponent<Transform>();
   ecs_.RegisterComponent<RigidBody>();
   ecs_.RegisterComponent<Collider>();
+  ecs_.RegisterComponent<PhysicsBody>();
   ecs_.RegisterComponent<Selected>();
 
   // --- Assets and entities ----------------------------------------------
@@ -167,7 +169,7 @@ auto Game::Run() -> int {
     camera_control_.Update(ecs_, ctx);
     // UI runs last, so this is last frame's answer
     selection_.Update(ecs_, assets_, ctx, ui_.WantsMouse());
-    physics_.Update(ecs_, physics_world_, assets_, ctx);
+    physics_.Update(ecs_, physics_world_, ctx);
     // Frame uniforms must be set before the renderer submits.
     lighting_.Update(ecs_, ctx);
     render_.Update(ecs_, assets_, ctx);

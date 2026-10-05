@@ -89,6 +89,7 @@ FetchContent_MakeAvailable(JoltPhysics)
 # PhysicsWorld's headers are Jolt-free; PRIVATE keeps Jolt's include paths and
 # JPH_* defines out of every target that links this.
 add_library(engine_physics STATIC
+  src/physics/body_handle.h
   src/physics/jolt_runtime.h
   src/physics/jolt_runtime.cpp
   src/physics/layers.h
@@ -121,6 +122,7 @@ set(ENGINE_RUNTIME_DIR ${CMAKE_BINARY_DIR})
 add_executable(engine src/main.cpp
   src/ecs/components/camera.h
   src/ecs/components/collider.h
+  src/ecs/components/physics_body.h
   src/ecs/components/renderable.h
   src/ecs/components/directional_light.h
   src/ecs/components/rigid_body.h
