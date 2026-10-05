@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "physics/body_handle.h"
+#include "physics/shape.h"
 
 class JoltRuntime;
 
@@ -17,29 +18,6 @@ struct Pose {
   bx::Quaternion rotation{bx::InitIdentity};
 };
 
-// TODO: Shapes already defined in component collider.h
-/** @brief The kind of a body's shape. */
-enum class ShapeKind : std::uint8_t { kBox, kSphere };
-
-/** @brief A shape in body space, with any scale already applied. */
-struct ShapeDesc {
-  ShapeKind kind{ShapeKind::kBox};
-  /// kBox only: half the box's size on each axis, in m.
-  bx::Vec3 half_extents{0.5F};
-  /// kSphere only: radius in m.
-  float radius{0.5F};
-  /// Shape centre relative to the body's origin, in m.
-  bx::Vec3 offset{0.0F};
-};
-
-/** @brief How a body's surface responds to contact. */
-struct Material {
-  /// Bounciness from 0 to 1. A contact uses the higher of its two bodies'.
-  float restitution{0.0F};
-  /// Sliding resistance, 0 or more. A contact uses sqrt(a * b) of its pair's.
-  float friction{0.2F};
-};
-
 /** @brief Whether a body moves under forces and collisions. */
 enum class Motion : std::uint8_t { kStatic, kDynamic };
 
@@ -47,6 +25,8 @@ enum class Motion : std::uint8_t { kStatic, kDynamic };
 struct BodyDesc {
   ShapeDesc shape;
   Pose pose;
+  /// Applied to the shape: sizes and offset scale per axis.
+  bx::Vec3 scale{1.0F};
   Motion motion{Motion::kStatic};
   Material material;
   /// Initial linear velocity in m/s; dynamic bodies only.
@@ -100,8 +80,11 @@ class PhysicsWorld {
   /** @brief Teleports @p body, waking what touched its old and new place. */
   void SetPose(BodyHandle body, const Pose& pose);
 
-  /** @brief Reshapes @p body in place, keeping its id and velocity. */
-  void SetShape(BodyHandle body, const ShapeDesc& shape);
+  /**
+   * @brief Reshapes @p body in place, keeping its id and velocity.
+   * @param scale Applied to @p shape: sizes and offset scale per axis.
+   */
+  void SetShape(BodyHandle body, const ShapeDesc& shape, const bx::Vec3& scale);
 
   /** @brief Changes @p body's surface response, waking what touches it. */
   void SetMaterial(BodyHandle body, const Material& material);

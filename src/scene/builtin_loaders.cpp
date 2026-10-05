@@ -14,6 +14,7 @@
 #include "ecs/core/ecs.h"
 #include "ecs/core/types.h"
 #include "math/rotation.h"
+#include "physics/shape.h"
 #include "resource/asset_registry.h"
 #include "scene/json_read.h"
 #include "scene/scene_loader.h"
@@ -97,51 +98,52 @@ void LoadDirectionalLight(const json& data, Entity entity, Ecs& ecs,
  * @brief Reads a Collider's optional "shape" ("box" or "sphere"), its size
  * ("half_extents" for a box, "radius" for a sphere) and "offset".
  */
-void ReadColliderShape(const json& data, Collider& collider) {
+void ReadShapeKind(const json& data, Collider& collider) {
   // TODO: Who defines default values?
   if (data.contains("shape")) {
     const auto shape = data.at("shape").get<std::string>();
     if (shape != "box" && shape != "sphere") {
       throw std::runtime_error(R"(shape must be "box" or "sphere")");
     }
-    collider.shape =
-        shape == "sphere" ? ColliderShape::kSphere : ColliderShape::kBox;
+    collider.shape.kind =
+        shape == "sphere" ? ShapeKind::kSphere : ShapeKind::kBox;
   }
-  const bool sphere = collider.shape == ColliderShape::kSphere;
+  const bool sphere = collider.shape.kind == ShapeKind::kSphere;
   // A size for the other shape is a typo, not something to ignore
   if (data.contains(sphere ? "half_extents" : "radius")) {
     throw std::runtime_error(sphere ? R"(half_extents needs shape "box")"
                                     : R"(radius needs shape "sphere")");
   }
   if (data.contains("half_extents")) {
-    collider.half_extents = ReadVec3(data.at("half_extents"));
-    const bx::Vec3& half = collider.half_extents;
+    collider.shape.half_extents = ReadVec3(data.at("half_extents"));
+    const bx::Vec3& half = collider.shape.half_extents;
     if (half.x <= 0.0F || half.y <= 0.0F || half.z <= 0.0F) {
       throw std::runtime_error("half_extents must be positive");
     }
   }
   if (data.contains("radius")) {
-    collider.radius = data.at("radius").get<float>();
-    if (collider.radius <= 0.0F) {
+    collider.shape.radius = data.at("radius").get<float>();
+    if (collider.shape.radius <= 0.0F) {
       throw std::runtime_error("radius must be positive");
     }
   }
   if (data.contains("offset")) {
-    collider.offset = ReadVec3(data.at("offset"));
+    collider.shape.offset = ReadVec3(data.at("offset"));
   }
 }
 
 /** @brief Reads a Collider's optional "restitution" and "friction". */
 void ReadColliderMaterial(const json& data, Collider& collider) {
   if (data.contains("restitution")) {
-    collider.restitution = data.at("restitution").get<float>();
-    if (collider.restitution < 0.0F || collider.restitution > 1.0F) {
+    collider.material.restitution = data.at("restitution").get<float>();
+    if (collider.material.restitution < 0.0F ||
+        collider.material.restitution > 1.0F) {
       throw std::runtime_error("restitution must be within [0, 1]");
     }
   }
   if (data.contains("friction")) {
-    collider.friction = data.at("friction").get<float>();
-    if (collider.friction < 0.0F) {
+    collider.material.friction = data.at("friction").get<float>();
+    if (collider.material.friction < 0.0F) {
       throw std::runtime_error("friction must not be negative");
     }
   }
@@ -156,7 +158,7 @@ void LoadCollider(const json& data, Entity entity, Ecs& ecs,
   CheckKeys(data, {"shape", "half_extents", "radius", "offset", "restitution",
                    "friction"});
   Collider collider{};
-  ReadColliderShape(data, collider);
+  ReadShapeKind(data, collider);
   ReadColliderMaterial(data, collider);
   ecs.AddComponent(entity, collider);
 }

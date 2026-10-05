@@ -22,6 +22,7 @@
 #include "ecs/core/ecs.h"
 #include "ecs/core/types.h"
 #include "math/rotation.h"
+#include "physics/shape.h"
 #include "platform/frame_context.h"
 #include "resource/asset_registry.h"
 #include "resource/mesh_handle.h"
@@ -44,24 +45,25 @@ auto SpawnEntity(Ecs& ecs, AssetRegistry& assets) -> Entity {
 }
 
 /** @brief Draws a Collider's shape picker and the size fields it uses. */
-auto DrawColliderShape(Collider& collider) -> void {
+auto DrawShapeKind(Collider& collider) -> void {
   constexpr std::array<const char*, 2> kShapeNames{"Box", "Sphere"};
-  int shape = static_cast<int>(collider.shape);
+  int shape = static_cast<int>(collider.shape.kind);
   if (ImGui::Combo("Shape", &shape, kShapeNames.data(),
                    static_cast<int>(kShapeNames.size()))) {
-    collider.shape = static_cast<ColliderShape>(shape);
+    collider.shape.kind = static_cast<ShapeKind>(shape);
   }
   // A zero size is a degenerate shape Jolt rejects
-  if (collider.shape == ColliderShape::kBox) {
-    ImGui::DragFloat3("Half Extents", &collider.half_extents.x, 0.05F, 0.01F,
-                      std::numeric_limits<float>::max(), "%.2f",
+  if (collider.shape.kind == ShapeKind::kBox) {
+    ImGui::DragFloat3("Half Extents", &collider.shape.half_extents.x, 0.05F,
+                      0.01F, std::numeric_limits<float>::max(), "%.2f",
                       ImGuiSliderFlags_AlwaysClamp);
   } else {
-    ImGui::DragFloat("Radius", &collider.radius, 0.05F, 0.01F,
+    ImGui::DragFloat("Radius", &collider.shape.radius, 0.05F, 0.01F,
                      std::numeric_limits<float>::max(), "%.2f",
                      ImGuiSliderFlags_AlwaysClamp);
   }
-  ImGui::DragFloat3("Offset", &collider.offset.x, 0.05F, 0.0F, 0.0F, "%.2f");
+  ImGui::DragFloat3("Offset", &collider.shape.offset.x, 0.05F, 0.0F, 0.0F,
+                    "%.2f");
 }
 
 /**
@@ -147,11 +149,11 @@ auto DrawInspector(Ecs& ecs, AssetRegistry& assets) -> void {
         });
     DrawComponent<Collider>(
         ecs, entity, "Collider", [&ecs, entity](Collider& collider) -> void {
-          DrawColliderShape(collider);
-          ImGui::DragFloat("Restitution", &collider.restitution, 0.1F, 0.0F,
+          DrawShapeKind(collider);
+          ImGui::DragFloat("Restitution", &collider.material.restitution, 0.1F,
+                           0.0F, 1.0F, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+          ImGui::DragFloat("Friction", &collider.material.friction, 0.1F, 0.0F,
                            1.0F, "%.1f", ImGuiSliderFlags_AlwaysClamp);
-          ImGui::DragFloat("Friction", &collider.friction, 0.1F, 0.0F, 1.0F,
-                           "%.1f", ImGuiSliderFlags_AlwaysClamp);
           // Read-only: PhysicsSystem owns the link to the body
           const auto* link = ecs.TryGetComponent<PhysicsLink>(entity);
           const std::string body =

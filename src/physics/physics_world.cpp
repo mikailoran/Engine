@@ -29,6 +29,7 @@
 #include <Jolt/Physics/PhysicsSystem.h>
 #include <bx/math.h>
 
+#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -39,6 +40,7 @@
 #include "physics/body_handle.h"
 #include "physics/jolt_runtime.h"
 #include "physics/layers.h"
+#include "physics/shape.h"
 
 namespace {
 
@@ -92,11 +94,24 @@ auto MakeCentredShape(const ShapeDesc& desc)
   return JPH::BoxShapeSettings(half_extent).Create();
 }
 
+/** @brief @p desc with @p scale applied to its sizes and offset. */
+auto Scaled(const ShapeDesc& desc, const bx::Vec3& scale) -> ShapeDesc {
+  const bx::Vec3 size = bx::abs(scale);
+  ShapeDesc scaled = desc;
+  scaled.half_extents = bx::mul(desc.half_extents, size);
+  // Spheres cannot stretch, so the largest axis wins
+  scaled.radius = desc.radius * std::max({size.x, size.y, size.z});
+  scaled.offset = bx::mul(desc.offset, scale);
+  return scaled;
+}
+
 /**
- * @brief Builds the Jolt shape for @p desc.
+ * @brief Builds the Jolt shape for @p desc at @p scale.
  * @return The shape, or null if Jolt rejected it.
  */
-auto MakeShape(const ShapeDesc& desc) -> JPH::RefConst<JPH::Shape> {
+auto MakeShape(const ShapeDesc& unscaled, const bx::Vec3& scale)
+    -> JPH::RefConst<JPH::Shape> {
+  const ShapeDesc desc = Scaled(unscaled, scale);
   JPH::ShapeSettings::ShapeResult result = MakeCentredShape(desc);
   // Most shapes are centred, which needs no offset wrapper
   if (result.IsValid() && !IsZero(desc.offset)) {
@@ -160,7 +175,7 @@ PhysicsWorld::PhysicsWorld(const JoltRuntime& /*runtime*/,
 PhysicsWorld::~PhysicsWorld() = default;
 
 auto PhysicsWorld::CreateBody(const BodyDesc& desc) -> BodyHandle {
-  const auto shape = MakeShape(desc.shape);
+  const auto shape = MakeShape(desc.shape, desc.scale);
   if (!shape) {
     return {};
   }
@@ -206,8 +221,9 @@ void PhysicsWorld::SetPose(BodyHandle body, const Pose& pose) {
   WakeTouching(body_interface, id);
 }
 
-void PhysicsWorld::SetShape(BodyHandle body, const ShapeDesc& shape) {
-  const auto jolt_shape = MakeShape(shape);
+void PhysicsWorld::SetShape(BodyHandle body, const ShapeDesc& shape,
+                            const bx::Vec3& scale) {
+  const auto jolt_shape = MakeShape(shape, scale);
   if (!jolt_shape) {
     return;
   }

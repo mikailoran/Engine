@@ -25,6 +25,7 @@
 #include "physics/body_handle.h"
 #include "physics/jolt_runtime.h"
 #include "physics/physics_world.h"
+#include "physics/shape.h"
 #include "platform/frame_context.h"
 
 namespace {
@@ -42,15 +43,15 @@ auto At(const bx::Vec3& position,
 
 /** @brief @p collider with its restitution replaced. */
 auto WithRestitution(Collider collider, float restitution) -> Collider {
-  collider.restitution = restitution;
+  collider.material.restitution = restitution;
   return collider;
 }
 
 /** @brief A sphere Collider of @p radius, before scale. */
 auto Sphere(float radius) -> Collider {
   Collider collider{};
-  collider.shape = ColliderShape::kSphere;
-  collider.radius = radius;
+  collider.shape.kind = ShapeKind::kSphere;
+  collider.shape.radius = radius;
   return collider;
 }
 
@@ -486,9 +487,10 @@ TEST(Physics, ScaleEditReshapesTheSameBody) {
 
 /** @brief A grippy small box asleep on the ramp. @return The box. */
 auto SleepingBoxOnRamp(PhysicsHarness& scene, Entity ramp) -> Entity {
-  scene.Get<Collider>(ramp).restitution = 0.0F;
+  scene.Get<Collider>(ramp).material.restitution = 0.0F;
   Collider grippy = WithRestitution(Collider{}, 0.0F);
-  grippy.friction = 10.0F;  // sqrt(10 * 0.2) = 1.4 > tan(15 deg): holds
+  grippy.material.friction =
+      10.0F;  // sqrt(10 * 0.2) = 1.4 > tan(15 deg): holds
   const Entity box =
       scene.AddDynamic(At({0.0F, 3.0F, 14.0F}, bx::Quaternion{bx::InitIdentity},
                           {0.5F, 0.5F, 0.5F}),
@@ -505,7 +507,7 @@ TEST(Physics, StaticFrictionEditWakesWhatRestsOnIt) {
   scene.Run(30);
   ASSERT_LT(bx::distance(rest, scene.Get<Transform>(box).position), 1e-4F);
 
-  scene.Get<Collider>(ramp).friction = 0.0F;
+  scene.Get<Collider>(ramp).material.friction = 0.0F;
   scene.Run(30);
   EXPECT_GT(bx::distance(rest, scene.Get<Transform>(box).position), 0.05F);
 }
@@ -516,7 +518,7 @@ TEST(Physics, DynamicFrictionEditWakesTheBody) {
   const Entity box = SleepingBoxOnRamp(scene, ramp);
   const bx::Vec3 rest = scene.Get<Transform>(box).position;
 
-  scene.Get<Collider>(box).friction = 0.0F;
+  scene.Get<Collider>(box).material.friction = 0.0F;
   scene.Run(30);
   EXPECT_GT(bx::distance(rest, scene.Get<Transform>(box).position), 0.05F);
 }

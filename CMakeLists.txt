@@ -95,6 +95,7 @@ add_library(engine_physics STATIC
   src/physics/layers.h
   src/physics/layers.cpp
   src/physics/physics_world.h
+  src/physics/shape.h
   src/physics/physics_world.cpp)
 
 target_include_directories(engine_physics PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)

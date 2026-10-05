@@ -16,6 +16,7 @@
 #include "ecs/core/types.h"
 #include "physics/body_handle.h"
 #include "physics/physics_world.h"
+#include "physics/shape.h"
 #include "platform/frame_context.h"
 
 namespace {
@@ -30,37 +31,20 @@ auto Same(const bx::Quaternion& a, const bx::Quaternion& b) -> bool {
   return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
 }
 
-/** @brief Tests whether two Colliders describe the same shape. */
-auto SameShape(const Collider& a, const Collider& b) -> bool {
-  return a.shape == b.shape && Same(a.half_extents, b.half_extents) &&
+/** @brief Tests whether two shapes are identical. */
+auto Same(const ShapeDesc& a, const ShapeDesc& b) -> bool {
+  return a.kind == b.kind && Same(a.half_extents, b.half_extents) &&
          a.radius == b.radius && Same(a.offset, b.offset);
+}
+
+/** @brief Tests whether two materials are identical. */
+auto Same(const Material& a, const Material& b) -> bool {
+  return a.restitution == b.restitution && a.friction == b.friction;
 }
 
 /** @brief The tag a body carries to name its entity. */
 auto Tag(Entity entity) -> std::uint64_t {
   return static_cast<std::uint64_t>(entity);
-}
-
-/** @brief @p collider's shape at @p scale, in body space. */
-auto ShapeOf(const Collider& collider, const bx::Vec3& scale) -> ShapeDesc {
-  const bx::Vec3 size = bx::abs(scale);
-  const bx::Vec3 offset = bx::mul(collider.offset, scale);
-  if (collider.shape == ColliderShape::kSphere) {
-    // Spheres cannot stretch, so the largest axis wins
-    return {.kind = ShapeKind::kSphere,
-            .half_extents = bx::Vec3{0.0F},
-            .radius = collider.radius * std::max({size.x, size.y, size.z}),
-            .offset = offset};
-  }
-  return {.kind = ShapeKind::kBox,
-          .half_extents = bx::mul(collider.half_extents, size),
-          .radius = 0.0F,
-          .offset = offset};
-}
-
-/** @brief The surface response @p collider asks for. */
-auto MaterialOf(const Collider& collider) -> Material {
-  return {.restitution = collider.restitution, .friction = collider.friction};
 }
 
 /**
@@ -119,11 +103,12 @@ void AttachBodies(Ecs& ecs, PhysicsWorld& world) {
     const bool dynamic = rigid_body != nullptr;
 
     const BodyHandle body = world.CreateBody(
-        BodyDesc{.shape = ShapeOf(collider, transform.scale),
+        BodyDesc{.shape = collider.shape,
                  .pose = {.position = transform.position,
                           .rotation = transform.rotation},
+                 .scale = transform.scale,
                  .motion = dynamic ? Motion::kDynamic : Motion::kStatic,
-                 .material = MaterialOf(collider),
+                 .material = collider.material,
                  .velocity = dynamic ? rigid_body->velocity : bx::Vec3{0.0F},
                  .gravity = dynamic && rigid_body->has_gravity,
                  .user_data = Tag(entity)});
@@ -186,13 +171,12 @@ void PushEdits(Ecs& ecs, PhysicsWorld& world) {
           world.SetPose(link.body, {.position = transform.position,
                                     .rotation = transform.rotation});
         }
-        if (!SameShape(collider, link.collider) ||
+        if (!Same(collider.shape, link.collider.shape) ||
             !Same(transform.scale, link.transform.scale)) {
-          world.SetShape(link.body, ShapeOf(collider, transform.scale));
+          world.SetShape(link.body, collider.shape, transform.scale);
         }
-        if (collider.restitution != link.collider.restitution ||
-            collider.friction != link.collider.friction) {
-          world.SetMaterial(link.body, MaterialOf(collider));
+        if (!Same(collider.material, link.collider.material)) {
+          world.SetMaterial(link.body, collider.material);
         }
         PushMotion(world, link, ecs.TryGetComponent<RigidBody>(entity));
         link.transform = transform;
