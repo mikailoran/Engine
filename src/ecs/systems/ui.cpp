@@ -157,7 +157,8 @@ auto DrawInspector(Ecs& ecs, AssetRegistry& assets) -> void {
           // Read-only: PhysicsSystem owns the link to the body
           const auto* link = ecs.TryGetComponent<PhysicsLink>(entity);
           const std::string body =
-              link == nullptr ? "none" : std::format("{}", link->body.Value());
+              link == nullptr ? "none"
+                              : std::format("{}", link->Body().Value());
           ImGui::TextUnformatted(std::format("Body: {}", body).c_str());
         });
     DrawComponent<Renderable>(

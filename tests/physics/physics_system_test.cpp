@@ -201,18 +201,18 @@ TEST(Physics, RemovingRigidBodyKeepsTheBodyButMakesItStatic) {
   PhysicsHarness scene;
   const Entity box = scene.AddDynamic(At({0.0F, 5.0F, 0.0F}));
   scene.Run(1);
-  const BodyHandle body = scene.Get<PhysicsLink>(box).body;
+  const BodyHandle body = scene.Get<PhysicsLink>(box).Body();
 
   scene.Entities().RemoveComponent<RigidBody>(box);
   scene.Run(1);
   const float static_y = scene.Get<Transform>(box).position.y;
   scene.Run(30);
-  EXPECT_EQ(scene.Get<PhysicsLink>(box).body, body);
+  EXPECT_EQ(scene.Get<PhysicsLink>(box).Body(), body);
   EXPECT_EQ(scene.Get<Transform>(box).position.y, static_y);
 
   scene.Entities().AddComponent(box, RigidBody{});
   scene.Run(30);
-  EXPECT_EQ(scene.Get<PhysicsLink>(box).body, body);
+  EXPECT_EQ(scene.Get<PhysicsLink>(box).Body(), body);
   EXPECT_LT(scene.Get<Transform>(box).position.y, static_y - 0.5F);
 }
 
@@ -222,12 +222,12 @@ TEST(Physics, SameFrameColliderSwapKeepsBodyAndTakesNewShape) {
   const Entity box = scene.AddDynamic(At({0.0F, 0.5F, 0.0F}),
                                       WithRestitution(Collider{}, 0.0F));
   scene.Run(60);
-  const BodyHandle body = scene.Get<PhysicsLink>(box).body;
+  const BodyHandle body = scene.Get<PhysicsLink>(box).Body();
 
   scene.Entities().RemoveComponent<Collider>(box);
   scene.Entities().AddComponent(box, WithRestitution(Sphere(1.0F), 0.0F));
   scene.Run(120);
-  EXPECT_EQ(scene.Get<PhysicsLink>(box).body, body);
+  EXPECT_EQ(scene.Get<PhysicsLink>(box).Body(), body);
   // Now a radius 1 sphere, so it rests a unit above the floor
   EXPECT_NEAR(scene.Get<Transform>(box).position.y, 1.0F, 0.03F);
 }
@@ -236,7 +236,7 @@ TEST(Physics, ReusedEntityIdGetsAFreshBody) {
   PhysicsHarness scene;
   const Entity doomed = scene.AddDynamic(At({3.0F, 4.0F, 3.0F}));
   scene.Run(1);
-  const BodyHandle old_body = scene.Get<PhysicsLink>(doomed).body;
+  const BodyHandle old_body = scene.Get<PhysicsLink>(doomed).Body();
   scene.Entities().DestroyEntity(doomed);
   scene.Entities().Flush();
 
@@ -256,7 +256,7 @@ TEST(Physics, ReusedEntityIdGetsAFreshBody) {
   }
   scene.Run(1);
 
-  EXPECT_NE(scene.Get<PhysicsLink>(reused).body, old_body);
+  EXPECT_NE(scene.Get<PhysicsLink>(reused).Body(), old_body);
   EXPECT_EQ(scene.Get<Transform>(reused).position.x, -5.0F);
   EXPECT_EQ(scene.BodyCount(), 1U);
 }
@@ -266,14 +266,14 @@ TEST(Physics, CopiedLinkGetsItsOwnBody) {
   scene.AddFloor();
   const Entity original = scene.AddDynamic(At({-14.0F, 0.5F, -4.0F}));
   scene.Run(1);
-  const BodyHandle body = scene.Get<PhysicsLink>(original).body;
+  const BodyHandle body = scene.Get<PhysicsLink>(original).Body();
 
   const Entity copy = scene.AddStatic(At({14.0F, 4.0F, 14.0F}));
   scene.Entities().AddComponent(copy, scene.Get<PhysicsLink>(original));
   scene.Run(2);
 
-  EXPECT_EQ(scene.Get<PhysicsLink>(original).body, body);
-  EXPECT_NE(scene.Get<PhysicsLink>(copy).body, body);
+  EXPECT_EQ(scene.Get<PhysicsLink>(original).Body(), body);
+  EXPECT_NE(scene.Get<PhysicsLink>(copy).Body(), body);
   EXPECT_NEAR(scene.Get<Transform>(original).position.x, -14.0F, 0.01F);
   EXPECT_EQ(scene.BodyCount(), scene.LinkCount());
 }
@@ -475,11 +475,11 @@ TEST(Physics, ScaleEditReshapesTheSameBody) {
                                       WithRestitution(Collider{}, 0.0F));
   scene.Run(180);
   const float rest_y = scene.Get<Transform>(box).position.y;
-  const BodyHandle body = scene.Get<PhysicsLink>(box).body;
+  const BodyHandle body = scene.Get<PhysicsLink>(box).Body();
 
   scene.Get<Transform>(box).scale = {2.0F, 2.0F, 2.0F};
   scene.Run(180);
-  EXPECT_EQ(scene.Get<PhysicsLink>(box).body, body);
+  EXPECT_EQ(scene.Get<PhysicsLink>(box).Body(), body);
   EXPECT_NEAR(scene.Get<Transform>(box).position.y, 2.0F * rest_y, 0.05F);
 }
 

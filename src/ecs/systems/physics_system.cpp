@@ -47,36 +47,29 @@ auto Tag(Entity entity) -> std::uint64_t {
   return static_cast<std::uint64_t>(entity);
 }
 
-/**
- * @brief Destroys bodies that no PhysicsLink points to: their entity was
- * destroyed, or its id was reused by an entity not yet given a body.
- */
-void SweepOrphans(Ecs& ecs, PhysicsWorld& world) {
+}  // namespace
+
+void PhysicsSystem::SweepOrphans(Ecs& ecs, PhysicsWorld& world) {
   for (const BodyEntry& entry : world.Bodies()) {
     const auto* link =
         ecs.TryGetComponent<PhysicsLink>(static_cast<Entity>(entry.user_data));
-    if (link == nullptr || link->body != entry.body) {
+    if (link == nullptr || link->body_ != entry.body) {
       world.DestroyBody(entry.body);
     }
   }
 }
 
-/**
- * @brief Unlinks entities that lost their Collider or Transform, destroying
- * their bodies. Also drops a PhysicsLink that does not own its body, such as
- * a copy, so the entity gets its own.
- */
-void DetachBodies(Ecs& ecs, PhysicsWorld& world) {
+void PhysicsSystem::DetachBodies(Ecs& ecs, PhysicsWorld& world) {
   std::vector<Entity> unlinked;
   ecs.View<PhysicsLink>().ForEach(
       [&](Entity entity, const PhysicsLink& link) -> void {
-        const bool owns = world.UserData(link.body) == Tag(entity);
+        const bool owns = world.UserData(link.body_) == Tag(entity);
         if (owns && ecs.HasComponent<Collider>(entity) &&
             ecs.HasComponent<Transform>(entity)) {
           return;
         }
         if (owns) {
-          world.DestroyBody(link.body);
+          world.DestroyBody(link.body_);
         }
         unlinked.push_back(entity);
       });
@@ -86,8 +79,7 @@ void DetachBodies(Ecs& ecs, PhysicsWorld& world) {
   }
 }
 
-/** @brief Creates a body for each Collider and Transform entity without one. */
-void AttachBodies(Ecs& ecs, PhysicsWorld& world) {
+void PhysicsSystem::AttachBodies(Ecs& ecs, PhysicsWorld& world) {
   std::vector<Entity> unlinked;
   ecs.View<Collider, Transform>().ForEach(
       [&](Entity entity, const Collider&, const Transform&) -> void {
@@ -118,91 +110,77 @@ void AttachBodies(Ecs& ecs, PhysicsWorld& world) {
     if (dynamic) {
       world.SetAcceleration(body, rigid_body->acceleration);
     }
-    ecs.AddComponent(
-        entity, PhysicsLink{.body = body,
-                            .transform = transform,
-                            .collider = collider,
-                            .rigid_body = dynamic ? std::optional(*rigid_body)
-                                                  : std::nullopt});
+    ecs.AddComponent(entity, PhysicsLink(body, transform, collider,
+                                         dynamic ? std::optional(*rigid_body)
+                                                 : std::nullopt));
   }
 }
 
-/**
- * @brief Pushes RigidBody edits; adding or removing one switches the body
- * between static and dynamic. @p rigid_body is null when absent.
- */
-void PushMotion(PhysicsWorld& world, PhysicsLink& link,
-                const RigidBody* rigid_body) {
+void PhysicsSystem::PushMotion(PhysicsWorld& world, PhysicsLink& link,
+                               const RigidBody* rigid_body) {
   const bool dynamic = rigid_body != nullptr;
-  if (dynamic != link.rigid_body.has_value()) {
-    world.SetMotion(link.body, dynamic ? Motion::kDynamic : Motion::kStatic);
+  if (dynamic != link.rigid_body_.has_value()) {
+    world.SetMotion(link.body_, dynamic ? Motion::kDynamic : Motion::kStatic);
     if (dynamic) {
       // Static bodies hold no gravity, velocity or acceleration
-      world.SetGravityEnabled(link.body, rigid_body->has_gravity);
-      world.SetVelocity(link.body, rigid_body->velocity);
-      world.SetAcceleration(link.body, rigid_body->acceleration);
+      world.SetGravityEnabled(link.body_, rigid_body->has_gravity);
+      world.SetVelocity(link.body_, rigid_body->velocity);
+      world.SetAcceleration(link.body_, rigid_body->acceleration);
     }
   } else if (dynamic) {
-    const RigidBody& synced = *link.rigid_body;
+    const RigidBody& synced = *link.rigid_body_;
     if (!Same(rigid_body->velocity, synced.velocity)) {
-      world.SetVelocity(link.body, rigid_body->velocity);
+      world.SetVelocity(link.body_, rigid_body->velocity);
     }
     if (rigid_body->has_gravity != synced.has_gravity) {
-      world.SetGravityEnabled(link.body, rigid_body->has_gravity);
+      world.SetGravityEnabled(link.body_, rigid_body->has_gravity);
     }
     if (!Same(rigid_body->acceleration, synced.acceleration)) {
-      world.SetAcceleration(link.body, rigid_body->acceleration);
+      world.SetAcceleration(link.body_, rigid_body->acceleration);
     }
   }
-  link.rigid_body =
+  link.rigid_body_ =
       dynamic ? std::optional(*rigid_body) : std::optional<RigidBody>{};
 }
 
-/**
- * @brief Pushes edits made outside physics into each body, then refreshes the
- * link's copies to match.
- */
-void PushEdits(Ecs& ecs, PhysicsWorld& world) {
+void PhysicsSystem::PushEdits(Ecs& ecs, PhysicsWorld& world) {
   ecs.View<PhysicsLink, Collider, Transform>().ForEach(
       [&](Entity entity, PhysicsLink& link, const Collider& collider,
           const Transform& transform) -> void {
-        if (!Same(transform.position, link.transform.position) ||
-            !Same(transform.rotation, link.transform.rotation)) {
-          world.SetPose(link.body, {.position = transform.position,
-                                    .rotation = transform.rotation});
+        if (!Same(transform.position, link.transform_.position) ||
+            !Same(transform.rotation, link.transform_.rotation)) {
+          world.SetPose(link.body_, {.position = transform.position,
+                                     .rotation = transform.rotation});
         }
-        if (!Same(collider.shape, link.collider.shape) ||
-            !Same(transform.scale, link.transform.scale)) {
-          world.SetShape(link.body, collider.shape, transform.scale);
+        if (!Same(collider.shape, link.collider_.shape) ||
+            !Same(transform.scale, link.transform_.scale)) {
+          world.SetShape(link.body_, collider.shape, transform.scale);
         }
-        if (!Same(collider.material, link.collider.material)) {
-          world.SetMaterial(link.body, collider.material);
+        if (!Same(collider.material, link.collider_.material)) {
+          world.SetMaterial(link.body_, collider.material);
         }
         PushMotion(world, link, ecs.TryGetComponent<RigidBody>(entity));
-        link.transform = transform;
-        link.collider = collider;
+        link.transform_ = transform;
+        link.collider_ = collider;
       });
 }
 
-/** @brief Copies dynamic bodies' poses and velocities back to the ECS. */
-void PullResults(Ecs& ecs, const PhysicsWorld& world) {
+void PhysicsSystem::PullResults(Ecs& ecs, const PhysicsWorld& world) {
   ecs.View<PhysicsLink, Transform>().ForEach(
       [&](Entity entity, PhysicsLink& link, Transform& transform) -> void {
         auto* rigid_body = ecs.TryGetComponent<RigidBody>(entity);
-        if (!link.rigid_body.has_value() || rigid_body == nullptr) {
+        if (!link.rigid_body_.has_value() || rigid_body == nullptr) {
           return;
         }
-        const Pose pose = world.GetPose(link.body);
+        const Pose pose = world.GetPose(link.body_);
         transform.position = pose.position;
         transform.rotation = pose.rotation;
-        rigid_body->velocity = world.GetVelocity(link.body);
+        rigid_body->velocity = world.GetVelocity(link.body_);
 
-        link.transform = transform;
-        link.rigid_body->velocity = rigid_body->velocity;
+        link.transform_ = transform;
+        link.rigid_body_->velocity = rigid_body->velocity;
       });
 }
-
-}  // namespace
 
 void PhysicsSystem::Update(Ecs& ecs, PhysicsWorld& world,
                            const FrameContext& ctx) {

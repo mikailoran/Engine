@@ -1,8 +1,10 @@
 #pragma once
 
 class Ecs;
+class PhysicsLink;
 class PhysicsWorld;
 struct FrameContext;
+struct RigidBody;
 
 /**
  * @brief Keeps a PhysicsWorld body for every entity with a Collider and a
@@ -28,6 +30,41 @@ class PhysicsSystem {
   void Update(Ecs& ecs, PhysicsWorld& world, const FrameContext& ctx);
 
  private:
+  // Static: steps reach PhysicsLink's privates through this class's friendship
+
+  /**
+   * @brief Destroys bodies that no PhysicsLink points to: their entity was
+   * destroyed, or its id was reused by an entity not yet given a body.
+   */
+  static void SweepOrphans(Ecs& ecs, PhysicsWorld& world);
+
+  /**
+   * @brief Unlinks entities that lost their Collider or Transform, destroying
+   * their bodies. Also drops a PhysicsLink that does not own its body, such as
+   * a copy, so the entity gets its own.
+   */
+  static void DetachBodies(Ecs& ecs, PhysicsWorld& world);
+
+  /** @brief Creates a body for each Collider and Transform entity without one.
+   */
+  static void AttachBodies(Ecs& ecs, PhysicsWorld& world);
+
+  /**
+   * @brief Pushes edits made outside physics into each body, then refreshes the
+   * link's copies to match.
+   */
+  static void PushEdits(Ecs& ecs, PhysicsWorld& world);
+
+  /**
+   * @brief Pushes RigidBody edits; adding or removing one switches the body
+   * between static and dynamic. @p rigid_body is null when absent.
+   */
+  static void PushMotion(PhysicsWorld& world, PhysicsLink& link,
+                         const RigidBody* rigid_body);
+
+  /** @brief Copies dynamic bodies' poses and velocities back to the ECS. */
+  static void PullResults(Ecs& ecs, const PhysicsWorld& world);
+
   /// Simulation step length, in seconds (60 Hz).
   static constexpr float kFixedDt = 1.0F / 60.0F;
 
