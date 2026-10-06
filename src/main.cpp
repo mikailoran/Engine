@@ -20,6 +20,7 @@
 #include "ecs/core/ecs.h"
 #include "ecs/core/types.h"
 #include "ecs/systems/camera_control.h"
+#include "ecs/systems/debug_draw_system.h"
 #include "ecs/systems/lighting_system.h"
 #include "ecs/systems/physics_system.h"
 #include "ecs/systems/render_system.h"
@@ -119,6 +120,7 @@ class Game {
   SelectionSystem selection_;
   PhysicsSystem physics_system_;
   LightingSystem lighting_;
+  DebugDrawSystem debug_draw_;
   RenderSystem render_;
   UiSystem ui_;
 };
@@ -140,6 +142,7 @@ Game::Game() {
   ecs_.AddComponent(camera_entity, Camera{});
   camera_control_.SetCamera(camera_entity);
   selection_.SetCamera(camera_entity);
+  debug_draw_.SetCamera(camera_entity);
   render_.SetCamera(camera_entity);
 
   // Load the debug scene's decor as ordinary entities
@@ -171,6 +174,8 @@ auto Game::Run() -> int {
     physics_system_.Update(ecs_, physics_world_, ctx);
     // Frame uniforms must be set before the renderer submits.
     lighting_.Update(ecs_, ctx);
+    // Submits to view 1; must precede the renderer's bgfx::frame()
+    debug_draw_.Update(ecs_, ctx);
     render_.Update(ecs_, assets_, ctx);
     ui_.Update(ecs_, assets_, ctx);
 

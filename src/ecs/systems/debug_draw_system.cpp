@@ -1,0 +1,102 @@
+#include "ecs/systems/debug_draw_system.h"
+
+#include <bgfx/bgfx.h>
+#include <bx/bounds.h>
+#include <bx/math.h>
+#include <debugdraw/debugdraw.h>
+
+#include <algorithm>
+#include <array>
+#include <cstdint>
+#include <iterator>
+
+#include "ecs/components/camera.h"
+#include "ecs/components/collider.h"
+#include "ecs/components/transform.h"
+#include "ecs/core/ecs.h"
+#include "ecs/core/types.h"
+#include "physics/shape.h"
+#include "platform/frame_context.h"
+
+namespace {
+
+// Rendered after view 0, sharing its depth buffer.
+constexpr bgfx::ViewId kDebugView = 1;
+
+constexpr std::uint32_t kGridColor = 0xff808080;      // ABGR
+constexpr std::uint32_t kColliderColor = 0xff00ff00;  // ABGR
+constexpr std::uint32_t kGridSize = 20;
+constexpr float kGridStep = 1.0F;
+// Keeps the grid off the floor's top face, which sits at y = 0
+constexpr float kGridLift = 0.005F;
+
+/** @brief Draws @p collider's shape as a wireframe, placed by @p transform. */
+void DrawCollider(DebugDrawEncoder& encoder, const Transform& transform,
+                  const Collider& collider) {
+  const ShapeDesc& shape = collider.shape;
+  const auto model = ModelMatrix(transform);
+
+  switch (shape.kind) {
+    case ShapeKind::kBox: {
+      // Unit cube [-1, 1] -> shape space -> world
+      std::array<float, 16> local{};
+      bx::mtxSRT(local.data(), shape.half_extents.x, shape.half_extents.y,
+                 shape.half_extents.z, 0.0F, 0.0F, 0.0F, shape.offset.x,
+                 shape.offset.y, shape.offset.z);
+      bx::Obb obb{};
+      bx::mtxMul(std::data(obb.mtx), local.data(), model.data());
+      encoder.draw(obb);
+      break;
+    }
+    case ShapeKind::kSphere: {
+      // Largest scale axis, as physics does; the model matrix would stretch it
+      const bx::Vec3 size = bx::abs(transform.scale);
+      const bx::Sphere sphere{
+          .center = bx::mul(shape.offset, model.data()),
+          .radius = shape.radius * std::max({size.x, size.y, size.z}),
+      };
+      encoder.draw(sphere);
+      break;
+    }
+  }
+}
+
+}  // namespace
+
+DebugDrawSystem::DebugDrawSystem() { ddInit(); }
+
+DebugDrawSystem::~DebugDrawSystem() { ddShutdown(); }
+
+void DebugDrawSystem::Update(Ecs& ecs, const FrameContext& ctx) {
+  if (!camera_) {
+    return;
+  }
+
+  const auto& camera = ecs.GetComponent<Camera>(*camera_);
+  bgfx::setViewTransform(kDebugView, camera.view.data(), camera.proj.data());
+  bgfx::setViewRect(kDebugView, 0, 0, static_cast<std::uint16_t>(ctx.width),
+                    static_cast<std::uint16_t>(ctx.height));
+
+  DebugDrawEncoder encoder;
+  encoder.begin(kDebugView);
+
+  encoder.drawAxis(0.0F, 0.0F, 0.0F);
+  encoder.push();
+  encoder.setColor(kGridColor);
+  encoder.drawGrid(Axis::Y, {0.0F, kGridLift, 0.0F}, kGridSize, kGridStep);
+  encoder.pop();
+
+  encoder.push();
+  encoder.setWireframe(true);
+  encoder.setColor(kColliderColor);
+  ecs.View<Transform, Collider>().ForEach(
+      [&encoder](Entity /*entity*/, const Transform& transform,
+                 const Collider& collider) -> void {
+        DrawCollider(encoder, transform, collider);
+      });
+  encoder.pop();
+
+  encoder.end();
+}
+
+void DebugDrawSystem::SetCamera(Entity camera) { camera_ = camera; }

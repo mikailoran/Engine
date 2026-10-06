@@ -147,6 +147,8 @@ add_executable(engine src/main.cpp
   src/ecs/components/selected.h
   src/ecs/systems/camera_control.cpp
   src/ecs/systems/camera_control.h
+  src/ecs/systems/debug_draw_system.h
+  src/ecs/systems/debug_draw_system.cpp
   src/ecs/systems/lighting_system.h
   src/ecs/systems/lighting_system.cpp
   src/ecs/systems/render_system.h
