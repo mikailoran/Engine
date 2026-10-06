@@ -175,7 +175,9 @@ auto Game::Run() -> int {
     // Frame uniforms must be set before the renderer submits.
     lighting_.Update(ecs_, ctx);
     // Submits to view 1; must precede the renderer's bgfx::frame()
-    debug_draw_.Update(ecs_, ctx);
+    if (ui_.DebugDrawEnabled()) {
+      debug_draw_.Update(ecs_, ctx);
+    }
     render_.Update(ecs_, assets_, ctx);
     ui_.Update(ecs_, assets_, ctx);
 

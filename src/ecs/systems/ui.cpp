@@ -211,6 +211,8 @@ auto UiSystem::WantsMouse() const -> bool {
   return ImGui::GetIO().WantCaptureMouse;
 }
 
+auto UiSystem::DebugDrawEnabled() const -> bool { return debug_draw_enabled_; }
+
 void UiSystem::Update(Ecs& ecs, AssetRegistry& assets,
                       const FrameContext& ctx) {
   // Draw into this system's context, not whichever is current
@@ -242,6 +244,7 @@ void UiSystem::Update(Ecs& ecs, AssetRegistry& assets,
   if (ImGui::Button("Spawn Entity")) {
     SpawnEntity(ecs, assets);
   }
+  ImGui::Checkbox("Debug Draw", &debug_draw_enabled_);
   ImGui::Separator();
   DrawInspector(ecs, assets);
   ImGui::End();
