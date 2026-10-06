@@ -40,7 +40,16 @@ class UiSystem {
    */
   [[nodiscard]] auto WantsMouse() const -> bool;
 
+  /**
+   * @brief Whether the Debug Draw checkbox is ticked, as of the last Update.
+   * @return True to draw the debug grid and collider wireframes.
+   */
+  [[nodiscard]] auto DebugDrawEnabled() const -> bool;
+
  private:
   // Created by imguiCreate and freed by imguiDestroy; never null.
   ImGuiContext* context_{nullptr};
+
+  // Set by the Debug Draw checkbox.
+  bool debug_draw_enabled_{true};
 };
