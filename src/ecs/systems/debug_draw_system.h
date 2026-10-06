@@ -8,7 +8,8 @@ class Ecs;
 struct FrameContext;
 
 /**
- * @brief Draws a ground grid, origin axes and every Collider's wireframe.
+ * @brief Draws a ground grid, origin axes, every Collider's wireframe and
+ * every RigidBody's velocity arrow.
  *
  * Owns bgfx's debugdraw context, a process-wide global, so at most one
  * instance may exist. Draws to view 1, over the scene and against its depth.

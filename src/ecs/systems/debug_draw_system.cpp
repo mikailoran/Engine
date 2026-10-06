@@ -12,6 +12,7 @@
 
 #include "ecs/components/camera.h"
 #include "ecs/components/collider.h"
+#include "ecs/components/rigid_body.h"
 #include "ecs/components/transform.h"
 #include "ecs/core/ecs.h"
 #include "ecs/core/types.h"
@@ -25,10 +26,17 @@ constexpr bgfx::ViewId kDebugView = 1;
 
 constexpr std::uint32_t kGridColor = 0xff808080;      // ABGR
 constexpr std::uint32_t kColliderColor = 0xff00ff00;  // ABGR
+constexpr std::uint32_t kVelocityColor = 0xff00ffff;  // ABGR
 constexpr std::uint32_t kGridSize = 20;
 constexpr float kGridStep = 1.0F;
 // Keeps the grid off the floor's top face, which sits at y = 0
 constexpr float kGridLift = 0.005F;
+// Arrow length per m/s: the distance covered in this many seconds
+constexpr float kVelocityArrowScale = 0.25F;
+// Slower bodies get no arrow, hiding resting jitter
+constexpr float kMinArrowSpeed = 0.05F;
+constexpr float kArrowHeadLength = 0.15F;
+constexpr float kArrowHeadRadius = 0.05F;
 
 /** @brief Draws @p collider's shape as a wireframe, placed by @p transform. */
 void DrawCollider(DebugDrawEncoder& encoder, const Transform& transform,
@@ -59,6 +67,26 @@ void DrawCollider(DebugDrawEncoder& encoder, const Transform& transform,
       break;
     }
   }
+}
+
+/** @brief Draws an arrow from @p transform's origin along @p velocity. */
+void DrawVelocityArrow(DebugDrawEncoder& encoder, const Transform& transform,
+                       const bx::Vec3& velocity) {
+  const float speed = bx::length(velocity);
+  if (speed < kMinArrowSpeed) {
+    return;
+  }
+
+  const bx::Vec3 dir = bx::mul(velocity, 1.0F / speed);
+  const float length = speed * kVelocityArrowScale;
+  const float head = std::min(kArrowHeadLength, length);
+  const bx::Vec3 tip = bx::mad(dir, length, transform.position);
+  const bx::Vec3 head_base = bx::mad(dir, -head, tip);
+
+  encoder.moveTo(transform.position);
+  encoder.lineTo(head_base);
+  // Base at the first point, apex at the second
+  encoder.drawCone(head_base, tip, kArrowHeadRadius);
 }
 
 }  // namespace
@@ -93,6 +121,15 @@ void DebugDrawSystem::Update(Ecs& ecs, const FrameContext& ctx) {
       [&encoder](Entity /*entity*/, const Transform& transform,
                  const Collider& collider) -> void {
         DrawCollider(encoder, transform, collider);
+      });
+  encoder.pop();
+
+  encoder.push();
+  encoder.setColor(kVelocityColor);
+  ecs.View<Transform, RigidBody>().ForEach(
+      [&encoder](Entity /*entity*/, const Transform& transform,
+                 const RigidBody& rigid_body) -> void {
+        DrawVelocityArrow(encoder, transform, rigid_body.velocity);
       });
   encoder.pop();
 
