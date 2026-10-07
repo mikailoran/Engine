@@ -25,14 +25,14 @@ add_subdirectory(third_party/bgfx.cmake SYSTEM)
 
 # --- ECS core ---------------------------------------------------------------
 add_library(ecs_core STATIC
-  src/ecs/core/ecs.cpp
-  src/ecs/core/entity_manager.cpp
-  src/ecs/core/component_array.h
-  src/ecs/core/component_manager.h
-  src/ecs/core/ecs.h
-  src/ecs/core/entity_manager.h
-  src/ecs/core/types.h
-  src/ecs/core/view.h)
+  src/engine/ecs/core/ecs.cpp
+  src/engine/ecs/core/entity_manager.cpp
+  src/engine/ecs/core/component_array.h
+  src/engine/ecs/core/component_manager.h
+  src/engine/ecs/core/ecs.h
+  src/engine/ecs/core/entity_manager.h
+  src/engine/ecs/core/types.h
+  src/engine/ecs/core/view.h)
 
 # PUBLIC so both engine and the tests can #include "ecs/core/ecs.h".
 target_include_directories(ecs_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -49,8 +49,8 @@ set_target_properties(ecs_core PROPERTIES
 # Rotation conventions shared by rendering, scenes and physics. A library so
 # math_tests can link it without the engine.
 add_library(engine_math STATIC
-  src/math/rotation.cpp
-  src/math/rotation.h)
+  src/engine/math/rotation.cpp
+  src/engine/math/rotation.h)
 
 target_include_directories(engine_math PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(engine_math PUBLIC bx)
@@ -89,14 +89,14 @@ FetchContent_MakeAvailable(JoltPhysics)
 # PhysicsWorld's headers are Jolt-free; PRIVATE keeps Jolt's include paths and
 # JPH_* defines out of every target that links this.
 add_library(engine_physics STATIC
-  src/physics/body_handle.h
-  src/physics/jolt_runtime.h
-  src/physics/jolt_runtime.cpp
-  src/physics/layers.h
-  src/physics/layers.cpp
-  src/physics/physics_world.h
-  src/physics/shape.h
-  src/physics/physics_world.cpp)
+  src/engine/physics/body_handle.h
+  src/engine/physics/jolt_runtime.h
+  src/engine/physics/jolt_runtime.cpp
+  src/engine/physics/layers.h
+  src/engine/physics/layers.cpp
+  src/engine/physics/physics_world.h
+  src/engine/physics/shape.h
+  src/engine/physics/physics_world.cpp)
 
 target_include_directories(engine_physics PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(engine_physics PUBLIC bx PRIVATE Jolt)
@@ -112,8 +112,8 @@ set_target_properties(engine_physics PROPERTIES
 # The ECS side of physics. Needs no bgfx, so physics_tests can link it without
 # example-common.
 add_library(engine_physics_system STATIC
-  src/ecs/systems/physics_system.h
-  src/ecs/systems/physics_system.cpp)
+  src/engine/ecs/systems/physics_system.h
+  src/engine/ecs/systems/physics_system.cpp)
 
 target_link_libraries(engine_physics_system PUBLIC ecs_core engine_physics)
 target_compile_options(engine_physics_system PRIVATE -Wall -Wextra -Wpedantic)
@@ -127,8 +127,8 @@ set_target_properties(engine_physics_system PROPERTIES
 # --- Runtime layout ---------------------------------------------------------
 # Everything loaded at runtime is generated, and it is emitted here, beside the
 # executable. The app then derives its asset root from its own location
-# (src/platform/asset_root.cpp) instead of a path fixed at build time, so the
-# build tree is relocatable and the working directory does not matter.
+# (src/engine/platform/asset_root.cpp) instead of a path fixed at build time,
+# so the build tree is relocatable and the working directory does not matter.
 #
 # Pinned explicitly rather than relying on the default being
 # CMAKE_CURRENT_BINARY_DIR: the shader and mesh outputs below have to name the
@@ -136,43 +136,43 @@ set_target_properties(engine_physics_system PROPERTIES
 # would put the executable in a per-config subdirectory).
 set(ENGINE_RUNTIME_DIR ${CMAKE_BINARY_DIR})
 
-add_executable(engine src/main.cpp
-  src/ecs/components/camera.h
-  src/ecs/components/collider.h
-  src/ecs/components/physics_link.h
-  src/ecs/components/renderable.h
-  src/ecs/components/directional_light.h
-  src/ecs/components/rigid_body.h
-  src/ecs/components/transform.h
-  src/ecs/components/selected.h
-  src/ecs/systems/camera_control.cpp
-  src/ecs/systems/camera_control.h
-  src/ecs/systems/debug_draw_system.h
-  src/ecs/systems/debug_draw_system.cpp
-  src/ecs/systems/lighting_system.h
-  src/ecs/systems/lighting_system.cpp
-  src/ecs/systems/render_system.h
-  src/ecs/systems/render_system.cpp
-  src/ecs/systems/selection_system.h
-  src/ecs/systems/selection_system.cpp
-  src/ecs/systems/ui.h
-  src/ecs/systems/ui.cpp
-  src/resource/mesh_handle.h
-  src/resource/texture_handle.h
-  src/resource/asset_registry.h
-  src/resource/asset_registry.cpp
-  src/platform/asset_root.h
-  src/platform/asset_root.cpp
-  src/platform/frame_context.h
-  src/platform/input.h
-  src/platform/screen.h
-  src/scene/scene_loader.h
-  src/scene/scene_loader.cpp
-  src/scene/builtin_loaders.h
-  src/scene/builtin_loaders.cpp
-  src/scene/json_read.h
-  src/scene/picking.h
-  src/scene/picking.cpp)
+add_executable(engine src/game/main.cpp
+  src/engine/ecs/components/camera.h
+  src/engine/ecs/components/collider.h
+  src/engine/ecs/components/physics_link.h
+  src/engine/ecs/components/renderable.h
+  src/engine/ecs/components/directional_light.h
+  src/engine/ecs/components/rigid_body.h
+  src/engine/ecs/components/transform.h
+  src/engine/ecs/systems/debug_draw_system.h
+  src/engine/ecs/systems/debug_draw_system.cpp
+  src/engine/ecs/systems/lighting_system.h
+  src/engine/ecs/systems/lighting_system.cpp
+  src/engine/ecs/systems/render_system.h
+  src/engine/ecs/systems/render_system.cpp
+  src/engine/resource/mesh_handle.h
+  src/engine/resource/texture_handle.h
+  src/engine/resource/asset_registry.h
+  src/engine/resource/asset_registry.cpp
+  src/engine/platform/asset_root.h
+  src/engine/platform/asset_root.cpp
+  src/engine/platform/frame_context.h
+  src/engine/platform/input.h
+  src/engine/platform/screen.h
+  src/engine/scene/scene_loader.h
+  src/engine/scene/scene_loader.cpp
+  src/engine/scene/builtin_loaders.h
+  src/engine/scene/builtin_loaders.cpp
+  src/engine/scene/json_read.h
+  src/engine/scene/picking.h
+  src/engine/scene/picking.cpp
+  src/devtools/selected.h
+  src/devtools/camera_control.cpp
+  src/devtools/camera_control.h
+  src/devtools/selection_system.h
+  src/devtools/selection_system.cpp
+  src/devtools/ui.h
+  src/devtools/ui.cpp)
 
 # example-common publicly exposes examples/common plus bgfx, bx and bimg with
 # their include directories, which is what makes "entry/entry.h" resolve.
@@ -213,8 +213,8 @@ set(BGFX_SHADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/bgfx.cmake/bgfx/src)
 # asset root points. bgfx_compile_shaders mkdirs each profile directory itself.
 bgfx_compile_shaders(
   TYPE VERTEX
-  SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/vs_mesh.sc
-  VARYING_DEF ${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/varying.def.sc
+  SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/vs_mesh.sc
+  VARYING_DEF ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/varying.def.sc
   OUTPUT_DIR ${ENGINE_RUNTIME_DIR}/shaders
   INCLUDE_DIRS ${BGFX_SHADER_DIR}
   OUT_FILES_VAR VS_OUTPUTS
@@ -222,8 +222,8 @@ bgfx_compile_shaders(
 
 bgfx_compile_shaders(
   TYPE FRAGMENT
-  SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/fs_mesh.sc
-  VARYING_DEF ${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/varying.def.sc
+  SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/fs_mesh.sc
+  VARYING_DEF ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/varying.def.sc
   OUTPUT_DIR ${ENGINE_RUNTIME_DIR}/shaders
   INCLUDE_DIRS ${BGFX_SHADER_DIR}
   OUT_FILES_VAR FS_OUTPUTS

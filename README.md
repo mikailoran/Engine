@@ -20,7 +20,7 @@ It's not meant to be used by anyone else or have state of the art performance. R
   unaware of it, and an ECS system keeps the two in sync every frame. The
   design choices and the alternatives turned down are written up as
   [decision records](docs/adr/README.md).
-- **ECS from scratch** ([src/ecs/core/](src/ecs/core/)): packed component
+- **ECS from scratch** ([src/engine/ecs/core/](src/engine/ecs/core/)): packed component
   arrays, multi-component views, and deferred entity destruction. It depends
   only on the standard library.
 - **RAII resource management**: every resource, GPU objects included, is

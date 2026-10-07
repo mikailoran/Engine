@@ -5,8 +5,8 @@
 #include <set>
 #include <vector>
 
-#include "ecs/core/ecs.h"
-#include "ecs/core/types.h"
+#include "engine/ecs/core/ecs.h"
+#include "engine/ecs/core/types.h"
 
 namespace {
 

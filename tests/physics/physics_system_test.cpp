@@ -1,7 +1,7 @@
 // Physics end to end: ECS components in, Jolt simulation, components out.
 // Scene pieces copy debug.json's values; nothing here needs bgfx or meshes.
 
-#include "ecs/systems/physics_system.h"
+#include "engine/ecs/systems/physics_system.h"
 
 #include <bx/bounds.h>
 #include <bx/bx.h>
@@ -15,18 +15,18 @@
 #include <cstdint>
 #include <vector>
 
-#include "ecs/components/collider.h"
-#include "ecs/components/physics_link.h"
-#include "ecs/components/rigid_body.h"
-#include "ecs/components/transform.h"
-#include "ecs/core/ecs.h"
-#include "ecs/core/types.h"
-#include "math/rotation.h"
-#include "physics/body_handle.h"
-#include "physics/jolt_runtime.h"
-#include "physics/physics_world.h"
-#include "physics/shape.h"
-#include "platform/frame_context.h"
+#include "engine/ecs/components/collider.h"
+#include "engine/ecs/components/physics_link.h"
+#include "engine/ecs/components/rigid_body.h"
+#include "engine/ecs/components/transform.h"
+#include "engine/ecs/core/ecs.h"
+#include "engine/ecs/core/types.h"
+#include "engine/math/rotation.h"
+#include "engine/physics/body_handle.h"
+#include "engine/physics/jolt_runtime.h"
+#include "engine/physics/physics_world.h"
+#include "engine/physics/shape.h"
+#include "engine/platform/frame_context.h"
 
 namespace {
 

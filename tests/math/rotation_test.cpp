@@ -1,7 +1,7 @@
 // Rotation convention: quaternions in Transform must draw exactly what the old
 // Euler angles drew, and convert back to Euler angles without changing it.
 
-#include "math/rotation.h"
+#include "engine/math/rotation.h"
 
 #include <bx/constants.h>
 #include <bx/math.h>
@@ -13,7 +13,7 @@
 #include <cstddef>
 #include <random>
 
-#include "ecs/components/transform.h"
+#include "engine/ecs/components/transform.h"
 
 namespace {
 
