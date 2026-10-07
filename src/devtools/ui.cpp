@@ -219,7 +219,7 @@ void UiSystem::Update(Ecs& ecs, AssetRegistry& assets,
   // Draw into this system's context, not whichever is current
   ImGui::SetCurrentContext(context_);
 
-  const Input& input = ctx.input;
+  const InputState& input = ctx.input;
   // imguiBeginFrame wants a running total, not this frame's notches
   wheel_total_ += input.Wheel();
 

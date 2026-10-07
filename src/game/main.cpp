@@ -59,7 +59,7 @@ constexpr std::array<KeyBinding, 6> kKeyBindings{{
  * @param last_scroll entry's scroll total last frame; updated to this one's.
  */
 void ReadEntryInput(const entry::MouseState& mouse, std::int32_t& last_scroll,
-                    Input& input) {
+                    InputState& input) {
   input.BeginFrame();
   input.SetMouse({.x = static_cast<float>(mouse.m_mx),
                   .y = static_cast<float>(mouse.m_my)});
@@ -70,7 +70,7 @@ void ReadEntryInput(const entry::MouseState& mouse, std::int32_t& last_scroll,
   input.SetButton(MouseButton::kMiddle,
                   mouse.m_buttons[entry::MouseButton::Middle] != 0);
 
-  // entry reports a running total; Input wants this frame's notches
+  // entry reports a running total; InputState wants this frame's notches
   input.AddWheel(static_cast<float>(mouse.m_mz - last_scroll));
   last_scroll = mouse.m_mz;
 
@@ -149,7 +149,7 @@ class Game {
   entry::MouseState mouse_state_;
   // entry's scroll total last frame, to turn it into per-frame notches.
   std::int32_t last_scroll_{0};
-  Input input_;
+  InputState input_;
   FrameTime frame_time_;
 
   // Before anything that creates GPU resources

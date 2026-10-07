@@ -23,7 +23,7 @@ constexpr float kMaxPitch = 1.55F;
 }  // namespace
 
 void FlyCameraSystem::Update(Ecs& ecs, const FrameContext& ctx) {
-  const Input& input = ctx.input;
+  const InputState& input = ctx.input;
 
   // Turn by how far the cursor moved since last frame, while right is held
   const ScreenPosition mouse = input.Mouse();

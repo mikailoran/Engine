@@ -19,7 +19,7 @@ enum class Key : std::uint8_t { kW, kA, kS, kD, kQ, kE };
  * The host calls BeginFrame once per frame, then records that frame's state.
  * Positions are in backbuffer pixels, matching FrameContext's size.
  */
-class Input {
+class InputState {
  public:
   /** @brief Starts a frame: keeps last frame's buttons and zeroes the wheel. */
   void BeginFrame() {
