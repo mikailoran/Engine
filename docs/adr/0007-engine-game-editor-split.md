@@ -1,6 +1,7 @@
 # 0007: Split the engine from its hosts, and the editor from the game
 
-**Status:** accepted, not yet implemented
+**Status:** accepted; the engine/host split and devtools are implemented
+(M1), the game-logic library and the editor are not yet
 
 ## Context
 

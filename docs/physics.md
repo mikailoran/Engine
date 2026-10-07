@@ -179,7 +179,7 @@ Jolt has process-wide state: an allocator, a factory and a type registry.
 `JoltRuntime` sets it up in its constructor and tears it down in its
 destructor. It must exist before any other Jolt object and outlive all of
 them, and there may only be one (a second one asserts, or throws in Release).
-`Game` owns it right after bgfx, and passes it to `PhysicsWorld`.
+`Engine` owns it right after bgfx, and passes it to `PhysicsWorld`.
 
 ### Capacity limits
 
@@ -256,7 +256,7 @@ ctest --test-dir build/Debug
 
 Physics needs no window and no graphics, so `physics_tests` runs the real
 `PhysicsSystem` and Jolt end to end in well under a second. Each test builds a
-`PhysicsHarness` (runtime, world, ECS and system, in the same order as `Game`)
+`PhysicsHarness` (runtime, world, ECS and system, in the same order as `Engine`)
 plus whatever scene pieces it needs, with values copied from
 `assets/scenes/debug.json`.
 

@@ -1,6 +1,6 @@
 # 0006: Own windowing and input with SDL3
 
-**Status:** accepted, not yet implemented
+**Status:** accepted, implemented in M1
 
 ## Context
 

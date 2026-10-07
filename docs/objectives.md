@@ -75,14 +75,14 @@ generators. Nothing is planned beyond that.
 
 Each milestone ends with something you can run and show.
 
-| # | Milestone | Done when |
-|---|---|---|
-| M0 | **Objectives and architecture written down** | This page, [architecture.md](architecture.md) and their ADRs exist |
-| M1 | **Off bgfx's example harness.** Engine `Input` type, a highlight mechanism instead of `Selected` in the renderer, an `engine`/`devtools`/`game` directory split, an `Engine` class driven by its host, an SDL3 host with a real `main()` | `game` runs natively on Wayland with no `entry` code linked, and behaves as it does today |
-| M2 | **First-person exploration.** A kinematic character controller (Jolt `CharacterVirtual` behind the facade), a first-person camera, a triangle-mesh collider, one level shell exported from Blender | You can walk around a Blender-made level and push physics props |
-| M3 | **Scene authoring foundation.** A `Name` component, scene saving, separate environment and scene files, material and physics-surface assets, multi-material meshes | Load, save and load again gives an identical scene; a level is an environment file plus a scene file |
-| M4 | **Qt editor MVP.** Viewport, entity hierarchy, `Transform` inspector, picking, a simulate/pause toggle | Move a crate in the editor, save, and `game` shows it there |
-| M5 | **Physics lab.** Undo/redo, a generic inspector driven by component registration, constraints, a physics-surface library, play/stop with restore, physics debug overlays, telemetry plots, a "launch game" button | You can build a hinged door or a pendulum and tune it without touching JSON |
+| # | Milestone | Done when | Status |
+|---|---|---|---|
+| M0 | **Objectives and architecture written down** | This page, [architecture.md](architecture.md) and their ADRs exist | Done |
+| M1 | **Off bgfx's example harness.** Engine `Input` type, a highlight mechanism instead of `Selected` in the renderer, an `engine`/`devtools`/`game` directory split, an `Engine` class driven by its host, an SDL3 host with a real `main()` | `game` runs natively on Wayland with no `entry` code linked, and behaves as it does today | Done |
+| M2 | **First-person exploration.** A kinematic character controller (Jolt `CharacterVirtual` behind the facade), a first-person camera, a triangle-mesh collider, one level shell exported from Blender | You can walk around a Blender-made level and push physics props | |
+| M3 | **Scene authoring foundation.** A `Name` component, scene saving, separate environment and scene files, material and physics-surface assets, multi-material meshes | Load, save and load again gives an identical scene; a level is an environment file plus a scene file | |
+| M4 | **Qt editor MVP.** Viewport, entity hierarchy, `Transform` inspector, picking, a simulate/pause toggle | Move a crate in the editor, save, and `game` shows it there | |
+| M5 | **Physics lab.** Undo/redo, a generic inspector driven by component registration, constraints, a physics-surface library, play/stop with restore, physics debug overlays, telemetry plots, a "launch game" button | You can build a hinged door or a pendulum and tune it without touching JSON | |
 
 The editor deliberately comes after M2 and M3. Its features should come from
 real authoring needs, and it needs the engine API those milestones create.

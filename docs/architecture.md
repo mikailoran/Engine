@@ -5,6 +5,10 @@ describes **where the code is going**; `CLAUDE.md` and the code describe where
 it is today. The goals and milestones behind it are in
 [objectives.md](objectives.md).
 
+**Built so far (M1):** the engine is a library (`Engine`, in
+`src/engine/engine.h`) driven by the SDL `game` host, with the ImGui tools in
+`src/devtools/`. The game-logic library and the editor don't exist yet.
+
 ---
 
 ## Layers
@@ -49,14 +53,15 @@ editor. Each frame, the host:
 splits it so a host can run its tools in between:
 
 ```cpp
-Engine engine(surface, size);   // native window handle from the host
-engine.LoadScene("assets/scenes/level01.json");
+Engine engine(window.Surface());   // native handles and backbuffer size
+engine.LoadScene("assets/scenes/debug.json");
+engine.SetActiveCamera(camera);
 
 // Host loop
-engine.Resize(w, h);            // on window resize
-engine.Update(ctx);             // physics, lighting (skipped while editing)
-engine.Render(ctx);             // debug draw, scene, bgfx::frame()
-engine.EndFrame();              // Ecs::Flush
+engine.Resize(window.BackbufferSize());     // cheap when unchanged
+engine.Update(ctx);                         // physics, lighting
+engine.Render(ctx, {.debug_draw = true});   // debug draw, scene, bgfx::frame()
+engine.EndFrame();                          // Ecs::Flush
 ```
 
 The engine creates its rendering context from a `NativeSurface` (window and
