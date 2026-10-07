@@ -2,7 +2,6 @@
 
 #include <bx/math.h>
 #include <dear-imgui/imgui.h>
-#include <entry/entry.h>
 #include <imgui/imgui.h>
 
 #include <array>
@@ -24,6 +23,8 @@
 #include "math/rotation.h"
 #include "physics/shape.h"
 #include "platform/frame_context.h"
+#include "platform/input.h"
+#include "platform/screen.h"
 #include "resource/asset_registry.h"
 #include "resource/mesh_handle.h"
 #include "resource/texture_handle.h"
@@ -218,18 +219,23 @@ void UiSystem::Update(Ecs& ecs, AssetRegistry& assets,
   // Draw into this system's context, not whichever is current
   ImGui::SetCurrentContext(context_);
 
+  const Input& input = ctx.input;
+  // imguiBeginFrame wants a running total, not this frame's notches
+  wheel_total_ += input.Wheel();
+
   // Wait for windowing set up to finish
   if (ctx.width <= 1 || ctx.height <= 1) {
     return;
   }
 
-  const auto& mouse = *ctx.mouse;
+  const ScreenPosition mouse = input.Mouse();
   imguiBeginFrame(
-      mouse.m_mx, mouse.m_my,
-      (mouse.m_buttons[entry::MouseButton::Left] ? IMGUI_MBUT_LEFT : 0) |
-          (mouse.m_buttons[entry::MouseButton::Right] ? IMGUI_MBUT_RIGHT : 0) |
-          (mouse.m_buttons[entry::MouseButton::Middle] ? IMGUI_MBUT_MIDDLE : 0),
-      mouse.m_mz, static_cast<std::uint16_t>(ctx.width),
+      static_cast<std::int32_t>(mouse.x), static_cast<std::int32_t>(mouse.y),
+      (input.Down(MouseButton::kLeft) ? IMGUI_MBUT_LEFT : 0) |
+          (input.Down(MouseButton::kRight) ? IMGUI_MBUT_RIGHT : 0) |
+          (input.Down(MouseButton::kMiddle) ? IMGUI_MBUT_MIDDLE : 0),
+      static_cast<std::int32_t>(wheel_total_),
+      static_cast<std::uint16_t>(ctx.width),
       static_cast<std::uint16_t>(ctx.height));
 
   const auto screen_width = static_cast<float>(ctx.width);

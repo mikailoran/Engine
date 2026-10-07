@@ -3,7 +3,7 @@
 // Standard headers only: components include this
 
 /** @brief A position in window pixels, origin top-left. */
-struct ScreenPoint {
+struct ScreenPosition {
   float x{0.0F};
   float y{0.0F};
 };

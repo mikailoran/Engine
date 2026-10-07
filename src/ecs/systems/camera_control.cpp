@@ -3,6 +3,7 @@
 #include <bgfx/bgfx.h>
 #include <bx/math.h>
 #include <camera.h>
+#include <entry/entry.h>
 
 #include "ecs/components/camera.h"
 #include "ecs/components/transform.h"
@@ -25,7 +26,8 @@ CameraControl::CameraControl() {
   cameraSetVerticalAngle(kStartVerticalAngle);
 }
 
-void CameraControl::Update(Ecs& ecs, const FrameContext& ctx) {
+void CameraControl::Update(Ecs& ecs, const FrameContext& ctx,
+                           const entry::MouseState& mouse) {
   if (!camera_) {
     return;
   }
@@ -33,13 +35,11 @@ void CameraControl::Update(Ecs& ecs, const FrameContext& ctx) {
   auto& transform = ecs.GetComponent<Transform>(*camera_);
   auto& camera = ecs.GetComponent<Camera>(*camera_);
 
-  if (ctx.mouse != nullptr) {
-    cameraUpdate(ctx.dt, *ctx.mouse);
+  cameraUpdate(ctx.dt, mouse);
 
-    // Mirror the resulting pose into the components.
-    transform.position = cameraGetPosition();
-    camera.target = cameraGetAt();
-  }
+  // Mirror the resulting pose into the components.
+  transform.position = cameraGetPosition();
+  camera.target = cameraGetAt();
 
   // Derive view and projection for this frame's readers
   const auto aspect =

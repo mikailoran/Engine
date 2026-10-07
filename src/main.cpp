@@ -30,11 +30,33 @@
 #include "physics/physics_world.h"
 #include "platform/asset_root.h"
 #include "platform/frame_context.h"
+#include "platform/input.h"
 #include "resource/asset_registry.h"
 #include "scene/builtin_loaders.h"
 #include "scene/scene_loader.h"
 
 namespace {
+
+/**
+ * @brief Copies entry's mouse state into @p input as a new frame.
+ * @param last_scroll entry's scroll total last frame; updated to this one's.
+ */
+void ReadEntryMouse(const entry::MouseState& mouse, std::int32_t& last_scroll,
+                    Input& input) {
+  input.BeginFrame();
+  input.SetMouse({.x = static_cast<float>(mouse.m_mx),
+                  .y = static_cast<float>(mouse.m_my)});
+  input.SetButton(MouseButton::kLeft,
+                  mouse.m_buttons[entry::MouseButton::Left] != 0);
+  input.SetButton(MouseButton::kRight,
+                  mouse.m_buttons[entry::MouseButton::Right] != 0);
+  input.SetButton(MouseButton::kMiddle,
+                  mouse.m_buttons[entry::MouseButton::Middle] != 0);
+
+  // entry reports a running total; Input wants this frame's notches
+  input.AddWheel(static_cast<float>(mouse.m_mz - last_scroll));
+  last_scroll = mouse.m_mz;
+}
 
 /** @brief Window and reset parameters, written back by entry each frame. */
 struct WindowState {
@@ -104,6 +126,9 @@ class Game {
  private:
   WindowState window_;
   entry::MouseState mouse_state_;
+  // entry's scroll total last frame, to turn it into per-frame notches.
+  std::int32_t last_scroll_{0};
+  Input input_;
   FrameTime frame_time_;
 
   // Before anything that creates GPU resources
@@ -157,6 +182,7 @@ auto Game::Run() -> int {
   while (!entry::processEvents(window_.width, window_.height, window_.debug,
                                window_.reset, &mouse_state_)) {
     frame_time_.frame();
+    ReadEntryMouse(mouse_state_, last_scroll_, input_);
 
     // One context per frame, shared by every system.
     const FrameContext ctx{
@@ -164,11 +190,11 @@ auto Game::Run() -> int {
         .height = window_.height,
         .dt = bx::toSeconds<float>(frame_time_.getDeltaTime()),
         .time = bx::toSeconds<float>(frame_time_.getDurationTime()),
-        .mouse = &mouse_state_,
+        .input = input_,
     };
 
     // The camera pose must settle before the renderer reads it.
-    camera_control_.Update(ecs_, ctx);
+    camera_control_.Update(ecs_, ctx, mouse_state_);
     // UI runs last, so this is last frame's answer
     selection_.Update(ecs_, assets_, ctx, ui_.WantsMouse());
     physics_system_.Update(ecs_, physics_world_, ctx);

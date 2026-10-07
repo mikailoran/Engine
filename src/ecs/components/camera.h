@@ -36,8 +36,8 @@ struct Camera {
  * @brief Casts a world-space ray from the camera through a window pixel.
  * @pre @p size has positive area; view and proj are current.
  */
-inline auto ScreenPointToRay(const Camera& camera, ScreenPoint point,
-                             ScreenSize size) -> bx::Ray {
+inline auto ScreenPositionToRay(const Camera& camera, ScreenPosition point,
+                                ScreenSize size) -> bx::Ray {
   assert(size.width > 0.0F && size.height > 0.0F && "window has no area");
 
   // Pixel to NDC; screen y grows down, NDC y up

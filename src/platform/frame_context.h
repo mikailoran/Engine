@@ -2,9 +2,7 @@
 
 #include <cstdint>
 
-namespace entry {
-struct MouseState;
-}  // namespace entry
+#include "platform/input.h"
 
 /**
  * @brief Generic info used per-frame for rendering
@@ -22,6 +20,6 @@ struct FrameContext {
   // Seconds elapsed since startup.
   float time{0.0F};
 
-  // Current mouse position and button state.
-  const entry::MouseState* mouse{nullptr};
+  // This frame's mouse input; default-constructed when the host has none.
+  Input input{};
 };

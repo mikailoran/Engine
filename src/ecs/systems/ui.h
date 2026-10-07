@@ -52,4 +52,7 @@ class UiSystem {
 
   // Set by the Debug Draw checkbox.
   bool debug_draw_enabled_{true};
+
+  // Wheel notches summed over every frame, as imguiBeginFrame expects.
+  float wheel_total_{0.0F};
 };

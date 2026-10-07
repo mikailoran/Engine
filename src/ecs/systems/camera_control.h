@@ -7,6 +7,10 @@
 class Ecs;
 struct FrameContext;
 
+namespace entry {
+struct MouseState;
+}  // namespace entry
+
 /**
  * @brief Controls camera entities from user input.
  *
@@ -35,8 +39,10 @@ class CameraControl {
    *
    * @param ecs World to write components through.
    * @param ctx Per-frame inputs.
+   * @param mouse entry's raw mouse state, which the examples' camera reads.
    */
-  void Update(Ecs& ecs, const FrameContext& ctx);
+  void Update(Ecs& ecs, const FrameContext& ctx,
+              const entry::MouseState& mouse);
 
   /**
    * @brief Nominates the entity to drive. It must carry a Transform and a

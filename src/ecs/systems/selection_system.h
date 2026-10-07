@@ -38,7 +38,4 @@ class SelectionSystem {
  private:
   // Entity supplying view and projection; empty until SetCamera.
   std::optional<Entity> camera_;
-
-  // Left button state last frame, to detect the press edge.
-  bool was_left_down_{false};
 };

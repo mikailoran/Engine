@@ -3,7 +3,6 @@
 #include <bgfx_utils.h>
 #include <bx/bounds.h>
 #include <bx/math.h>
-#include <entry/entry.h>
 
 #include <array>
 #include <optional>
@@ -16,6 +15,7 @@
 #include "ecs/core/ecs.h"
 #include "ecs/core/types.h"
 #include "platform/frame_context.h"
+#include "platform/input.h"
 #include "platform/screen.h"
 #include "resource/asset_registry.h"
 
@@ -89,27 +89,17 @@ void ApplySelection(Ecs& ecs, std::optional<Entity> entity) {
 
 void SelectionSystem::Update(Ecs& ecs, const AssetRegistry& assets,
                              const FrameContext& ctx, bool mouse_over_ui) {
-  if (ctx.mouse == nullptr) {
-    return;
-  }
-
-  const bool left_down = ctx.mouse->m_buttons[entry::MouseButton::Left] != 0;
-  const bool pressed = left_down && !was_left_down_;
-  was_left_down_ = left_down;
-
   // Only a fresh click on the scene, once the window has a size
-  if (!pressed || mouse_over_ui || !camera_ || ctx.width <= 1 ||
-      ctx.height <= 1) {
+  if (!ctx.input.Pressed(MouseButton::kLeft) || mouse_over_ui || !camera_ ||
+      ctx.width <= 1 || ctx.height <= 1) {
     return;
   }
 
   const auto& camera = ecs.GetComponent<Camera>(*camera_);
   const bx::Ray ray =
-      ScreenPointToRay(camera,
-                       ScreenPoint{.x = static_cast<float>(ctx.mouse->m_mx),
-                                   .y = static_cast<float>(ctx.mouse->m_my)},
-                       ScreenSize{.width = static_cast<float>(ctx.width),
-                                  .height = static_cast<float>(ctx.height)});
+      ScreenPositionToRay(camera, ctx.input.Mouse(),
+                          ScreenSize{.width = static_cast<float>(ctx.width),
+                                     .height = static_cast<float>(ctx.height)});
 
   const auto hit = PickEntity(ecs, assets, ray);
   ApplySelection(ecs, hit ? std::optional<Entity>{hit->entity} : std::nullopt);
