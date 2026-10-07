@@ -1,5 +1,4 @@
 #include <bgfx/bgfx.h>
-#include <bgfx/defines.h>
 #include <bx/timer.h>
 #include <common.h>
 #include <entry/entry.h>
@@ -9,33 +8,21 @@
 #include <cstdint>
 #include <exception>
 #include <iostream>
-#include <stdexcept>
 
 #include "devtools/fly_camera_system.h"
 #include "devtools/selected.h"
 #include "devtools/selection_system.h"
 #include "devtools/ui.h"
+#include "engine/bgfx_context.h"
 #include "engine/ecs/components/camera.h"
-#include "engine/ecs/components/collider.h"
-#include "engine/ecs/components/directional_light.h"
-#include "engine/ecs/components/physics_link.h"
-#include "engine/ecs/components/renderable.h"
-#include "engine/ecs/components/rigid_body.h"
 #include "engine/ecs/components/transform.h"
 #include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
-#include "engine/ecs/systems/debug_draw_system.h"
-#include "engine/ecs/systems/lighting_system.h"
-#include "engine/ecs/systems/physics_system.h"
-#include "engine/ecs/systems/render_system.h"
-#include "engine/physics/jolt_runtime.h"
-#include "engine/physics/physics_world.h"
+#include "engine/engine.h"
 #include "engine/platform/asset_root.h"
 #include "engine/platform/frame_context.h"
 #include "engine/platform/input.h"
-#include "engine/resource/asset_registry.h"
-#include "engine/scene/builtin_loaders.h"
-#include "engine/scene/scene_loader.h"
+#include "engine/platform/native_surface.h"
 
 namespace {
 
@@ -79,63 +66,37 @@ void ReadEntryInput(const entry::MouseState& mouse, std::int32_t& last_scroll,
   }
 }
 
-/** @brief Window and reset parameters, written back by entry each frame. */
+/** @brief Window size and bgfx flags that entry reads and writes back. */
 struct WindowState {
   uint32_t width = 1280;
   uint32_t height = 720;
-  uint32_t debug = BGFX_DEBUG_TEXT;
-  uint32_t reset = BGFX_RESET_VSYNC;
+  // entry applies these itself on resize and debug-key toggles
+  uint32_t debug = BgfxContext::kDebugFlags;
+  uint32_t reset = BgfxContext::kResetFlags;
 };
 
-/**
- * @brief Owns bgfx's lifetime: bgfx::init on construction, bgfx::shutdown on
- * destruction.
- *
- * Every GPU resource must be released before this is destroyed.
- */
-class BgfxContext {
- public:
-  /**
-   * @brief Brings up bgfx against the window entry has already created.
-   * @throws std::runtime_error If bgfx::init fails.
-   */
-  explicit BgfxContext(const WindowState& window) {
-    bgfx::Init init;
-    init.type = bgfx::RendererType::Count;  // auto-select backend
-    init.platformData.nwh =
-        entry::getNativeWindowHandle(entry::kDefaultWindowHandle);
-    init.platformData.ndt = entry::getNativeDisplayHandle();
-    init.platformData.type = entry::getNativeWindowHandleType();
-    init.resolution.width = window.width;
-    init.resolution.height = window.height;
-    init.resolution.reset = window.reset;
-    if (!bgfx::init(init)) {
-      throw std::runtime_error("bgfx::init failed");
-    }
-
-    bgfx::setDebug(window.debug);
-  }
-
-  /** @brief Shuts bgfx down. */
-  ~BgfxContext() { bgfx::shutdown(); }
-
-  // bgfx is a process-wide singleton: exactly one owner
-  BgfxContext(const BgfxContext&) = delete;
-  auto operator=(const BgfxContext&) -> BgfxContext& = delete;
-  BgfxContext(BgfxContext&&) = delete;
-  auto operator=(BgfxContext&&) -> BgfxContext& = delete;
-};
+/** @brief Describes the window entry created, for the engine to render into. */
+auto EntrySurface(const WindowState& window) -> NativeSurface {
+  const bool wayland = entry::getNativeWindowHandleType() ==
+                       bgfx::NativeWindowHandleType::Wayland;
+  return {
+      .window = entry::getNativeWindowHandle(entry::kDefaultWindowHandle),
+      .display = entry::getNativeDisplayHandle(),
+      .kind = wayland ? SurfaceKind::kWayland : SurfaceKind::kX11,
+      .width = window.width,
+      .height = window.height,
+  };
+}
 
 /**
- * @brief Whole game state: window/reset parameters plus everything the
- *        simulation owns.
+ * @brief The game host: entry's window and input, the engine, and devtools.
  *
- * Member order is the bring-up order; destruction runs in reverse, so bgfx
- * outlives every GPU resource. The asset root must be set before construction.
+ * Member order is the bring-up order; destruction runs in reverse. The asset
+ * root must be set before construction.
  */
 class Game {
  public:
-  /** @brief Brings up bgfx, the systems and the debug scene. */
+  /** @brief Brings up the engine, the devtools and the debug scene. */
   Game();
 
   /**
@@ -152,49 +113,25 @@ class Game {
   InputState input_;
   FrameTime frame_time_;
 
-  // Before anything that creates GPU resources
-  BgfxContext bgfx_context_{window_};
-  // Before anything that uses Jolt
-  JoltRuntime jolt_runtime_;
+  Engine engine_{EntrySurface(window_)};
 
-  AssetRegistry assets_;
-  PhysicsWorld physics_world_{jolt_runtime_,
-                              static_cast<std::uint32_t>(kMaxEntities)};
-  Ecs ecs_;
-
+  // After the engine: UiSystem's GPU resources must go before bgfx does
   FlyCameraSystem fly_camera_;
-  SelectionSystem selection_;
-  PhysicsSystem physics_system_;
-  LightingSystem lighting_;
-  DebugDrawSystem debug_draw_;
-  RenderSystem render_;
   UiSystem ui_;
 };
 
 Game::Game() {
-  // --- ECS: components --------------------------------------------------
-  ecs_.RegisterComponent<Camera>();
-  ecs_.RegisterComponent<Renderable>();
-  ecs_.RegisterComponent<DirectionalLight>();
-  ecs_.RegisterComponent<Transform>();
-  ecs_.RegisterComponent<RigidBody>();
-  ecs_.RegisterComponent<Collider>();
-  ecs_.RegisterComponent<PhysicsLink>();
-  ecs_.RegisterComponent<Selected>();
+  Ecs& ecs = engine_.World();
+  ecs.RegisterComponent<Selected>();
 
-  // --- Assets and entities ----------------------------------------------
-  const auto camera_entity = ecs_.CreateEntity();
-  ecs_.AddComponent(camera_entity, Transform{.position = {0.0F, 1.0F, -5.0F}});
-  ecs_.AddComponent(camera_entity, Camera{});
+  const auto camera_entity = ecs.CreateEntity();
+  ecs.AddComponent(camera_entity, Transform{.position = {0.0F, 1.0F, -5.0F}});
+  ecs.AddComponent(camera_entity, Camera{});
+  engine_.SetActiveCamera(camera_entity);
   fly_camera_.SetControlledCamera(camera_entity);
-  selection_.SetCamera(camera_entity);
-  debug_draw_.SetCamera(camera_entity);
-  render_.SetCamera(camera_entity);
 
   // Load the debug scene's decor as ordinary entities
-  SceneLoader scene_loader;
-  RegisterBuiltinLoaders(scene_loader);
-  scene_loader.Load("assets/scenes/debug.json", ecs_, assets_);
+  engine_.LoadScene("assets/scenes/debug.json");
 }
 
 auto Game::Run() -> int {
@@ -214,26 +151,24 @@ auto Game::Run() -> int {
         .input = input_,
     };
 
-    // The camera pose must settle before the renderer reads it.
-    fly_camera_.Update(ecs_, ctx);
+    // The camera pose must settle before the engine reads it.
+    fly_camera_.Update(engine_.World(), ctx);
     // UI runs last, so this is last frame's answer
-    selection_.Update(ecs_, assets_, ctx, ui_.WantsMouse());
-    physics_system_.Update(ecs_, physics_world_, ctx);
-    // Frame uniforms must be set before the renderer submits.
-    lighting_.Update(ecs_, ctx);
-    // Submits to view 1; must precede the renderer's bgfx::frame()
-    if (ui_.DebugDrawEnabled()) {
-      // Selection is devtools policy; debug draw only draws what it's asked
-      ecs_.View<Selected>().ForEach(
-          [this](Entity entity, const Selected& /*selected*/) -> void {
-            debug_draw_.Highlight(entity);
-          });
-      debug_draw_.Update(ecs_, assets_, ctx);
-    }
-    render_.Update(ecs_, assets_, ctx);
-    ui_.Update(ecs_, assets_, ctx);
+    UpdateSelection(engine_, ctx, ui_.WantsMouse());
+    engine_.Update(ctx);
 
-    ecs_.Flush();
+    const RenderOptions render_options{.debug_draw = ui_.DebugDrawEnabled()};
+    if (render_options.debug_draw) {
+      // Selection is devtools policy; the engine only draws what it's asked
+      engine_.World().View<Selected>().ForEach(
+          [this](Entity entity, const Selected& /*selected*/) -> void {
+            engine_.Highlight(entity);
+          });
+    }
+    engine_.Render(ctx, render_options);
+    ui_.Update(engine_.World(), engine_.Assets(), ctx);
+
+    engine_.EndFrame();
   }
 
   return 0;

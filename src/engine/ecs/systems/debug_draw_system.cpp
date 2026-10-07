@@ -118,13 +118,13 @@ DebugDrawSystem::~DebugDrawSystem() { ddShutdown(); }
 
 void DebugDrawSystem::Update(Ecs& ecs, const AssetRegistry& assets,
                              const FrameContext& ctx) {
-  if (!camera_) {
+  if (!active_camera_) {
     highlights_.clear();
     return;
   }
 
-  const auto& camera = ecs.GetComponent<Camera>(*camera_);
-  const auto view = ViewMatrix(ecs.GetComponent<Transform>(*camera_));
+  const auto& camera = ecs.GetComponent<Camera>(*active_camera_);
+  const auto view = ViewMatrix(ecs.GetComponent<Transform>(*active_camera_));
   const auto proj = ProjectionMatrix(
       camera, static_cast<float>(ctx.width) / static_cast<float>(ctx.height),
       bgfx::getCaps()->homogeneousDepth);
@@ -182,4 +182,6 @@ void DebugDrawSystem::Highlight(Entity entity) {
   highlights_.push_back(entity);
 }
 
-void DebugDrawSystem::SetCamera(Entity camera) { camera_ = camera; }
+void DebugDrawSystem::SetActiveCamera(Entity camera) {
+  active_camera_ = camera;
+}

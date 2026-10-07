@@ -42,7 +42,7 @@ Requires CMake 3.25+ and a C++20 compiler. Only tested on Linux (Wayland).
 git clone --recurse-submodules <url>
 cmake -S . -B build/Debug -DCMAKE_BUILD_TYPE=Debug
 cmake --build build/Debug
-./build/Debug/engine
+./build/Debug/game
 ```
 
 The configure step needs network access because it fetches Jolt Physics,

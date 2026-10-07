@@ -82,9 +82,11 @@ void RenderSystem::Update(Ecs& ecs, const AssetRegistry& assets,
   // View and projection for view 0, from the camera's pose and lens
   {
     // No camera set: a default lens at the world origin
-    const Transform pose =
-        camera_ ? ecs.GetComponent<Transform>(*camera_) : Transform{};
-    const Camera lens = camera_ ? ecs.GetComponent<Camera>(*camera_) : Camera{};
+    const Transform pose = active_camera_
+                               ? ecs.GetComponent<Transform>(*active_camera_)
+                               : Transform{};
+    const Camera lens =
+        active_camera_ ? ecs.GetComponent<Camera>(*active_camera_) : Camera{};
 
     const auto view = ViewMatrix(pose);
     const auto proj = ProjectionMatrix(
@@ -127,4 +129,4 @@ void RenderSystem::Update(Ecs& ecs, const AssetRegistry& assets,
   bgfx::frame();
 }
 
-void RenderSystem::SetCamera(Entity camera) { camera_ = camera; }
+void RenderSystem::SetActiveCamera(Entity camera) { active_camera_ = camera; }

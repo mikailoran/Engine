@@ -136,7 +136,14 @@ set_target_properties(engine_physics_system PROPERTIES
 # would put the executable in a per-config subdirectory).
 set(ENGINE_RUNTIME_DIR ${CMAKE_BINARY_DIR})
 
-add_executable(engine src/game/main.cpp
+# --- Engine runtime ---------------------------------------------------------
+# Everything in src/engine/ that the smaller libraries above don't cover:
+# rendering, assets, scenes and the Engine class hosts drive.
+add_library(engine_runtime STATIC
+  src/engine/engine.h
+  src/engine/engine.cpp
+  src/engine/bgfx_context.h
+  src/engine/bgfx_context.cpp
   src/engine/ecs/components/camera.h
   src/engine/ecs/components/collider.h
   src/engine/ecs/components/physics_link.h
@@ -158,6 +165,7 @@ add_executable(engine src/game/main.cpp
   src/engine/platform/asset_root.cpp
   src/engine/platform/frame_context.h
   src/engine/platform/input.h
+  src/engine/platform/native_surface.h
   src/engine/platform/screen.h
   src/engine/scene/scene_loader.h
   src/engine/scene/scene_loader.cpp
@@ -165,7 +173,25 @@ add_executable(engine src/game/main.cpp
   src/engine/scene/builtin_loaders.cpp
   src/engine/scene/json_read.h
   src/engine/scene/picking.h
-  src/engine/scene/picking.cpp
+  src/engine/scene/picking.cpp)
+
+# example-common publicly exposes examples/common plus bgfx, bx and bimg with
+# their include directories, which engine headers and the game's entry code
+# both need until the SDL host replaces entry.
+target_link_libraries(engine_runtime PUBLIC example-common ecs_core engine_math
+  engine_physics engine_physics_system nlohmann_json::nlohmann_json)
+
+target_compile_options(engine_runtime PRIVATE -Wall -Wextra -Wpedantic)
+
+set_target_properties(engine_runtime PROPERTIES
+  CXX_STANDARD 20
+  CXX_STANDARD_REQUIRED ON
+  CXX_EXTENSIONS OFF
+)
+
+# --- Game -------------------------------------------------------------------
+# The host: window, input, devtools and the frame loop around Engine.
+add_executable(game src/game/main.cpp
   src/devtools/selected.h
   src/devtools/fly_camera_system.cpp
   src/devtools/fly_camera_system.h
@@ -174,12 +200,9 @@ add_executable(engine src/game/main.cpp
   src/devtools/ui.h
   src/devtools/ui.cpp)
 
-# example-common publicly exposes examples/common plus bgfx, bx and bimg with
-# their include directories, which is what makes "entry/entry.h" resolve.
-target_link_libraries(engine PRIVATE example-common ecs_core engine_math
-  engine_physics engine_physics_system nlohmann_json::nlohmann_json)
+target_link_libraries(game PRIVATE engine_runtime)
 
-target_compile_options(engine PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_options(game PRIVATE -Wall -Wextra -Wpedantic)
 
 # Set as target properties rather than directory-level CMAKE_CXX_* variables, so
 # the choice cannot reach anything add_subdirectory() pulls in. bgfx.cmake sets
@@ -189,7 +212,7 @@ target_compile_options(engine PRIVATE -Wall -Wextra -Wpedantic)
 # GCC 16 already defaults to C++20, so CMake emitted no -std flag at all and
 # CXX_EXTENSIONS OFF was silently ignored. CXX_STANDARD with STANDARD_REQUIRED
 # emits the flag unconditionally, which is what turns extensions off.
-set_target_properties(engine PROPERTIES
+set_target_properties(game PROPERTIES
   CXX_STANDARD 20
   CXX_STANDARD_REQUIRED ON
   CXX_EXTENSIONS OFF
@@ -231,7 +254,7 @@ bgfx_compile_shaders(
 
 # add_custom_command outputs are only built when a target depends on them.
 add_custom_target(shaders DEPENDS ${VS_OUTPUTS} ${FS_OUTPUTS})
-add_dependencies(engine shaders)
+add_dependencies(game shaders)
 
 # --- Meshes -----------------------------------------------------------------
 # Unlike bgfx_compile_shaders, bgfx_compile_geometry emits a bare custom command
@@ -263,7 +286,7 @@ foreach(mesh IN LISTS ENGINE_MESHES)
   list(APPEND ENGINE_MESH_OUTPUTS ${ENGINE_MESH_DIR}/${mesh}.bin)
 endforeach()
 add_custom_target(meshes DEPENDS ${ENGINE_MESH_OUTPUTS})
-add_dependencies(engine meshes)
+add_dependencies(game meshes)
 
 # --- Textures ---------------------------------------------------------------
 # bgfx_compile_texture is a bare custom command like geometry: create the
@@ -289,7 +312,7 @@ foreach(texture IN LISTS ENGINE_TEXTURES)
   list(APPEND ENGINE_TEXTURE_OUTPUTS ${ENGINE_TEXTURE_DIR}/${texture}.dds)
 endforeach()
 add_custom_target(textures DEPENDS ${ENGINE_TEXTURE_OUTPUTS})
-add_dependencies(engine textures)
+add_dependencies(game textures)
 
 # --- Scenes -----------------------------------------------------------------
 # Scene files are copied beside the executable; edits recopy on build.
@@ -313,7 +336,7 @@ foreach(scene IN LISTS ENGINE_SCENES)
   list(APPEND ENGINE_SCENE_OUTPUTS ${scene_out})
 endforeach()
 add_custom_target(scenes DEPENDS ${ENGINE_SCENE_OUTPUTS})
-add_dependencies(engine scenes)
+add_dependencies(game scenes)
 
 # --- Tests ------------------------------------------------------------------
 # Off-switch so a plain game build never triggers googletest's network fetch.

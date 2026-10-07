@@ -48,7 +48,7 @@ class RenderSystem {
    *
    * @param camera Entity to read the camera from.
    */
-  void SetCamera(Entity camera);
+  void SetActiveCamera(Entity camera);
 
  private:
   // Used when a Renderable leaves its own program handle invalid.
@@ -71,6 +71,6 @@ class RenderSystem {
   // 1x1 white, bound for untextured entities so they keep their plain color.
   UniqueHandle<bgfx::TextureHandle> default_texture_;
 
-  // Entity supplying view and projection; empty until SetCamera.
-  std::optional<Entity> camera_;
+  // Entity supplying view and projection; empty until SetActiveCamera.
+  std::optional<Entity> active_camera_;
 };

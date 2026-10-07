@@ -51,11 +51,11 @@ class DebugDrawSystem {
    * @brief Nominates the entity supplying view and projection.
    * @param camera Entity carrying a Camera.
    */
-  void SetCamera(Entity camera);
+  void SetActiveCamera(Entity camera);
 
  private:
-  // Entity supplying view and projection; empty until SetCamera.
-  std::optional<Entity> camera_;
+  // Entity supplying view and projection; empty until SetActiveCamera.
+  std::optional<Entity> active_camera_;
 
   // This frame's Highlight requests, cleared by Update.
   std::vector<Entity> highlights_;
