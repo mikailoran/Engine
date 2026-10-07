@@ -6,6 +6,8 @@
 
 #include "engine/platform/screen.h"
 
+namespace engine {
+
 /** @brief Windowing protocol a NativeSurface's handles belong to. */
 enum class SurfaceKind : std::uint8_t { kX11, kWayland };
 
@@ -22,3 +24,5 @@ struct NativeSurface {
   // Backbuffer size when the engine starts.
   PixelSize size{};
 };
+
+}  // namespace engine

@@ -4,6 +4,8 @@
 #include <source_location>
 #include <string_view>
 
+namespace engine {
+
 // TODO: Figure out Entity vs EntityType
 using EntityType = std::size_t;
 using Entity = std::size_t;
@@ -33,3 +35,5 @@ template <class T>
 consteval auto TypeKeyOf() -> TypeKey {
   return std::source_location::current().function_name();
 }
+
+}  // namespace engine

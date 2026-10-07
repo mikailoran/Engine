@@ -3,8 +3,11 @@
 #include "engine/platform/native_surface.h"
 #include "engine/platform/screen.h"
 
-class Input;
 struct SDL_Window;
+
+namespace engine {
+class Input;
+}  // namespace engine
 
 /**
  * @brief The game's SDL window and event pump.
@@ -20,7 +23,7 @@ class Window {
    *        high-density displays.
    * @throws std::runtime_error If SDL or the window fails to start.
    */
-  explicit Window(PixelSize size);
+  explicit Window(engine::PixelSize size);
 
   /** @brief Closes the window and shuts SDL down. */
   ~Window();
@@ -35,16 +38,16 @@ class Window {
    * @brief The native handles and backbuffer size, for the engine.
    * @throws std::runtime_error If the video driver is neither Wayland nor X11.
    */
-  [[nodiscard]] auto Surface() const -> NativeSurface;
+  [[nodiscard]] auto Surface() const -> engine::NativeSurface;
 
   /** @brief Current backbuffer size in pixels. */
-  [[nodiscard]] auto BackbufferSize() const -> PixelSize;
+  [[nodiscard]] auto BackbufferSize() const -> engine::PixelSize;
 
   /**
    * @brief Drains SDL's events and records this frame's state into @p input.
    * @return True when the window has been asked to close.
    */
-  auto PumpEvents(Input& input) -> bool;
+  auto PumpEvents(engine::Input& input) -> bool;
 
   /**
    * @brief Turns typed-text events on or off. Off by default; on Wayland,

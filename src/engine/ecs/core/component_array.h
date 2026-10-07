@@ -9,6 +9,8 @@
 
 #include "engine/ecs/core/types.h"
 
+namespace engine {
+
 /** @brief Type-erased base so ComponentManager can hold every component array
  * together. */
 class ComponentArrayInterface {
@@ -175,3 +177,5 @@ void ComponentArray<Component>::EntityDestroyed(Entity entity) {
     RemoveData(entity);
   }
 }
+
+}  // namespace engine

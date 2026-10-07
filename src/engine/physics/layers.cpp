@@ -6,6 +6,8 @@
 
 #include <cassert>
 
+namespace engine::physics {
+
 namespace {
 
 // One broad-phase layer per object layer
@@ -46,3 +48,5 @@ auto CollisionLayers::ObjectVsBroadPhase() const
 auto CollisionLayers::ObjectPairs() const -> const JPH::ObjectLayerPairFilter& {
   return object_pairs_;
 }
+
+}  // namespace engine::physics

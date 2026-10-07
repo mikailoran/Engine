@@ -5,6 +5,8 @@
 
 #include "engine/ecs/core/types.h"
 
+namespace engine {
+
 EntityManager::EntityManager() {
   for (EntityType entity_id = 0; entity_id < kMaxEntities; ++entity_id) {
     available_entities_.push(Entity{entity_id});
@@ -41,3 +43,5 @@ void EntityManager::DestroyEntity(Entity entity) {
   --living_entity_count_;
   alive_.at(entity) = false;
 }
+
+}  // namespace engine

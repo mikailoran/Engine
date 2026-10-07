@@ -10,6 +10,8 @@
 #include <string>
 #include <string_view>
 
+namespace engine {
+
 // Helpers for component loaders reading scene JSON. All throw on bad input.
 
 // TODO: Add namespace
@@ -43,3 +45,5 @@ inline auto ReadVec3(const nlohmann::json& data) -> bx::Vec3 {
   const auto values = ReadFloats<3>(data);
   return {values.at(0), values.at(1), values.at(2)};
 }
+
+}  // namespace engine

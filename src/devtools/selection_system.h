@@ -1,7 +1,9 @@
 #pragma once
 
+namespace engine {
 class Engine;
 struct FrameContext;
+}  // namespace engine
 
 /**
  * @brief Selects the entity under the cursor on a fresh left click.
@@ -14,5 +16,5 @@ struct FrameContext;
  * @param ctx Per-frame inputs; reads the mouse and window size.
  * @param mouse_over_ui True when the UI owns the cursor; clicks are ignored.
  */
-void UpdateSelection(Engine& engine, const FrameContext& ctx,
+void UpdateSelection(engine::Engine& engine, const engine::FrameContext& ctx,
                      bool mouse_over_ui);

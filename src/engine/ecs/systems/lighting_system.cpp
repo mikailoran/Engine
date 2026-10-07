@@ -12,6 +12,8 @@
 #include "engine/ecs/core/types.h"
 #include "engine/platform/frame_context.h"
 
+namespace engine {
+
 namespace {
 
 /** @brief Packs a Vec3 into a vec4 uniform value with w = 0. */
@@ -53,3 +55,5 @@ void LightingSystem::Update(Ecs& ecs, const FrameContext& /*ctx*/) {
   bgfx::setFrameUniform(u_sky_color_.Get(), sky_color.data());
   bgfx::setFrameUniform(u_ground_color_.Get(), ground_color.data());
 }
+
+}  // namespace engine

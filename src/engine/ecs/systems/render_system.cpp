@@ -20,6 +20,8 @@
 #include "engine/resource/asset_registry.h"
 #include "engine/resource/texture_handle.h"
 
+namespace engine {
+
 namespace {
 
 constexpr uint32_t kClearColor = 0x303030ff;  // RGBA
@@ -130,3 +132,5 @@ void RenderSystem::Update(Ecs& ecs, const AssetRegistry& assets,
 }
 
 void RenderSystem::SetActiveCamera(Entity camera) { active_camera_ = camera; }
+
+}  // namespace engine

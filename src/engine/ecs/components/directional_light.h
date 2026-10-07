@@ -2,6 +2,8 @@
 
 #include <bx/math.h>
 
+namespace engine {
+
 /**
  * @brief A sun-like light at infinity, plus the scene's hemisphere ambient.
  */
@@ -17,3 +19,5 @@ struct DirectionalLight {
   bx::Vec3 sky_color{0.22F, 0.25F, 0.3F};
   bx::Vec3 ground_color{0.08F, 0.07F, 0.06F};
 };
+
+}  // namespace engine

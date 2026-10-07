@@ -4,6 +4,8 @@
 
 #include <cstdint>
 
+namespace engine {
+
 /** @brief A position in window pixels, origin top-left. */
 struct ScreenPosition {
   float x{0.0F};
@@ -23,3 +25,5 @@ struct PixelSize {
 
   friend auto operator==(const PixelSize&, const PixelSize&) -> bool = default;
 };
+
+}  // namespace engine

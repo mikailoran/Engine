@@ -4,6 +4,8 @@
 
 #include "engine/resource/unique_handle.h"
 
+namespace engine {
+
 class Ecs;
 struct FrameContext;
 
@@ -34,3 +36,5 @@ class LightingSystem {
   UniqueHandle<bgfx::UniformHandle> u_sky_color_;
   UniqueHandle<bgfx::UniformHandle> u_ground_color_;
 };
+
+}  // namespace engine

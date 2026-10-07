@@ -5,6 +5,8 @@
 
 #include "engine/ecs/core/types.h"
 
+namespace engine {
+
 /**
  * @brief Hands out entity ids and tracks which of them are in use.
  *
@@ -57,3 +59,5 @@ class EntityManager {
   EntityType living_entity_count_{0};
   std::array<bool, kMaxEntities> alive_{};
 };
+
+}  // namespace engine

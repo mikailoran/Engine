@@ -2,6 +2,8 @@
 
 #include <bx/math.h>
 
+namespace engine {
+
 // Rotations are unit quaternions applied as v' = q v q*, the convention of
 // bx::mul(Vec3, Quaternion), Jolt and glTF. Euler angles appear only at the
 // edges (scene files, the inspector) and use bx::mtxSRT's angle order.
@@ -26,3 +28,5 @@ struct YawPitch {
 
 /** @brief Rotation pointing local +Z along @p angles, local +X level. */
 auto YawPitchToQuat(YawPitch angles) -> bx::Quaternion;
+
+}  // namespace engine

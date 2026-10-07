@@ -7,6 +7,8 @@
 #include "engine/ecs/core/types.h"
 #include "engine/resource/unique_handle.h"
 
+namespace engine {
+
 class Ecs;
 class AssetRegistry;
 struct FrameContext;
@@ -74,3 +76,5 @@ class RenderSystem {
   // Entity supplying view and projection; empty until SetActiveCamera.
   std::optional<Entity> active_camera_;
 };
+
+}  // namespace engine

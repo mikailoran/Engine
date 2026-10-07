@@ -12,6 +12,16 @@
 #include "engine/platform/input.h"
 #include "engine/platform/screen.h"
 
+using engine::Ecs;
+using engine::Entity;
+using engine::FrameContext;
+using engine::Input;
+using engine::Key;
+using engine::MouseButton;
+using engine::ScreenPosition;
+using engine::Transform;
+using engine::YawPitchToQuat;
+
 namespace {
 
 // Matches the examples' camera this replaces.

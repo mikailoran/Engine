@@ -1,9 +1,12 @@
 #pragma once
 
-class Ecs;
-class AssetRegistry;
-struct FrameContext;
 struct ImGuiContext;
+
+namespace engine {
+class AssetRegistry;
+class Ecs;
+struct FrameContext;
+}  // namespace engine
 
 /**
  * @brief Draws the debug settings window and applies its edits.
@@ -32,7 +35,8 @@ class UiSystem {
    * @param assets Registry to load spawned entities' meshes through.
    * @param ctx Per-frame inputs.
    */
-  void Update(Ecs& ecs, AssetRegistry& assets, const FrameContext& ctx);
+  void Update(engine::Ecs& ecs, engine::AssetRegistry& assets,
+              const engine::FrameContext& ctx);
 
   /**
    * @brief Whether the UI wants the mouse, as of the last Update.

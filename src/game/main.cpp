@@ -18,6 +18,18 @@
 #include "engine/platform/screen.h"
 #include "game/window.h"
 
+using engine::AssetRoot;
+using engine::Camera;
+using engine::Ecs;
+using engine::Engine;
+using engine::Entity;
+using engine::FrameContext;
+using engine::Input;
+using engine::PixelSize;
+using engine::RenderOptions;
+using engine::SetAssetRoot;
+using engine::Transform;
+
 namespace {
 
 // Window size in screen points at startup

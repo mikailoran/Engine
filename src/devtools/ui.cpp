@@ -29,6 +29,25 @@
 #include "engine/resource/mesh_handle.h"
 #include "engine/resource/texture_handle.h"
 
+using engine::AssetRegistry;
+using engine::BoxColliderAround;
+using engine::Collider;
+using engine::Ecs;
+using engine::Entity;
+using engine::EulerToQuat;
+using engine::FrameContext;
+using engine::Input;
+using engine::Key;
+using engine::MeshHandle;
+using engine::MouseButton;
+using engine::PhysicsLink;
+using engine::QuatToEuler;
+using engine::Renderable;
+using engine::RigidBody;
+using engine::ScreenPosition;
+using engine::Transform;
+using engine::physics::ShapeKind;
+
 namespace {
 
 /** @brief Spawns a bunny. @return The new entity. */

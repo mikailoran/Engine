@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <limits>
 
+namespace engine {
+
 // TODO: Same as mesh handle so refactor into one class maybe
 
 /**
@@ -28,3 +30,5 @@ constexpr TextureHandle kInvalidTexture{};
 constexpr auto IsValid(TextureHandle handle) -> bool {
   return handle.idx != std::numeric_limits<std::uint16_t>::max();
 }
+
+}  // namespace engine

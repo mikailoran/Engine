@@ -11,6 +11,13 @@
 #include "engine/platform/input.h"
 #include "engine/platform/screen.h"
 
+using engine::Ecs;
+using engine::Engine;
+using engine::Entity;
+using engine::FrameContext;
+using engine::MouseButton;
+using engine::ScreenSize;
+
 namespace {
 
 /** @brief Removes Selected from every entity. */

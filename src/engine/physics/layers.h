@@ -9,6 +9,8 @@
 
 #include <optional>
 
+namespace engine::physics {
+
 /** @brief Jolt object layers, one per kind of body. */
 namespace object_layer {
 inline constexpr JPH::ObjectLayer kNonMoving = 0;
@@ -43,3 +45,5 @@ class CollisionLayers {
   // Derived from the two tables above, so built once they are filled
   std::optional<JPH::ObjectVsBroadPhaseLayerFilterTable> object_vs_broad_phase_;
 };
+
+}  // namespace engine::physics

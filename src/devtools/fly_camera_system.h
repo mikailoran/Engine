@@ -6,8 +6,10 @@
 #include "engine/math/rotation.h"
 #include "engine/platform/screen.h"
 
+namespace engine {
 class Ecs;
 struct FrameContext;
+}  // namespace engine
 
 /**
  * @brief Flies a camera entity from mouse and keyboard input.
@@ -28,19 +30,19 @@ class FlyCameraSystem {
    *        right-drag don't steer.
    * @param ui_has_keyboard True while the UI takes typing; keys don't move.
    */
-  void Update(Ecs& ecs, const FrameContext& ctx, bool ui_has_mouse,
-              bool ui_has_keyboard);
+  void Update(engine::Ecs& ecs, const engine::FrameContext& ctx,
+              bool ui_has_mouse, bool ui_has_keyboard);
 
   /** @brief Nominates the entity to fly. It must carry a Transform. */
-  void SetControlledCamera(Entity camera);
+  void SetControlledCamera(engine::Entity camera);
 
  private:
   // Entity being flown; empty until SetControlledCamera.
-  std::optional<Entity> camera_;
+  std::optional<engine::Entity> camera_;
 
   // Look direction, applied to the camera's rotation every frame.
-  YawPitch angles_{};
+  engine::YawPitch angles_{};
 
   // Cursor position last frame, to turn mouse motion into turning.
-  ScreenPosition last_mouse_{};
+  engine::ScreenPosition last_mouse_{};
 };

@@ -1,8 +1,12 @@
 #pragma once
 
+namespace engine {
+
 class Ecs;
 class PhysicsLink;
+namespace physics {
 class PhysicsWorld;
+}  // namespace physics
 struct FrameContext;
 struct RigidBody;
 
@@ -27,7 +31,7 @@ class PhysicsSystem {
    * @param world Physics world holding the bodies.
    * @param ctx Per-frame inputs; only its variable @c dt is consumed.
    */
-  void Update(Ecs& ecs, PhysicsWorld& world, const FrameContext& ctx);
+  void Update(Ecs& ecs, physics::PhysicsWorld& world, const FrameContext& ctx);
 
  private:
   // Static: steps reach PhysicsLink's privates through this class's friendship
@@ -36,34 +40,34 @@ class PhysicsSystem {
    * @brief Destroys bodies that no PhysicsLink points to: their entity was
    * destroyed, or its id was reused by an entity not yet given a body.
    */
-  static void SweepOrphans(Ecs& ecs, PhysicsWorld& world);
+  static void SweepOrphans(Ecs& ecs, physics::PhysicsWorld& world);
 
   /**
    * @brief Unlinks entities that lost their Collider or Transform, destroying
    * their bodies. Also drops a PhysicsLink that does not own its body, such as
    * a copy, so the entity gets its own.
    */
-  static void DetachBodies(Ecs& ecs, PhysicsWorld& world);
+  static void DetachBodies(Ecs& ecs, physics::PhysicsWorld& world);
 
   /** @brief Creates a body for each Collider and Transform entity without one.
    */
-  static void AttachBodies(Ecs& ecs, PhysicsWorld& world);
+  static void AttachBodies(Ecs& ecs, physics::PhysicsWorld& world);
 
   /**
    * @brief Pushes edits made outside physics into each body, then refreshes the
    * link's copies to match.
    */
-  static void PushEdits(Ecs& ecs, PhysicsWorld& world);
+  static void PushEdits(Ecs& ecs, physics::PhysicsWorld& world);
 
   /**
    * @brief Pushes RigidBody edits; adding or removing one switches the body
    * between static and dynamic. @p rigid_body is null when absent.
    */
-  static void PushMotion(PhysicsWorld& world, PhysicsLink& link,
+  static void PushMotion(physics::PhysicsWorld& world, PhysicsLink& link,
                          const RigidBody* rigid_body);
 
   /** @brief Copies dynamic bodies' poses and velocities back to the ECS. */
-  static void PullResults(Ecs& ecs, const PhysicsWorld& world);
+  static void PullResults(Ecs& ecs, const physics::PhysicsWorld& world);
 
   /// Simulation step length, in seconds (60 Hz).
   static constexpr float kFixedDt = 1.0F / 60.0F;
@@ -75,3 +79,5 @@ class PhysicsSystem {
   /// Unsimulated seconds carried between frames.
   float accumulator_{0.0F};
 };
+
+}  // namespace engine

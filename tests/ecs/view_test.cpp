@@ -8,6 +8,8 @@
 #include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
 
+namespace engine {
+
 namespace {
 
 struct Position {
@@ -207,3 +209,5 @@ TEST(ViewDeathTest, RemovingAViewedComponentDuringForEachAsserts) {
       "added or removed during ForEach");
 #endif
 }
+
+}  // namespace engine

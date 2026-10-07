@@ -2,6 +2,8 @@
 
 #include <string>
 
+namespace engine {
+
 /**
  * @brief Sets the directory every asset path is resolved against.
  *
@@ -13,3 +15,5 @@
  *        any asset loads.
  */
 void SetAssetRoot(std::string root);
+
+}  // namespace engine

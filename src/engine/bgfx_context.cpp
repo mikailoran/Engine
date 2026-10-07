@@ -7,6 +7,8 @@
 #include "engine/platform/native_surface.h"
 #include "engine/platform/screen.h"
 
+namespace engine {
+
 BgfxContext::BgfxContext(const NativeSurface& surface) : size_(surface.size) {
   // Called before init, this keeps bgfx from starting its own render thread
   bgfx::renderFrame();
@@ -37,3 +39,5 @@ void BgfxContext::Resize(PixelSize size) {
   size_ = size;
   bgfx::reset(size.width, size.height, kResetFlags);
 }
+
+}  // namespace engine

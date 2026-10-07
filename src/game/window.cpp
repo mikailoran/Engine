@@ -25,6 +25,13 @@
 #include "engine/platform/native_surface.h"
 #include "engine/platform/screen.h"
 
+using engine::Input;
+using engine::Key;
+using engine::MouseButton;
+using engine::NativeSurface;
+using engine::PixelSize;
+using engine::SurfaceKind;
+
 namespace {
 
 /** @brief An engine key and the physical key that drives it. */

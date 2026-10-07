@@ -14,6 +14,8 @@
 
 struct Mesh;
 
+namespace engine {
+
 /** @brief unique_ptr deleter that frees a mesh with meshUnload. */
 struct MeshUnloader {
   /** @brief Unloads @p mesh's GPU buffers and frees it. */
@@ -88,3 +90,5 @@ class AssetRegistry {
   std::unordered_map<std::filesystem::path, TextureHandle> texture_by_path_;
   std::vector<UniqueHandle<bgfx::TextureHandle>> textures_;
 };
+
+}  // namespace engine

@@ -8,6 +8,8 @@
 
 #include "engine/platform/screen.h"
 
+namespace engine {
+
 /** @brief Mouse buttons the engine reads. */
 enum class MouseButton : std::uint8_t { kLeft, kRight, kMiddle };
 
@@ -138,3 +140,5 @@ class Input {
   float wheel_{0.0F};
   std::string text_;
 };
+
+}  // namespace engine

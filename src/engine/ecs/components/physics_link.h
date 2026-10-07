@@ -7,6 +7,8 @@
 #include "engine/ecs/components/transform.h"
 #include "engine/physics/body_handle.h"
 
+namespace engine {
+
 class PhysicsSystem;
 
 /**
@@ -23,13 +25,13 @@ class PhysicsLink {
   PhysicsLink() = default;
 
   /** @brief The entity's body; it stores the entity back as its user data. */
-  [[nodiscard]] auto Body() const -> BodyHandle { return body_; }
+  [[nodiscard]] auto Body() const -> physics::BodyHandle { return body_; }
 
  private:
   friend class PhysicsSystem;
 
   /** @brief Links to @p body with the components it was created from. */
-  PhysicsLink(BodyHandle body, const Transform& transform,
+  PhysicsLink(physics::BodyHandle body, const Transform& transform,
               const Collider& collider,
               const std::optional<RigidBody>& rigid_body)
       : body_(body),
@@ -37,7 +39,7 @@ class PhysicsLink {
         collider_(collider),
         rigid_body_(rigid_body) {}
 
-  BodyHandle body_;
+  physics::BodyHandle body_;
   /// Transform as last synced with the body.
   Transform transform_;
   /// Collider as last synced with the body.
@@ -45,3 +47,5 @@ class PhysicsLink {
   /// RigidBody as last synced; engaged while the body is dynamic.
   std::optional<RigidBody> rigid_body_;
 };
+
+}  // namespace engine

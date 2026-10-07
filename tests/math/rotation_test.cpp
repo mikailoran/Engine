@@ -15,6 +15,8 @@
 
 #include "engine/ecs/components/transform.h"
 
+namespace engine {
+
 namespace {
 
 constexpr int kSamples = 10000;
@@ -144,3 +146,5 @@ TEST(Rotation, QuatToEulerKeepsRotationAtGimbalLock) {
 }
 
 }  // namespace
+
+}  // namespace engine

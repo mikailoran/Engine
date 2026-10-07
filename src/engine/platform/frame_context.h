@@ -4,6 +4,8 @@
 
 #include "engine/platform/input.h"
 
+namespace engine {
+
 /**
  * @brief Generic info used per-frame for rendering
  */
@@ -23,3 +25,5 @@ struct FrameContext {
   // This frame's mouse input; default-constructed when the host has none.
   Input input{};
 };
+
+}  // namespace engine

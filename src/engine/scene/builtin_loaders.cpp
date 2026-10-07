@@ -19,6 +19,8 @@
 #include "engine/scene/json_read.h"
 #include "engine/scene/scene_loader.h"
 
+namespace engine {
+
 namespace {
 
 using nlohmann::json;
@@ -105,10 +107,10 @@ void ReadShapeKind(const json& data, Collider& collider) {
     if (shape != "box" && shape != "sphere") {
       throw std::runtime_error(R"(shape must be "box" or "sphere")");
     }
-    collider.shape.kind =
-        shape == "sphere" ? ShapeKind::kSphere : ShapeKind::kBox;
+    collider.shape.kind = shape == "sphere" ? physics::ShapeKind::kSphere
+                                            : physics::ShapeKind::kBox;
   }
-  const bool sphere = collider.shape.kind == ShapeKind::kSphere;
+  const bool sphere = collider.shape.kind == physics::ShapeKind::kSphere;
   // A size for the other shape is a typo, not something to ignore
   if (data.contains(sphere ? "half_extents" : "radius")) {
     throw std::runtime_error(sphere ? R"(half_extents needs shape "box")"
@@ -171,3 +173,5 @@ void RegisterBuiltinLoaders(SceneLoader& loader) {
   loader.Register("directional_light", LoadDirectionalLight);
   loader.Register("collider", LoadCollider);
 }
+
+}  // namespace engine

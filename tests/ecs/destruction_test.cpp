@@ -11,6 +11,8 @@
 #include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
 
+namespace engine {
+
 namespace {
 
 struct Position {
@@ -110,3 +112,5 @@ TEST(Destruction, ReleasesWhatTheEntitysComponentsOwn) {
 
   EXPECT_EQ(resource.use_count(), 1);
 }
+
+}  // namespace engine

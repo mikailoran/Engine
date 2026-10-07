@@ -19,6 +19,8 @@
 #include "engine/physics/shape.h"
 #include "engine/platform/frame_context.h"
 
+namespace engine {
+
 namespace {
 
 /** @brief Tests two vectors for exact equality. */
@@ -32,13 +34,13 @@ auto Same(const bx::Quaternion& a, const bx::Quaternion& b) -> bool {
 }
 
 /** @brief Tests whether two shapes are identical. */
-auto Same(const ShapeDesc& a, const ShapeDesc& b) -> bool {
+auto Same(const physics::ShapeDesc& a, const physics::ShapeDesc& b) -> bool {
   return a.kind == b.kind && Same(a.half_extents, b.half_extents) &&
          a.radius == b.radius && Same(a.offset, b.offset);
 }
 
 /** @brief Tests whether two materials are identical. */
-auto Same(const Material& a, const Material& b) -> bool {
+auto Same(const physics::Material& a, const physics::Material& b) -> bool {
   return a.restitution == b.restitution && a.friction == b.friction;
 }
 
@@ -49,8 +51,8 @@ auto Tag(Entity entity) -> std::uint64_t {
 
 }  // namespace
 
-void PhysicsSystem::SweepOrphans(Ecs& ecs, PhysicsWorld& world) {
-  for (const BodyEntry& entry : world.Bodies()) {
+void PhysicsSystem::SweepOrphans(Ecs& ecs, physics::PhysicsWorld& world) {
+  for (const physics::BodyEntry& entry : world.Bodies()) {
     const auto* link =
         ecs.TryGetComponent<PhysicsLink>(static_cast<Entity>(entry.user_data));
     if (link == nullptr || link->body_ != entry.body) {
@@ -59,7 +61,7 @@ void PhysicsSystem::SweepOrphans(Ecs& ecs, PhysicsWorld& world) {
   }
 }
 
-void PhysicsSystem::DetachBodies(Ecs& ecs, PhysicsWorld& world) {
+void PhysicsSystem::DetachBodies(Ecs& ecs, physics::PhysicsWorld& world) {
   std::vector<Entity> unlinked;
   ecs.View<PhysicsLink>().ForEach(
       [&](Entity entity, const PhysicsLink& link) -> void {
@@ -79,7 +81,7 @@ void PhysicsSystem::DetachBodies(Ecs& ecs, PhysicsWorld& world) {
   }
 }
 
-void PhysicsSystem::AttachBodies(Ecs& ecs, PhysicsWorld& world) {
+void PhysicsSystem::AttachBodies(Ecs& ecs, physics::PhysicsWorld& world) {
   std::vector<Entity> unlinked;
   ecs.View<Collider, Transform>().ForEach(
       [&](Entity entity, const Collider&, const Transform&) -> void {
@@ -94,16 +96,17 @@ void PhysicsSystem::AttachBodies(Ecs& ecs, PhysicsWorld& world) {
     const auto* rigid_body = ecs.TryGetComponent<RigidBody>(entity);
     const bool dynamic = rigid_body != nullptr;
 
-    const BodyHandle body = world.CreateBody(
-        BodyDesc{.shape = collider.shape,
-                 .pose = {.position = transform.position,
-                          .rotation = transform.rotation},
-                 .scale = transform.scale,
-                 .motion = dynamic ? Motion::kDynamic : Motion::kStatic,
-                 .material = collider.material,
-                 .velocity = dynamic ? rigid_body->velocity : bx::Vec3{0.0F},
-                 .gravity = dynamic && rigid_body->has_gravity,
-                 .user_data = Tag(entity)});
+    const physics::BodyHandle body = world.CreateBody(physics::BodyDesc{
+        .shape = collider.shape,
+        .pose = {.position = transform.position,
+                 .rotation = transform.rotation},
+        .scale = transform.scale,
+        .motion =
+            dynamic ? physics::Motion::kDynamic : physics::Motion::kStatic,
+        .material = collider.material,
+        .velocity = dynamic ? rigid_body->velocity : bx::Vec3{0.0F},
+        .gravity = dynamic && rigid_body->has_gravity,
+        .user_data = Tag(entity)});
     if (!body.IsValid()) {
       continue;
     }
@@ -116,11 +119,12 @@ void PhysicsSystem::AttachBodies(Ecs& ecs, PhysicsWorld& world) {
   }
 }
 
-void PhysicsSystem::PushMotion(PhysicsWorld& world, PhysicsLink& link,
+void PhysicsSystem::PushMotion(physics::PhysicsWorld& world, PhysicsLink& link,
                                const RigidBody* rigid_body) {
   const bool dynamic = rigid_body != nullptr;
   if (dynamic != link.rigid_body_.has_value()) {
-    world.SetMotion(link.body_, dynamic ? Motion::kDynamic : Motion::kStatic);
+    world.SetMotion(link.body_, dynamic ? physics::Motion::kDynamic
+                                        : physics::Motion::kStatic);
     if (dynamic) {
       // Static bodies hold no gravity, velocity or acceleration
       world.SetGravityEnabled(link.body_, rigid_body->has_gravity);
@@ -143,7 +147,7 @@ void PhysicsSystem::PushMotion(PhysicsWorld& world, PhysicsLink& link,
       dynamic ? std::optional(*rigid_body) : std::optional<RigidBody>{};
 }
 
-void PhysicsSystem::PushEdits(Ecs& ecs, PhysicsWorld& world) {
+void PhysicsSystem::PushEdits(Ecs& ecs, physics::PhysicsWorld& world) {
   ecs.View<PhysicsLink, Collider, Transform>().ForEach(
       [&](Entity entity, PhysicsLink& link, const Collider& collider,
           const Transform& transform) -> void {
@@ -165,14 +169,14 @@ void PhysicsSystem::PushEdits(Ecs& ecs, PhysicsWorld& world) {
       });
 }
 
-void PhysicsSystem::PullResults(Ecs& ecs, const PhysicsWorld& world) {
+void PhysicsSystem::PullResults(Ecs& ecs, const physics::PhysicsWorld& world) {
   ecs.View<PhysicsLink, Transform>().ForEach(
       [&](Entity entity, PhysicsLink& link, Transform& transform) -> void {
         auto* rigid_body = ecs.TryGetComponent<RigidBody>(entity);
         if (!link.rigid_body_.has_value() || rigid_body == nullptr) {
           return;
         }
-        const Pose pose = world.GetPose(link.body_);
+        const physics::Pose pose = world.GetPose(link.body_);
         transform.position = pose.position;
         transform.rotation = pose.rotation;
         rigid_body->velocity = world.GetVelocity(link.body_);
@@ -182,7 +186,7 @@ void PhysicsSystem::PullResults(Ecs& ecs, const PhysicsWorld& world) {
       });
 }
 
-void PhysicsSystem::Update(Ecs& ecs, PhysicsWorld& world,
+void PhysicsSystem::Update(Ecs& ecs, physics::PhysicsWorld& world,
                            const FrameContext& ctx) {
   SweepOrphans(ecs, world);
   DetachBodies(ecs, world);
@@ -200,3 +204,5 @@ void PhysicsSystem::Update(Ecs& ecs, PhysicsWorld& world,
 
   PullResults(ecs, world);
 }
+
+}  // namespace engine

@@ -13,6 +13,8 @@
 #include "engine/ecs/core/component_array.h"
 #include "engine/ecs/core/types.h"
 
+namespace engine {
+
 // TODO: Make View become a range. Currently, we can only pass functions to
 // views (internal iteration). Making View returning ranges would allow external
 // iteration and early exits in systems where iterating over all entities is not
@@ -95,3 +97,5 @@ auto View<Components...>::ComponentArrayOf() const
     -> ComponentArray<Component>& {
   return *std::get<ComponentArray<Component>*>(component_arrays_);
 }
+
+}  // namespace engine

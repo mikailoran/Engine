@@ -7,6 +7,8 @@
 #include "engine/platform/native_surface.h"
 #include "engine/platform/screen.h"
 
+namespace engine {
+
 /**
  * @brief Owns bgfx's lifetime: bgfx::init on construction, bgfx::shutdown on
  * destruction.
@@ -43,3 +45,5 @@ class BgfxContext {
   // Backbuffer size bgfx was last initialised or reset with.
   PixelSize size_;
 };
+
+}  // namespace engine
