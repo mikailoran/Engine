@@ -15,8 +15,8 @@ struct MouseState;
  * @brief Controls camera entities from user input.
  *
  * Currently using examples-common free-look camera. The system copies its
- * resulting pose into the components. Owns that camera, a process-wide
- * global, so at most one instance may exist.
+ * resulting pose into the camera entity's Transform. Owns that camera, a
+ * process-wide global, so at most one instance may exist.
  */
 class CameraControl {
  public:
@@ -33,9 +33,8 @@ class CameraControl {
   auto operator=(CameraControl&&) -> CameraControl& = delete;
 
   /**
-   * @brief Gathers input and writes the resulting pose, view and projection
-   * into the nominated camera entity's Transform and Camera. Does nothing
-   * until SetCamera.
+   * @brief Gathers input and writes the resulting pose into the nominated
+   * camera entity's Transform. Does nothing until SetCamera.
    *
    * @param ecs World to write components through.
    * @param ctx Per-frame inputs.
@@ -45,8 +44,7 @@ class CameraControl {
               const entry::MouseState& mouse);
 
   /**
-   * @brief Nominates the entity to drive. It must carry a Transform and a
-   * Camera.
+   * @brief Nominates the entity to drive. It must carry a Transform.
    */
   void SetCamera(Entity camera);
 

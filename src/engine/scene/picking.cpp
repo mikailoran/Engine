@@ -62,9 +62,11 @@ auto PickEntity(Ecs& ecs, const AssetRegistry& assets, const bx::Ray& ray)
 
 }  // namespace
 
-auto Pick(Ecs& ecs, const AssetRegistry& assets, const Camera& camera,
+auto Pick(Ecs& ecs, const AssetRegistry& assets, Entity camera,
           ScreenPosition position, ScreenSize size) -> std::optional<Entity> {
-  const auto ray = ScreenPositionToRay(camera, position, size);
+  const auto ray =
+      ScreenPositionToRay(ecs.GetComponent<Camera>(camera),
+                          ecs.GetComponent<Transform>(camera), position, size);
   const auto hit = PickEntity(ecs, assets, ray);
   return hit ? std::optional<Entity>{hit->entity} : std::nullopt;
 }

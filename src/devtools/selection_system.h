@@ -19,7 +19,7 @@ class SelectionSystem {
   /**
    * @brief Picks on a left-button press and updates Selected.
    *
-   * Reads the camera's view and proj, so must run after CameraControl.
+   * Reads the camera's pose, so must run after CameraControl.
    *
    * @param ecs World to pick from and write Selected through.
    * @param assets Registry to resolve mesh bounds through.

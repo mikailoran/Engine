@@ -1,14 +1,16 @@
 #include "devtools/camera_control.h"
 
-#include <bgfx/bgfx.h>
 #include <bx/math.h>
 #include <camera.h>
 #include <entry/entry.h>
 
-#include "engine/ecs/components/camera.h"
+#include <algorithm>
+#include <cmath>
+
 #include "engine/ecs/components/transform.h"
 #include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
+#include "engine/math/rotation.h"
 #include "engine/platform/frame_context.h"
 
 namespace {
@@ -32,22 +34,16 @@ void CameraControl::Update(Ecs& ecs, const FrameContext& ctx,
     return;
   }
 
-  auto& transform = ecs.GetComponent<Transform>(*camera_);
-  auto& camera = ecs.GetComponent<Camera>(*camera_);
-
   cameraUpdate(ctx.dt, mouse);
 
-  // Mirror the resulting pose into the components.
-  transform.position = cameraGetPosition();
-  camera.target = cameraGetAt();
-
-  // Derive view and projection for this frame's readers
-  const auto aspect =
-      static_cast<float>(ctx.width) / static_cast<float>(ctx.height);
-  bx::mtxLookAt(camera.view.data(), transform.position, camera.target,
-                camera.up);
-  bx::mtxProj(camera.proj.data(), camera.fov_degrees, aspect, camera.near_plane,
-              camera.far_plane, bgfx::getCaps()->homogeneousDepth);
+  // Turn the example camera's eye and target into the Transform's pose
+  const bx::Vec3 eye = cameraGetPosition();
+  const bx::Vec3 dir = bx::normalize(bx::sub(cameraGetAt(), eye));
+  auto& transform = ecs.GetComponent<Transform>(*camera_);
+  transform.position = eye;
+  transform.rotation =
+      YawPitchToQuat({.yaw = std::atan2(dir.x, dir.z),
+                      .pitch = std::asin(std::clamp(dir.y, -1.0F, 1.0F))});
 }
 
 CameraControl::~CameraControl() { cameraDestroy(); }

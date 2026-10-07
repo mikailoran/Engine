@@ -124,7 +124,11 @@ void DebugDrawSystem::Update(Ecs& ecs, const AssetRegistry& assets,
   }
 
   const auto& camera = ecs.GetComponent<Camera>(*camera_);
-  bgfx::setViewTransform(kDebugView, camera.view.data(), camera.proj.data());
+  const auto view = ViewMatrix(ecs.GetComponent<Transform>(*camera_));
+  const auto proj = ProjectionMatrix(
+      camera, static_cast<float>(ctx.width) / static_cast<float>(ctx.height),
+      bgfx::getCaps()->homogeneousDepth);
+  bgfx::setViewTransform(kDebugView, view.data(), proj.data());
   bgfx::setViewRect(kDebugView, 0, 0, static_cast<std::uint16_t>(ctx.width),
                     static_cast<std::uint16_t>(ctx.height));
 

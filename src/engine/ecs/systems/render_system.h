@@ -42,9 +42,9 @@ class RenderSystem {
   /**
    * @brief Nominates the entity supplying view and projection.
    *
-   * The entity must carry both a Transform  and a Camera.
-   * Until this is called the view is identity, which leaves the scene drawn
-   * from the world origin.
+   * The entity must carry both a Transform and a Camera.
+   * Until this is called the scene is drawn from the world origin with a
+   * default Camera.
    *
    * @param camera Entity to read the camera from.
    */

@@ -31,3 +31,12 @@ auto QuatToEuler(const bx::Quaternion& rotation) -> bx::Vec3 {
   }
   return {std::atan2(z_axis.y, z_axis.z), y, std::atan2(y_axis.x, x_axis.x)};
 }
+
+auto YawPitchToQuat(YawPitch angles) -> bx::Quaternion {
+  // Pitch about local X, then yaw about world Y; +X tips +Z down, so negate
+  const bx::Quaternion yaw_q =
+      bx::fromAxisAngle({0.0F, 1.0F, 0.0F}, angles.yaw);
+  const bx::Quaternion pitch_q =
+      bx::fromAxisAngle({1.0F, 0.0F, 0.0F}, -angles.pitch);
+  return bx::mul(yaw_q, pitch_q);
+}

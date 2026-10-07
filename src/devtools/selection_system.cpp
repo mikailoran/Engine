@@ -4,7 +4,6 @@
 #include <vector>
 
 #include "devtools/selected.h"
-#include "engine/ecs/components/camera.h"
 #include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
 #include "engine/platform/frame_context.h"
@@ -39,10 +38,9 @@ void SelectionSystem::Update(Ecs& ecs, const AssetRegistry& assets,
     return;
   }
 
-  const auto& camera = ecs.GetComponent<Camera>(*camera_);
   const auto screen_size = ScreenSize{.width = static_cast<float>(ctx.width),
                                       .height = static_cast<float>(ctx.height)};
-  const auto pick = Pick(ecs, assets, camera, ctx.input.Mouse(), screen_size);
+  const auto pick = Pick(ecs, assets, *camera_, ctx.input.Mouse(), screen_size);
 
   // A hit becomes the only selection; a miss clears it
   DeselectAll(ecs);

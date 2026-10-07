@@ -6,7 +6,6 @@
 #include <bx/math.h>
 
 #include <array>
-#include <cstddef>
 #include <cstdint>
 #include <format>
 #include <stdexcept>
@@ -23,14 +22,7 @@
 
 namespace {
 
-// Matrix element count for bx's 4x4 routines.
-constexpr std::size_t kMtxSize = 16;
-
 constexpr uint32_t kClearColor = 0x303030ff;  // RGBA
-// Only used when no camera entity has been nominated.
-constexpr float kFallbackFovDegrees = 60.0F;
-constexpr float kFallbackNearPlane = 0.1F;
-constexpr float kFallbackFarPlane = 100.0F;
 
 /** @brief Prints @p text to bgfx's debug overlay at a character cell. */
 void DebugText(std::uint16_t x, std::uint16_t y, std::uint8_t attr,
@@ -87,27 +79,19 @@ void RenderSystem::Update(Ecs& ecs, const AssetRegistry& assets,
   DrawDebugOverlay(ctx);
   bgfx::setFrameUniform(u_time_.Get(), &ctx.time);
 
-  // View and projection for view 0, written by CameraControl this frame
+  // View and projection for view 0, from the camera's pose and lens
   {
-    std::array<float, kMtxSize> view{};
-    std::array<float, kMtxSize> proj{};
-    std::array<float, 4> eye_pos{0.0F, 0.0F, 0.0F, 0.0F};
+    // No camera set: a default lens at the world origin
+    const Transform pose =
+        camera_ ? ecs.GetComponent<Transform>(*camera_) : Transform{};
+    const Camera lens = camera_ ? ecs.GetComponent<Camera>(*camera_) : Camera{};
 
-    if (camera_) {
-      const auto& transform = ecs.GetComponent<Transform>(*camera_);
-      const auto& camera = ecs.GetComponent<Camera>(*camera_);
-      eye_pos = {transform.position.x, transform.position.y,
-                 transform.position.z, 0.0F};
-      view = camera.view;
-      proj = camera.proj;
-    } else {
-      // No camera set: view from the world origin with the stock projection.
-      const auto aspect =
-          static_cast<float>(ctx.width) / static_cast<float>(ctx.height);
-      bx::mtxIdentity(view.data());
-      bx::mtxProj(proj.data(), kFallbackFovDegrees, aspect, kFallbackNearPlane,
-                  kFallbackFarPlane, bgfx::getCaps()->homogeneousDepth);
-    }
+    const auto view = ViewMatrix(pose);
+    const auto proj = ProjectionMatrix(
+        lens, static_cast<float>(ctx.width) / static_cast<float>(ctx.height),
+        bgfx::getCaps()->homogeneousDepth);
+    const std::array<float, 4> eye_pos{pose.position.x, pose.position.y,
+                                       pose.position.z, 0.0F};
     bgfx::setFrameUniform(u_eye_pos_.Get(), eye_pos.data());
 
     bgfx::setViewTransform(0, view.data(), proj.data());

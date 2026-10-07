@@ -6,18 +6,14 @@
 #include <array>
 #include <cassert>
 
+#include "engine/ecs/components/transform.h"
 #include "engine/platform/screen.h"
 
 /**
- * @brief View and projection parameters for a camera entity.
+ * @brief Lens of a camera entity. Its Transform is the pose: the camera looks
+ * along local +Z with local +Y up, and scale is ignored.
  */
 struct Camera {
-  // World-space point the camera looks at.
-  bx::Vec3 target{0.0F, 0.0F, 1.0F};
-
-  // World-space up axis. Y-up matches the convention used by bx::mtxLookAt
-  bx::Vec3 up{0.0F, 1.0F, 0.0F};
-
   // Vertical field of view
   float fov_degrees{60.0F};
 
@@ -26,27 +22,56 @@ struct Camera {
 
   // Far clip distance.
   float far_plane{100.0F};
-
-  // Derived, not configuration: written each frame by CameraControl.
-  std::array<float, 16> view{};
-  std::array<float, 16> proj{};
 };
 
+/** @brief World-to-view matrix for a camera posed by @p transform. */
+inline auto ViewMatrix(const Transform& transform) -> std::array<float, 16> {
+  const bx::Vec3 forward =
+      bx::mul(bx::Vec3{0.0F, 0.0F, 1.0F}, transform.rotation);
+  const bx::Vec3 up = bx::mul(bx::Vec3{0.0F, 1.0F, 0.0F}, transform.rotation);
+
+  // Rotated +Y as up, so it is never parallel to forward
+  std::array<float, 16> view{};
+  bx::mtxLookAt(view.data(), transform.position,
+                bx::add(transform.position, forward), up);
+  return view;
+}
+
 /**
- * @brief Casts a world-space ray from the camera through a window pixel.
- * @pre @p size has positive area; view and proj are current.
+ * @brief Perspective projection for @p camera.
+ * @param aspect Viewport width over height.
+ * @param homogeneous_depth True for NDC depth -1..1, false for 0..1; pass
+ *        bgfx::getCaps()->homogeneousDepth when rendering.
  */
-inline auto ScreenPositionToRay(const Camera& camera, ScreenPosition point,
-                                ScreenSize size) -> bx::Ray {
+inline auto ProjectionMatrix(const Camera& camera, float aspect,
+                             bool homogeneous_depth) -> std::array<float, 16> {
+  std::array<float, 16> proj{};
+  bx::mtxProj(proj.data(), camera.fov_degrees, aspect, camera.near_plane,
+              camera.far_plane, homogeneous_depth);
+  return proj;
+}
+
+/**
+ * @brief Casts a world-space ray from a camera through a window pixel.
+ * @param transform The camera's pose.
+ * @pre @p size has positive area.
+ */
+inline auto ScreenPositionToRay(const Camera& camera,
+                                const Transform& transform,
+                                ScreenPosition point, ScreenSize size)
+    -> bx::Ray {
   assert(size.width > 0.0F && size.height > 0.0F && "window has no area");
 
   // Pixel to NDC; screen y grows down, NDC y up
   const float x_ndc = (2.0F * point.x / size.width) - 1.0F;
   const float y_ndc = 1.0F - (2.0F * point.y / size.height);
 
+  // makeRay unprojects NDC depth 0 and 1, so use 0..1 whatever the backend
+  const auto view = ViewMatrix(transform);
+  const auto proj = ProjectionMatrix(camera, size.width / size.height, false);
   std::array<float, 16> view_proj{};
   std::array<float, 16> inv_view_proj{};
-  bx::mtxMul(view_proj.data(), camera.view.data(), camera.proj.data());
+  bx::mtxMul(view_proj.data(), view.data(), proj.data());
   bx::mtxInverse(inv_view_proj.data(), view_proj.data());
   return bx::makeRay(x_ndc, y_ndc, inv_view_proj.data());
 }

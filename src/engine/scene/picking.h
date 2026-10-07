@@ -7,7 +7,6 @@
 
 class Ecs;
 class AssetRegistry;
-struct Camera;
 
 /**
  * @brief Finds the entity under a screen position.
@@ -15,9 +14,9 @@ struct Camera;
  * Casts a ray from @p camera and tests it against the mesh bounds of every
  * entity with a Transform and a Renderable; the nearest hit wins.
  *
- * @param camera Camera whose view and proj are current.
+ * @param camera Entity carrying a Camera and a Transform.
  * @param size Backbuffer size; must have positive area.
  * @return The nearest entity hit, or empty on a miss.
  */
-auto Pick(Ecs& ecs, const AssetRegistry& assets, const Camera& camera,
+auto Pick(Ecs& ecs, const AssetRegistry& assets, Entity camera,
           ScreenPosition position, ScreenSize size) -> std::optional<Entity>;

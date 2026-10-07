@@ -14,3 +14,15 @@ auto EulerToQuat(const bx::Vec3& euler) -> bx::Quaternion;
  * back to it. Y is within [-pi/2, pi/2]; X and Z within [-pi, pi].
  */
 auto QuatToEuler(const bx::Quaternion& rotation) -> bx::Vec3;
+
+/**
+ * @brief A look direction in radians. Zero looks along +Z; positive yaw turns
+ * toward +X, positive pitch looks up.
+ */
+struct YawPitch {
+  float yaw{0.0F};
+  float pitch{0.0F};
+};
+
+/** @brief Rotation pointing local +Z along @p angles, local +X level. */
+auto YawPitchToQuat(YawPitch angles) -> bx::Quaternion;
