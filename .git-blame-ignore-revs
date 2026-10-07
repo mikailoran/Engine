@@ -6,3 +6,6 @@
 
 # Move src/ into engine/devtools/game; include paths only
 fc06b480a3af763eb87226afe51866e3a59b1ed5
+
+# Wrap src/engine in namespace engine; namespace lines and qualifications only
+b01dedc267d7da45a2dd6a36a75ee03acff29ba6
