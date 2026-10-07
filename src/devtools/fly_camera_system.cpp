@@ -22,12 +22,13 @@ constexpr float kMaxPitch = 1.55F;
 
 }  // namespace
 
-void FlyCameraSystem::Update(Ecs& ecs, const FrameContext& ctx) {
+void FlyCameraSystem::Update(Ecs& ecs, const FrameContext& ctx,
+                             bool ui_has_mouse, bool ui_has_keyboard) {
   const Input& input = ctx.input;
 
   // Turn by how far the cursor moved since last frame, while right is held
   const ScreenPosition mouse = input.Mouse();
-  if (input.Down(MouseButton::kRight)) {
+  if (!ui_has_mouse && input.Down(MouseButton::kRight)) {
     angles_.yaw += kTurnRadiansPerPixel * (mouse.x - last_mouse_.x);
     angles_.pitch = std::clamp(
         angles_.pitch - (kTurnRadiansPerPixel * (mouse.y - last_mouse_.y)),
@@ -49,24 +50,29 @@ void FlyCameraSystem::Update(Ecs& ecs, const FrameContext& ctx) {
   const bx::Vec3 forward =
       bx::mul(bx::Vec3{0.0F, 0.0F, 1.0F}, transform.rotation);
 
-  bx::Vec3 move = bx::mul(forward, input.Wheel());
-  if (input.Down(Key::kW)) {
-    move = bx::add(move, forward);
-  }
-  if (input.Down(Key::kS)) {
-    move = bx::sub(move, forward);
-  }
-  if (input.Down(Key::kD)) {
-    move = bx::add(move, right);
-  }
-  if (input.Down(Key::kA)) {
-    move = bx::sub(move, right);
-  }
-  if (input.Down(Key::kE)) {
-    move = bx::add(move, up);
-  }
-  if (input.Down(Key::kQ)) {
-    move = bx::sub(move, up);
+  // Scrolling the UI must not move the camera
+  bx::Vec3 move = bx::mul(forward, ui_has_mouse ? 0.0F : input.Wheel());
+
+  // Nor must typing into it
+  if (!ui_has_keyboard) {
+    if (input.Down(Key::kW)) {
+      move = bx::add(move, forward);
+    }
+    if (input.Down(Key::kS)) {
+      move = bx::sub(move, forward);
+    }
+    if (input.Down(Key::kD)) {
+      move = bx::add(move, right);
+    }
+    if (input.Down(Key::kA)) {
+      move = bx::sub(move, right);
+    }
+    if (input.Down(Key::kE)) {
+      move = bx::add(move, up);
+    }
+    if (input.Down(Key::kQ)) {
+      move = bx::sub(move, up);
+    }
   }
   transform.position = bx::mad(move, kMoveSpeed * ctx.dt, transform.position);
 }

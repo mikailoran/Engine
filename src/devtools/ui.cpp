@@ -193,6 +193,66 @@ auto DrawInspector(Ecs& ecs, AssetRegistry& assets) -> void {
   });
 }
 
+/** @brief An engine key and the ImGui key it drives. */
+struct ImguiKeyBinding {
+  Key key;
+  ImGuiKey imgui_key;
+};
+
+// Text editing, navigation and shortcut keys; W/S/D/Q/E only fly the camera
+constexpr auto kImguiKeys = std::to_array<ImguiKeyBinding>({
+    // clang-format off
+    {.key = Key::kTab,        .imgui_key = ImGuiKey_Tab},
+    {.key = Key::kLeft,       .imgui_key = ImGuiKey_LeftArrow},
+    {.key = Key::kRight,      .imgui_key = ImGuiKey_RightArrow},
+    {.key = Key::kUp,         .imgui_key = ImGuiKey_UpArrow},
+    {.key = Key::kDown,       .imgui_key = ImGuiKey_DownArrow},
+    {.key = Key::kPageUp,     .imgui_key = ImGuiKey_PageUp},
+    {.key = Key::kPageDown,   .imgui_key = ImGuiKey_PageDown},
+    {.key = Key::kHome,       .imgui_key = ImGuiKey_Home},
+    {.key = Key::kEnd,        .imgui_key = ImGuiKey_End},
+    {.key = Key::kDelete,     .imgui_key = ImGuiKey_Delete},
+    {.key = Key::kBackspace,  .imgui_key = ImGuiKey_Backspace},
+    {.key = Key::kEnter,      .imgui_key = ImGuiKey_Enter},
+    {.key = Key::kEscape,     .imgui_key = ImGuiKey_Escape},
+    {.key = Key::kLeftCtrl,   .imgui_key = ImGuiKey_LeftCtrl},
+    {.key = Key::kRightCtrl,  .imgui_key = ImGuiKey_RightCtrl},
+    {.key = Key::kLeftShift,  .imgui_key = ImGuiKey_LeftShift},
+    {.key = Key::kRightShift, .imgui_key = ImGuiKey_RightShift},
+    {.key = Key::kLeftAlt,    .imgui_key = ImGuiKey_LeftAlt},
+    {.key = Key::kRightAlt,   .imgui_key = ImGuiKey_RightAlt},
+    {.key = Key::kA,          .imgui_key = ImGuiKey_A},
+    {.key = Key::kC,          .imgui_key = ImGuiKey_C},
+    {.key = Key::kV,          .imgui_key = ImGuiKey_V},
+    {.key = Key::kX,          .imgui_key = ImGuiKey_X},
+    {.key = Key::kY,          .imgui_key = ImGuiKey_Y},
+    {.key = Key::kZ,          .imgui_key = ImGuiKey_Z},
+    // clang-format on
+});
+
+/**
+ * @brief Queues this frame's keys, modifiers and typed text into the current
+ * ImGui context. Must precede its NewFrame.
+ */
+void ForwardKeyboard(const Input& input) {
+  ImGuiIO& io = ImGui::GetIO();
+
+  // Held state every frame; ImGui drops repeats and makes its own key repeat
+  for (const ImguiKeyBinding& binding : kImguiKeys) {
+    io.AddKeyEvent(binding.imgui_key, input.Down(binding.key));
+  }
+  io.AddKeyEvent(ImGuiMod_Ctrl,
+                 input.Down(Key::kLeftCtrl) || input.Down(Key::kRightCtrl));
+  io.AddKeyEvent(ImGuiMod_Shift,
+                 input.Down(Key::kLeftShift) || input.Down(Key::kRightShift));
+  io.AddKeyEvent(ImGuiMod_Alt,
+                 input.Down(Key::kLeftAlt) || input.Down(Key::kRightAlt));
+
+  if (!input.Text().empty()) {
+    io.AddInputCharactersUTF8(input.Text().c_str());
+  }
+}
+
 /** @brief Runs imguiCreate. @return The context it made current. */
 auto CreateImguiContext() -> ImGuiContext* {
   imguiCreate();
@@ -212,6 +272,16 @@ auto UiSystem::WantsMouse() const -> bool {
   return ImGui::GetIO().WantCaptureMouse;
 }
 
+auto UiSystem::WantsKeyboard() const -> bool {
+  ImGui::SetCurrentContext(context_);
+  return ImGui::GetIO().WantCaptureKeyboard;
+}
+
+auto UiSystem::WantsText() const -> bool {
+  ImGui::SetCurrentContext(context_);
+  return ImGui::GetIO().WantTextInput;
+}
+
 auto UiSystem::DebugDrawEnabled() const -> bool { return debug_draw_enabled_; }
 
 void UiSystem::Update(Ecs& ecs, AssetRegistry& assets,
@@ -228,6 +298,7 @@ void UiSystem::Update(Ecs& ecs, AssetRegistry& assets,
     return;
   }
 
+  ForwardKeyboard(input);
   const ScreenPosition mouse = input.Mouse();
   imguiBeginFrame(
       static_cast<std::int32_t>(mouse.x), static_cast<std::int32_t>(mouse.y),

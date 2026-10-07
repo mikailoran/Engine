@@ -24,8 +24,12 @@ class FlyCameraSystem {
    *
    * @param ecs World to write the Transform through.
    * @param ctx Per-frame inputs.
+   * @param ui_has_mouse True while the cursor is over the UI; the wheel and
+   *        right-drag don't steer.
+   * @param ui_has_keyboard True while the UI takes typing; keys don't move.
    */
-  void Update(Ecs& ecs, const FrameContext& ctx);
+  void Update(Ecs& ecs, const FrameContext& ctx, bool ui_has_mouse,
+              bool ui_has_keyboard);
 
   /** @brief Nominates the entity to fly. It must carry a Transform. */
   void SetControlledCamera(Entity camera);

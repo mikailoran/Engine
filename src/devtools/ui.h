@@ -41,6 +41,18 @@ class UiSystem {
   [[nodiscard]] auto WantsMouse() const -> bool;
 
   /**
+   * @brief Whether the UI wants the keyboard, as of the last Update.
+   * @return True while a text field is being edited.
+   */
+  [[nodiscard]] auto WantsKeyboard() const -> bool;
+
+  /**
+   * @brief Whether the UI wants typed text, as of the last Update.
+   * @return True while a text field is active; hosts turn text input on then.
+   */
+  [[nodiscard]] auto WantsText() const -> bool;
+
+  /**
    * @brief Whether the Debug Draw checkbox is ticked, as of the last Update.
    * @return True to draw the debug grid and collider wireframes.
    */

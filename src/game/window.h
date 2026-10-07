@@ -46,7 +46,16 @@ class Window {
    */
   auto PumpEvents(Input& input) -> bool;
 
+  /**
+   * @brief Turns typed-text events on or off. Off by default; on Wayland,
+   * turning it on can also bring up an input method.
+   */
+  void SetTextInput(bool enabled);
+
  private:
   // Created by SDL_CreateWindow; never null after construction.
   SDL_Window* window_{nullptr};
+
+  // Whether SDL is currently sending text-input events.
+  bool text_input_{false};
 };

@@ -3,14 +3,52 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <string>
+#include <string_view>
 
 #include "engine/platform/screen.h"
 
 /** @brief Mouse buttons the engine reads. */
 enum class MouseButton : std::uint8_t { kLeft, kRight, kMiddle };
 
-/** @brief Keyboard keys the engine reads. */
-enum class Key : std::uint8_t { kW, kA, kS, kD, kQ, kE };
+/** @brief Keyboard keys the engine reads, by physical position. */
+enum class Key : std::uint8_t {
+  // Letters: fly-camera movement and text-field shortcuts
+  kW,
+  kA,
+  kS,
+  kD,
+  kQ,
+  kE,
+  kC,
+  kV,
+  kX,
+  kY,
+  kZ,
+  // Editing and navigation
+  kTab,
+  kLeft,
+  kRight,
+  kUp,
+  kDown,
+  kPageUp,
+  kPageDown,
+  kHome,
+  kEnd,
+  kDelete,
+  kBackspace,
+  kEnter,
+  kEscape,
+  // Modifiers
+  kLeftCtrl,
+  kRightCtrl,
+  kLeftShift,
+  kRightShift,
+  kLeftAlt,
+  kRightAlt,
+  // Number of keys above; not a key
+  kCount,
+};
 
 /**
  * @brief One frame of mouse and keyboard input, translated from the host's
@@ -21,10 +59,14 @@ enum class Key : std::uint8_t { kW, kA, kS, kD, kQ, kE };
  */
 class Input {
  public:
-  /** @brief Starts a frame: keeps last frame's buttons and zeroes the wheel. */
+  /**
+   * @brief Starts a frame: keeps last frame's buttons, zeroes the wheel and
+   * clears the text.
+   */
   void BeginFrame() {
     was_down_ = down_;
     wheel_ = 0.0F;
+    text_.clear();
   }
 
   /** @brief Records whether @p button is held. */
@@ -41,11 +83,20 @@ class Input {
   /** @brief Adds wheel notches for this frame; positive is away from you. */
   void AddWheel(float notches) { wheel_ += notches; }
 
+  /** @brief Appends text typed this frame, as UTF-8. */
+  void AddText(std::string_view utf8) { text_ += utf8; }
+
   /** @brief Cursor position in backbuffer pixels, origin top-left. */
   [[nodiscard]] auto Mouse() const -> ScreenPosition { return mouse_; }
 
   /** @brief Wheel notches this frame; positive is away from you. */
   [[nodiscard]] auto Wheel() const -> float { return wheel_; }
+
+  /**
+   * @brief Text typed this frame, as UTF-8, after the layout and any input
+   * method. Hosts send it only while something has asked for text input.
+   */
+  [[nodiscard]] auto Text() const -> const std::string& { return text_; }
 
   /** @brief Whether @p button is held. */
   [[nodiscard]] auto Down(MouseButton button) const -> bool {
@@ -64,7 +115,7 @@ class Input {
 
  private:
   static constexpr std::size_t kButtonCount = 3;
-  static constexpr std::size_t kKeyCount = 6;
+  static constexpr auto kKeyCount = static_cast<std::size_t>(Key::kCount);
 
   /** @brief Array slot for @p button. */
   static constexpr auto Index(MouseButton button) -> std::size_t {
@@ -85,4 +136,5 @@ class Input {
 
   ScreenPosition mouse_{};
   float wheel_{0.0F};
+  std::string text_;
 };

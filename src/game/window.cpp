@@ -34,14 +34,52 @@ struct KeyBinding {
 };
 
 // Scancodes are physical positions, so WASD stays put on any layout
-constexpr std::array<KeyBinding, 6> kKeyBindings{{
-    {.key = Key::kW, .scancode = SDL_SCANCODE_W},
-    {.key = Key::kA, .scancode = SDL_SCANCODE_A},
-    {.key = Key::kS, .scancode = SDL_SCANCODE_S},
-    {.key = Key::kD, .scancode = SDL_SCANCODE_D},
-    {.key = Key::kQ, .scancode = SDL_SCANCODE_Q},
-    {.key = Key::kE, .scancode = SDL_SCANCODE_E},
-}};
+constexpr auto kKeyBindings = std::to_array<KeyBinding>({
+    // clang-format off
+    {.key = Key::kW,          .scancode = SDL_SCANCODE_W},
+    {.key = Key::kA,          .scancode = SDL_SCANCODE_A},
+    {.key = Key::kS,          .scancode = SDL_SCANCODE_S},
+    {.key = Key::kD,          .scancode = SDL_SCANCODE_D},
+    {.key = Key::kQ,          .scancode = SDL_SCANCODE_Q},
+    {.key = Key::kE,          .scancode = SDL_SCANCODE_E},
+    {.key = Key::kC,          .scancode = SDL_SCANCODE_C},
+    {.key = Key::kV,          .scancode = SDL_SCANCODE_V},
+    {.key = Key::kX,          .scancode = SDL_SCANCODE_X},
+    {.key = Key::kY,          .scancode = SDL_SCANCODE_Y},
+    {.key = Key::kZ,          .scancode = SDL_SCANCODE_Z},
+    {.key = Key::kTab,        .scancode = SDL_SCANCODE_TAB},
+    {.key = Key::kLeft,       .scancode = SDL_SCANCODE_LEFT},
+    {.key = Key::kRight,      .scancode = SDL_SCANCODE_RIGHT},
+    {.key = Key::kUp,         .scancode = SDL_SCANCODE_UP},
+    {.key = Key::kDown,       .scancode = SDL_SCANCODE_DOWN},
+    {.key = Key::kPageUp,     .scancode = SDL_SCANCODE_PAGEUP},
+    {.key = Key::kPageDown,   .scancode = SDL_SCANCODE_PAGEDOWN},
+    {.key = Key::kHome,       .scancode = SDL_SCANCODE_HOME},
+    {.key = Key::kEnd,        .scancode = SDL_SCANCODE_END},
+    {.key = Key::kDelete,     .scancode = SDL_SCANCODE_DELETE},
+    {.key = Key::kBackspace,  .scancode = SDL_SCANCODE_BACKSPACE},
+    {.key = Key::kEnter,      .scancode = SDL_SCANCODE_RETURN},
+    {.key = Key::kEscape,     .scancode = SDL_SCANCODE_ESCAPE},
+    {.key = Key::kLeftCtrl,   .scancode = SDL_SCANCODE_LCTRL},
+    {.key = Key::kRightCtrl,  .scancode = SDL_SCANCODE_RCTRL},
+    {.key = Key::kLeftShift,  .scancode = SDL_SCANCODE_LSHIFT},
+    {.key = Key::kRightShift, .scancode = SDL_SCANCODE_RSHIFT},
+    {.key = Key::kLeftAlt,    .scancode = SDL_SCANCODE_LALT},
+    {.key = Key::kRightAlt,   .scancode = SDL_SCANCODE_RALT},
+    // clang-format on
+});
+
+/** @brief Whether every Key appears in exactly one of kKeyBindings. */
+constexpr auto BindsEveryKeyOnce() -> bool {
+  std::array<int, static_cast<std::size_t>(Key::kCount)> uses{};
+  for (const KeyBinding& binding : kKeyBindings) {
+    ++uses.at(static_cast<std::size_t>(binding.key));
+  }
+  return std::ranges::all_of(uses,
+                             [](int count) -> bool { return count == 1; });
+}
+
+static_assert(BindsEveryKeyOnce(), "every Key needs exactly one binding");
 
 static_assert(std::ranges::all_of(kKeyBindings,
                                   [](const KeyBinding& binding) -> bool {
@@ -75,6 +113,18 @@ Window::Window(PixelSize size) {
   }
 
   std::cout << "SDL video driver: " << VideoDriver() << '\n';
+}
+
+void Window::SetTextInput(bool enabled) {
+  if (enabled == text_input_) {
+    return;
+  }
+  text_input_ = enabled;
+  if (enabled) {
+    SDL_StartTextInput(window_);
+  } else {
+    SDL_StopTextInput(window_);
+  }
 }
 
 Window::~Window() {
@@ -128,6 +178,9 @@ auto Window::PumpEvents(Input& input) -> bool {
       case SDL_EVENT_QUIT:
       case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
         quit = true;
+        break;
+      case SDL_EVENT_TEXT_INPUT:
+        input.AddText(event.text.text);
         break;
       case SDL_EVENT_MOUSE_WHEEL:
         // Natural scrolling flips the sign; undo it so positive is away

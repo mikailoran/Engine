@@ -90,7 +90,8 @@ auto Game::Run() -> int {
     };
 
     // The camera pose must settle before the engine reads it.
-    fly_camera_.Update(engine_.World(), ctx);
+    fly_camera_.Update(engine_.World(), ctx, ui_.WantsMouse(),
+                       ui_.WantsKeyboard());
     // UI runs last, so this is last frame's answer
     UpdateSelection(engine_, ctx, ui_.WantsMouse());
     engine_.Update(ctx);
@@ -105,6 +106,8 @@ auto Game::Run() -> int {
     }
     engine_.Render(ctx, render_options);
     ui_.Update(engine_.World(), engine_.Assets(), ctx);
+    // Typed text only flows while a UI text field asks for it
+    window_.SetTextInput(ui_.WantsText());
 
     engine_.EndFrame();
   }
