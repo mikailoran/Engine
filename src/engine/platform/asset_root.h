@@ -9,8 +9,8 @@
  * to the executable by the build, so the executable's own directory is the
  * asset root.
  *
- * @return Absolute path ending in '/', as entry::setCurrentDir requires: entry
- *         string-appends it to each asset path rather than using it as a chdir.
+ * @return Absolute path ending in '/', as SetAssetRoot requires: it is
+ *         string-appended to each asset path rather than used as a chdir.
  * @pre The platform must support querying the executable path (Linux, Windows,
  *      macOS); asserted, since bx returns an empty path otherwise.
  */

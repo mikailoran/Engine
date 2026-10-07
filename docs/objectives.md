@@ -78,7 +78,7 @@ Each milestone ends with something you can run and show.
 | # | Milestone | Done when |
 |---|---|---|
 | M0 | **Objectives and architecture written down** | This page, [architecture.md](architecture.md) and their ADRs exist |
-| M1 | **Off bgfx's example harness.** Engine `InputState` type, a highlight mechanism instead of `Selected` in the renderer, an `engine`/`devtools`/`game` directory split, an `Engine` class driven by its host, an SDL3 host with a real `main()` | `game` runs natively on Wayland with no `entry` code linked, and behaves as it does today |
+| M1 | **Off bgfx's example harness.** Engine `Input` type, a highlight mechanism instead of `Selected` in the renderer, an `engine`/`devtools`/`game` directory split, an `Engine` class driven by its host, an SDL3 host with a real `main()` | `game` runs natively on Wayland with no `entry` code linked, and behaves as it does today |
 | M2 | **First-person exploration.** A kinematic character controller (Jolt `CharacterVirtual` behind the facade), a first-person camera, a triangle-mesh collider, one level shell exported from Blender | You can walk around a Blender-made level and push physics props |
 | M3 | **Scene authoring foundation.** A `Name` component, scene saving, separate environment and scene files, material and physics-surface assets, multi-material meshes | Load, save and load again gives an identical scene; a level is an environment file plus a scene file |
 | M4 | **Qt editor MVP.** Viewport, entity hierarchy, `Transform` inspector, picking, a simulate/pause toggle | Move a crate in the editor, save, and `game` shows it there |

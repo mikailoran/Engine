@@ -36,7 +36,8 @@ It's not meant to be used by anyone else or have state of the art performance. R
 
 ## Building
 
-Requires CMake 3.25+ and a C++20 compiler. Only tested on Linux (Wayland).
+Requires CMake 3.25+, a C++20 compiler and SDL3 development files (Fedora:
+`SDL3-devel`, Debian/Ubuntu: `libsdl3-dev`). Only tested on Linux (Wayland).
 
 ```bash
 git clone --recurse-submodules <url>

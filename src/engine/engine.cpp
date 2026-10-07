@@ -32,6 +32,8 @@ Engine::Engine(const NativeSurface& surface) : bgfx_context_(surface) {
   RegisterBuiltinLoaders(scene_loader_);
 }
 
+void Engine::Resize(PixelSize size) { bgfx_context_.Resize(size); }
+
 void Engine::Update(const FrameContext& ctx) {
   physics_system_.Update(ecs_, physics_world_, ctx);
   // Frame uniforms must be set before the renderer submits

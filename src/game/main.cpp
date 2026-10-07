@@ -1,11 +1,4 @@
-#include <bgfx/bgfx.h>
-#include <bx/timer.h>
-#include <common.h>
-#include <entry/entry.h>
-#include <entry/input.h>
-
-#include <array>
-#include <cstdint>
+#include <chrono>
 #include <exception>
 #include <iostream>
 
@@ -13,90 +6,32 @@
 #include "devtools/selected.h"
 #include "devtools/selection_system.h"
 #include "devtools/ui.h"
-#include "engine/bgfx_context.h"
 #include "engine/ecs/components/camera.h"
 #include "engine/ecs/components/transform.h"
 #include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
 #include "engine/engine.h"
 #include "engine/platform/asset_root.h"
+#include "engine/platform/bgfx_file_access.h"
 #include "engine/platform/frame_context.h"
 #include "engine/platform/input.h"
-#include "engine/platform/native_surface.h"
+#include "engine/platform/screen.h"
+#include "game/window.h"
 
 namespace {
 
-/** @brief An engine key and the entry key that drives it. */
-struct KeyBinding {
-  Key key;
-  entry::Key::Enum entry_key;
-};
-
-constexpr std::array<KeyBinding, 6> kKeyBindings{{
-    {.key = Key::kW, .entry_key = entry::Key::KeyW},
-    {.key = Key::kA, .entry_key = entry::Key::KeyA},
-    {.key = Key::kS, .entry_key = entry::Key::KeyS},
-    {.key = Key::kD, .entry_key = entry::Key::KeyD},
-    {.key = Key::kQ, .entry_key = entry::Key::KeyQ},
-    {.key = Key::kE, .entry_key = entry::Key::KeyE},
-}};
+// Window size in screen points at startup
+constexpr PixelSize kStartSize{.width = 1280, .height = 720};
 
 /**
- * @brief Copies entry's mouse and key state into @p input as a new frame.
- * @param last_scroll entry's scroll total last frame; updated to this one's.
- */
-void ReadEntryInput(const entry::MouseState& mouse, std::int32_t& last_scroll,
-                    InputState& input) {
-  input.BeginFrame();
-  input.SetMouse({.x = static_cast<float>(mouse.m_mx),
-                  .y = static_cast<float>(mouse.m_my)});
-  input.SetButton(MouseButton::kLeft,
-                  mouse.m_buttons[entry::MouseButton::Left] != 0);
-  input.SetButton(MouseButton::kRight,
-                  mouse.m_buttons[entry::MouseButton::Right] != 0);
-  input.SetButton(MouseButton::kMiddle,
-                  mouse.m_buttons[entry::MouseButton::Middle] != 0);
-
-  // entry reports a running total; InputState wants this frame's notches
-  input.AddWheel(static_cast<float>(mouse.m_mz - last_scroll));
-  last_scroll = mouse.m_mz;
-
-  for (const KeyBinding& binding : kKeyBindings) {
-    input.SetKey(binding.key, inputGetKeyState(binding.entry_key));
-  }
-}
-
-/** @brief Window size and bgfx flags that entry reads and writes back. */
-struct WindowState {
-  uint32_t width = 1280;
-  uint32_t height = 720;
-  // entry applies these itself on resize and debug-key toggles
-  uint32_t debug = BgfxContext::kDebugFlags;
-  uint32_t reset = BgfxContext::kResetFlags;
-};
-
-/** @brief Describes the window entry created, for the engine to render into. */
-auto EntrySurface(const WindowState& window) -> NativeSurface {
-  const bool wayland = entry::getNativeWindowHandleType() ==
-                       bgfx::NativeWindowHandleType::Wayland;
-  return {
-      .window = entry::getNativeWindowHandle(entry::kDefaultWindowHandle),
-      .display = entry::getNativeDisplayHandle(),
-      .kind = wayland ? SurfaceKind::kWayland : SurfaceKind::kX11,
-      .width = window.width,
-      .height = window.height,
-  };
-}
-
-/**
- * @brief The game host: entry's window and input, the engine, and devtools.
+ * @brief The game host: the SDL window and input, the engine, and devtools.
  *
  * Member order is the bring-up order; destruction runs in reverse. The asset
  * root must be set before construction.
  */
 class Game {
  public:
-  /** @brief Brings up the engine, the devtools and the debug scene. */
+  /** @brief Opens the window, then brings up the engine and devtools. */
   Game();
 
   /**
@@ -106,14 +41,10 @@ class Game {
   auto Run() -> int;
 
  private:
-  WindowState window_;
-  entry::MouseState mouse_state_;
-  // entry's scroll total last frame, to turn it into per-frame notches.
-  std::int32_t last_scroll_{0};
-  InputState input_;
-  FrameTime frame_time_;
+  Window window_{kStartSize};
+  Input input_;
 
-  Engine engine_{EntrySurface(window_)};
+  Engine engine_{window_.Surface()};
 
   // After the engine: UiSystem's GPU resources must go before bgfx does
   FlyCameraSystem fly_camera_;
@@ -135,19 +66,26 @@ Game::Game() {
 }
 
 auto Game::Run() -> int {
-  // processEvents pumps entry's event queue and returns true when the window
-  // asks to close; it also writes back width/height and handles reset.
-  while (!entry::processEvents(window_.width, window_.height, window_.debug,
-                               window_.reset, &mouse_state_)) {
-    frame_time_.frame();
-    ReadEntryInput(mouse_state_, last_scroll_, input_);
+  using Clock = std::chrono::steady_clock;
+  using Seconds = std::chrono::duration<float>;
+  const auto start_time = Clock::now();
+  auto last_time = start_time;
+
+  while (!window_.PumpEvents(input_)) {
+    const auto now = Clock::now();
+    const float dt = Seconds(now - last_time).count();
+    last_time = now;
+
+    // Resizes and display-scale changes both land here
+    const PixelSize size = window_.BackbufferSize();
+    engine_.Resize(size);
 
     // One context per frame, shared by every system.
     const FrameContext ctx{
-        .width = window_.width,
-        .height = window_.height,
-        .dt = bx::toSeconds<float>(frame_time_.getDeltaTime()),
-        .time = bx::toSeconds<float>(frame_time_.getDurationTime()),
+        .width = size.width,
+        .height = size.height,
+        .dt = dt,
+        .time = Seconds(now - start_time).count(),
         .input = input_,
     };
 
@@ -176,26 +114,10 @@ auto Game::Run() -> int {
 
 }  // namespace
 
-/**
- * @brief Application entry point, currently called by the examples' common on
- * its own thread.
- *
- * entry defines the real main(): it keeps the OS thread on the platform message
- * pump and runs this on a secondary "Entry Thread". entry dispatches here
- * rather than to runApp because no entry::AppI instance is registered.
- *
- * The signature must match entry.h's `extern "C" int _main_(int, char**)`
- * exactly; a different parameter list makes this a separate, C++-mangled
- * function and entry's call to _main_ then fails to link. The names are
- * commented out rather than dropped because nothing parses arguments yet.
- *
- * @param _argc Argument count, forwarded from main(). Currently unused.
- * @param _argv Argument vector, forwarded from main(). Currently unused.
- * @return Process exit code.
- */
-auto _main_(int /*_argc*/, char** /*_argv*/) -> int {
-  // entry prepends this to every asset path; must precede any load
-  entry::setCurrentDir(AssetRoot().c_str());
+/** @brief Sets the asset root, then runs the game until its window closes. */
+auto main() -> int {
+  // bgfx_utils prepends this to every asset path; must precede any load
+  SetAssetRoot(AssetRoot());
 
   try {
     Game game;

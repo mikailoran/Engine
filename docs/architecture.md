@@ -37,7 +37,7 @@ The engine is a library. It does not own the process, the OS window, the
 event loop or the clock. A **host** does: the SDL `game` executable, or the Qt
 editor. Each frame, the host:
 
-1. turns its own events (SDL or Qt) into the engine's `InputState`, in backbuffer
+1. turns its own events (SDL or Qt) into the engine's `Input`, in backbuffer
    pixels;
 2. runs its own tools that must come before simulation (free camera, click
    selection);

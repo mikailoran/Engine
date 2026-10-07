@@ -4,6 +4,8 @@
 
 #include <cstdint>
 
+#include "engine/platform/screen.h"
+
 /** @brief Windowing protocol a NativeSurface's handles belong to. */
 enum class SurfaceKind : std::uint8_t { kX11, kWayland };
 
@@ -17,7 +19,6 @@ struct NativeSurface {
 
   SurfaceKind kind{SurfaceKind::kX11};
 
-  // Backbuffer size in pixels when the engine starts.
-  std::uint32_t width{0};
-  std::uint32_t height{0};
+  // Backbuffer size when the engine starts.
+  PixelSize size{};
 };

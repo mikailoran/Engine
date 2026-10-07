@@ -24,7 +24,7 @@ class RenderSystem {
    * @brief Creates the shared GPU resources and sets view 0's clear.
    *
    * Requires bgfx::init to have completed, and the asset root to be set via
-   * entry::setCurrentDir, since loadProgram resolves its paths against it.
+   * SetAssetRoot, since loadProgram resolves its paths against it.
    *
    * @throws std::runtime_error If the default program fails to link.
    */

@@ -17,7 +17,8 @@ add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>)
 # Opt-in bgfx samples; each builds only by name (e.g. example-01-cubes)
 option(ENGINE_BGFX_EXAMPLES "Define bgfx's example targets (built only on request)" OFF)
 set(BGFX_BUILD_EXAMPLES ${ENGINE_BGFX_EXAMPLES} CACHE BOOL "" FORCE)
-# example-common provides the entry layer main.cpp uses for windowing and input
+# example-common builds only for bgfx's own tools (geometryv, texturev); the
+# engine compiles the few helpers it uses itself (bgfx_helpers below)
 set(BGFX_BUILD_EXAMPLE_COMMON ON CACHE BOOL "" FORCE)
 # Tools stay ON for shaderc, and the wrapper ties example-common to them
 set(BGFX_BUILD_TOOLS ON CACHE BOOL "" FORCE)
@@ -136,6 +137,29 @@ set_target_properties(engine_physics_system PROPERTIES
 # would put the executable in a per-config subdirectory).
 set(ENGINE_RUNTIME_DIR ${CMAKE_BINARY_DIR})
 
+# --- bgfx helpers -----------------------------------------------------------
+# The parts of bgfx's example code the engine uses. bgfx_utils.cpp still calls
+# entry::getFileReader/getAllocator; src/engine/platform/bgfx_file_access.cpp
+# defines them. The source lists bgfx.cmake builds are scoped to its
+# directory, so they are globbed again here.
+set(BGFX_EXAMPLES_COMMON_DIR ${BGFX_DIR}/examples/common)
+file(GLOB MESHOPTIMIZER_SOURCES ${BGFX_DIR}/3rdparty/meshoptimizer/src/*.cpp)
+file(GLOB DEAR_IMGUI_SOURCES ${BGFX_DIR}/3rdparty/dear-imgui/*.cpp)
+
+add_library(bgfx_helpers STATIC
+  ${BGFX_EXAMPLES_COMMON_DIR}/bgfx_utils.cpp
+  ${BGFX_EXAMPLES_COMMON_DIR}/debugdraw/debugdraw.cpp
+  ${MESHOPTIMIZER_SOURCES})
+target_include_directories(bgfx_helpers SYSTEM PUBLIC
+  ${BGFX_EXAMPLES_COMMON_DIR} ${BGFX_DIR}/3rdparty)
+target_link_libraries(bgfx_helpers PUBLIC bgfx bx bimg bimg_decode)
+
+# bgfx's ImGui renderer and Dear ImGui, for the game's devtools only
+add_library(bgfx_imgui STATIC
+  ${BGFX_EXAMPLES_COMMON_DIR}/imgui/imgui.cpp
+  ${DEAR_IMGUI_SOURCES})
+target_link_libraries(bgfx_imgui PUBLIC bgfx_helpers)
+
 # --- Engine runtime ---------------------------------------------------------
 # Everything in src/engine/ that the smaller libraries above don't cover:
 # rendering, assets, scenes and the Engine class hosts drive.
@@ -163,6 +187,8 @@ add_library(engine_runtime STATIC
   src/engine/resource/asset_registry.cpp
   src/engine/platform/asset_root.h
   src/engine/platform/asset_root.cpp
+  src/engine/platform/bgfx_file_access.h
+  src/engine/platform/bgfx_file_access.cpp
   src/engine/platform/frame_context.h
   src/engine/platform/input.h
   src/engine/platform/native_surface.h
@@ -175,10 +201,9 @@ add_library(engine_runtime STATIC
   src/engine/scene/picking.h
   src/engine/scene/picking.cpp)
 
-# example-common publicly exposes examples/common plus bgfx, bx and bimg with
-# their include directories, which engine headers and the game's entry code
-# both need until the SDL host replaces entry.
-target_link_libraries(engine_runtime PUBLIC example-common ecs_core engine_math
+# bgfx_helpers publicly carries bgfx, bx and bimg with their include
+# directories, which engine headers need.
+target_link_libraries(engine_runtime PUBLIC bgfx_helpers ecs_core engine_math
   engine_physics engine_physics_system nlohmann_json::nlohmann_json)
 
 target_compile_options(engine_runtime PRIVATE -Wall -Wextra -Wpedantic)
@@ -192,6 +217,8 @@ set_target_properties(engine_runtime PROPERTIES
 # --- Game -------------------------------------------------------------------
 # The host: window, input, devtools and the frame loop around Engine.
 add_executable(game src/game/main.cpp
+  src/game/window.h
+  src/game/window.cpp
   src/devtools/selected.h
   src/devtools/fly_camera_system.cpp
   src/devtools/fly_camera_system.h
@@ -200,7 +227,8 @@ add_executable(game src/game/main.cpp
   src/devtools/ui.h
   src/devtools/ui.cpp)
 
-target_link_libraries(game PRIVATE engine_runtime)
+find_package(SDL3 CONFIG REQUIRED)
+target_link_libraries(game PRIVATE engine_runtime bgfx_imgui SDL3::SDL3)
 
 target_compile_options(game PRIVATE -Wall -Wextra -Wpedantic)
 

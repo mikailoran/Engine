@@ -43,6 +43,12 @@ class Engine {
    */
   explicit Engine(const NativeSurface& surface);
 
+  /**
+   * @brief Matches the backbuffer to @p size, e.g. after the window or its
+   * scale changes. Cheap when unchanged, so hosts can call it every frame.
+   */
+  void Resize(PixelSize size);
+
   /** @brief Steps physics and sets this frame's lighting. */
   void Update(const FrameContext& ctx);
 

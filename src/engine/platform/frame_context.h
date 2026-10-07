@@ -21,5 +21,5 @@ struct FrameContext {
   float time{0.0F};
 
   // This frame's mouse input; default-constructed when the host has none.
-  InputState input{};
+  Input input{};
 };
