@@ -202,7 +202,12 @@ auto Game::Run() -> int {
     lighting_.Update(ecs_, ctx);
     // Submits to view 1; must precede the renderer's bgfx::frame()
     if (ui_.DebugDrawEnabled()) {
-      debug_draw_.Update(ecs_, ctx);
+      // Selection is devtools policy; debug draw only draws what it's asked
+      ecs_.View<Selected>().ForEach(
+          [this](Entity entity, const Selected& /*selected*/) -> void {
+            debug_draw_.Highlight(entity);
+          });
+      debug_draw_.Update(ecs_, assets_, ctx);
     }
     render_.Update(ecs_, assets_, ctx);
     ui_.Update(ecs_, assets_, ctx);

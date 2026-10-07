@@ -12,21 +12,26 @@
 
 #include "ecs/components/camera.h"
 #include "ecs/components/collider.h"
+#include "ecs/components/renderable.h"
 #include "ecs/components/rigid_body.h"
 #include "ecs/components/transform.h"
 #include "ecs/core/ecs.h"
 #include "ecs/core/types.h"
 #include "physics/shape.h"
 #include "platform/frame_context.h"
+#include "resource/asset_registry.h"
 
 namespace {
 
 // Rendered after view 0, sharing its depth buffer.
 constexpr bgfx::ViewId kDebugView = 1;
 
-constexpr std::uint32_t kGridColor = 0xff808080;      // ABGR
-constexpr std::uint32_t kColliderColor = 0xff00ff00;  // ABGR
-constexpr std::uint32_t kVelocityColor = 0xff00ffff;  // ABGR
+constexpr std::uint32_t kGridColor = 0xff808080;       // ABGR
+constexpr std::uint32_t kColliderColor = 0xff00ff00;   // ABGR
+constexpr std::uint32_t kVelocityColor = 0xff00ffff;   // ABGR
+constexpr std::uint32_t kHighlightColor = 0xff0080ff;  // ABGR
+// Grows highlight boxes past the mesh so they don't sit on its faces
+constexpr float kHighlightGrowth = 1.02F;
 constexpr std::uint32_t kGridSize = 20;
 constexpr float kGridStep = 1.0F;
 // Keeps the grid off the floor's top face, which sits at y = 0
@@ -89,14 +94,32 @@ void DrawVelocityArrow(DebugDrawEncoder& encoder, const Transform& transform,
   encoder.drawCone(head_base, tip, kArrowHeadRadius);
 }
 
+/** @brief Draws a wire box around @p bounds, placed by @p transform. */
+void DrawHighlight(DebugDrawEncoder& encoder, const Transform& transform,
+                   const bx::Aabb& bounds) {
+  const bx::Vec3 center = bx::mul(bx::add(bounds.min, bounds.max), 0.5F);
+  const bx::Vec3 half =
+      bx::mul(bx::sub(bounds.max, bounds.min), 0.5F * kHighlightGrowth);
+
+  // Unit cube [-1, 1] -> mesh space -> world
+  std::array<float, 16> local{};
+  bx::mtxSRT(local.data(), half.x, half.y, half.z, 0.0F, 0.0F, 0.0F, center.x,
+             center.y, center.z);
+  bx::Obb obb{};
+  bx::mtxMul(std::data(obb.mtx), local.data(), ModelMatrix(transform).data());
+  encoder.draw(obb);
+}
+
 }  // namespace
 
 DebugDrawSystem::DebugDrawSystem() { ddInit(); }
 
 DebugDrawSystem::~DebugDrawSystem() { ddShutdown(); }
 
-void DebugDrawSystem::Update(Ecs& ecs, const FrameContext& ctx) {
+void DebugDrawSystem::Update(Ecs& ecs, const AssetRegistry& assets,
+                             const FrameContext& ctx) {
   if (!camera_) {
+    highlights_.clear();
     return;
   }
 
@@ -133,7 +156,26 @@ void DebugDrawSystem::Update(Ecs& ecs, const FrameContext& ctx) {
       });
   encoder.pop();
 
+  encoder.push();
+  encoder.setWireframe(true);
+  encoder.setColor(kHighlightColor);
+  for (const Entity entity : highlights_) {
+    if (!ecs.HasComponent<Transform>(entity) ||
+        !ecs.HasComponent<Renderable>(entity)) {
+      continue;
+    }
+    const auto& renderable = ecs.GetComponent<Renderable>(entity);
+    DrawHighlight(encoder, ecs.GetComponent<Transform>(entity),
+                  assets.GetMeshBounds(renderable.mesh_handle));
+  }
+  highlights_.clear();
+  encoder.pop();
+
   encoder.end();
+}
+
+void DebugDrawSystem::Highlight(Entity entity) {
+  highlights_.push_back(entity);
 }
 
 void DebugDrawSystem::SetCamera(Entity camera) { camera_ = camera; }

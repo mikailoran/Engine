@@ -11,9 +11,8 @@ struct FrameContext;
 /**
  * @brief Selects the entity under the cursor on a left click.
  *
- * Casts a ray from the nominated camera through the cursor and tests it
- * against every Renderable's mesh bounds. The nearest hit gets Selected; a
- * miss clears the selection. Single selection only.
+ * Picks from the nominated camera through the cursor (see Pick). The entity
+ * hit gets Selected; a miss clears the selection. Single selection only.
  */
 class SelectionSystem {
  public:

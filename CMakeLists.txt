@@ -170,7 +170,9 @@ add_executable(engine src/main.cpp
   src/scene/scene_loader.cpp
   src/scene/builtin_loaders.h
   src/scene/builtin_loaders.cpp
-  src/scene/json_read.h)
+  src/scene/json_read.h
+  src/scene/picking.h
+  src/scene/picking.cpp)
 
 # example-common publicly exposes examples/common plus bgfx, bx and bimg with
 # their include directories, which is what makes "entry/entry.h" resolve.

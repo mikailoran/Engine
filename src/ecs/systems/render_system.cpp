@@ -14,7 +14,6 @@
 
 #include "ecs/components/camera.h"
 #include "ecs/components/renderable.h"
-#include "ecs/components/selected.h"
 #include "ecs/components/transform.h"
 #include "ecs/core/ecs.h"
 #include "ecs/core/types.h"
@@ -28,8 +27,6 @@ namespace {
 constexpr std::size_t kMtxSize = 16;
 
 constexpr uint32_t kClearColor = 0x303030ff;  // RGBA
-constexpr std::array<float, 4> kHighlightColor{0.0F, 0.0F, 1.0F, 0.5F};
-constexpr std::array<float, 4> kNoHighlight{0.0F, 0.0F, 0.0F, 0.0F};
 // Only used when no camera entity has been nominated.
 constexpr float kFallbackFovDegrees = 60.0F;
 constexpr float kFallbackNearPlane = 0.1F;
@@ -69,7 +66,6 @@ RenderSystem::RenderSystem()
       u_time_(bgfx::createUniform("u_time", bgfx::UniformFreq::Frame,
                                   bgfx::UniformType::Vec4)),
       u_color_(bgfx::createUniform("u_color", bgfx::UniformType::Vec4)),
-      u_highlight_(bgfx::createUniform("u_highlight", bgfx::UniformType::Vec4)),
       u_eye_pos_(bgfx::createUniform("u_eyePos", bgfx::UniformFreq::Frame,
                                      bgfx::UniformType::Vec4)),
       s_albedo_(bgfx::createUniform("s_albedo", bgfx::UniformType::Sampler)),
@@ -120,8 +116,8 @@ void RenderSystem::Update(Ecs& ecs, const AssetRegistry& assets,
   }
 
   ecs.View<Transform, Renderable>().ForEach(
-      [this, &ecs, &assets](Entity entity, const Transform& transform,
-                            const Renderable& renderable) -> void {
+      [this, &assets](Entity /*entity*/, const Transform& transform,
+                      const Renderable& renderable) -> void {
         const auto mtx = ModelMatrix(transform);
 
         const auto program = bgfx::isValid(renderable.program)
@@ -138,10 +134,6 @@ void RenderSystem::Update(Ecs& ecs, const AssetRegistry& assets,
         // meshSubmit only discards state after its last group, so the color and
         // texture hold for every group of the mesh.
         bgfx::setUniform(u_color_.Get(), renderable.color.data());
-        // TODO: How to avoid getting selected entity's Component?
-        const auto highlight =
-            ecs.HasComponent<Selected>(entity) ? kHighlightColor : kNoHighlight;
-        bgfx::setUniform(u_highlight_.Get(), highlight.data());
         bgfx::setUniform(u_tex_params_.Get(), tex_params.data());
         bgfx::setTexture(0, s_albedo_.Get(), texture);
         meshSubmit(mesh, renderable.view, program, mtx.data(),
