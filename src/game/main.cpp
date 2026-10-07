@@ -3,13 +3,15 @@
 #include <bx/timer.h>
 #include <common.h>
 #include <entry/entry.h>
+#include <entry/input.h>
 
+#include <array>
 #include <cstdint>
 #include <exception>
 #include <iostream>
 #include <stdexcept>
 
-#include "devtools/camera_control.h"
+#include "devtools/fly_camera_system.h"
 #include "devtools/selected.h"
 #include "devtools/selection_system.h"
 #include "devtools/ui.h"
@@ -37,11 +39,26 @@
 
 namespace {
 
+/** @brief An engine key and the entry key that drives it. */
+struct KeyBinding {
+  Key key;
+  entry::Key::Enum entry_key;
+};
+
+constexpr std::array<KeyBinding, 6> kKeyBindings{{
+    {.key = Key::kW, .entry_key = entry::Key::KeyW},
+    {.key = Key::kA, .entry_key = entry::Key::KeyA},
+    {.key = Key::kS, .entry_key = entry::Key::KeyS},
+    {.key = Key::kD, .entry_key = entry::Key::KeyD},
+    {.key = Key::kQ, .entry_key = entry::Key::KeyQ},
+    {.key = Key::kE, .entry_key = entry::Key::KeyE},
+}};
+
 /**
- * @brief Copies entry's mouse state into @p input as a new frame.
+ * @brief Copies entry's mouse and key state into @p input as a new frame.
  * @param last_scroll entry's scroll total last frame; updated to this one's.
  */
-void ReadEntryMouse(const entry::MouseState& mouse, std::int32_t& last_scroll,
+void ReadEntryInput(const entry::MouseState& mouse, std::int32_t& last_scroll,
                     Input& input) {
   input.BeginFrame();
   input.SetMouse({.x = static_cast<float>(mouse.m_mx),
@@ -56,6 +73,10 @@ void ReadEntryMouse(const entry::MouseState& mouse, std::int32_t& last_scroll,
   // entry reports a running total; Input wants this frame's notches
   input.AddWheel(static_cast<float>(mouse.m_mz - last_scroll));
   last_scroll = mouse.m_mz;
+
+  for (const KeyBinding& binding : kKeyBindings) {
+    input.SetKey(binding.key, inputGetKeyState(binding.entry_key));
+  }
 }
 
 /** @brief Window and reset parameters, written back by entry each frame. */
@@ -141,7 +162,7 @@ class Game {
                               static_cast<std::uint32_t>(kMaxEntities)};
   Ecs ecs_;
 
-  CameraControl camera_control_;
+  FlyCameraSystem fly_camera_;
   SelectionSystem selection_;
   PhysicsSystem physics_system_;
   LightingSystem lighting_;
@@ -165,7 +186,7 @@ Game::Game() {
   const auto camera_entity = ecs_.CreateEntity();
   ecs_.AddComponent(camera_entity, Transform{.position = {0.0F, 1.0F, -5.0F}});
   ecs_.AddComponent(camera_entity, Camera{});
-  camera_control_.SetCamera(camera_entity);
+  fly_camera_.SetControlledCamera(camera_entity);
   selection_.SetCamera(camera_entity);
   debug_draw_.SetCamera(camera_entity);
   render_.SetCamera(camera_entity);
@@ -182,7 +203,7 @@ auto Game::Run() -> int {
   while (!entry::processEvents(window_.width, window_.height, window_.debug,
                                window_.reset, &mouse_state_)) {
     frame_time_.frame();
-    ReadEntryMouse(mouse_state_, last_scroll_, input_);
+    ReadEntryInput(mouse_state_, last_scroll_, input_);
 
     // One context per frame, shared by every system.
     const FrameContext ctx{
@@ -194,7 +215,7 @@ auto Game::Run() -> int {
     };
 
     // The camera pose must settle before the renderer reads it.
-    camera_control_.Update(ecs_, ctx, mouse_state_);
+    fly_camera_.Update(ecs_, ctx);
     // UI runs last, so this is last frame's answer
     selection_.Update(ecs_, assets_, ctx, ui_.WantsMouse());
     physics_system_.Update(ecs_, physics_world_, ctx);

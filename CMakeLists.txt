@@ -167,8 +167,8 @@ add_executable(engine src/game/main.cpp
   src/engine/scene/picking.h
   src/engine/scene/picking.cpp
   src/devtools/selected.h
-  src/devtools/camera_control.cpp
-  src/devtools/camera_control.h
+  src/devtools/fly_camera_system.cpp
+  src/devtools/fly_camera_system.h
   src/devtools/selection_system.h
   src/devtools/selection_system.cpp
   src/devtools/ui.h
