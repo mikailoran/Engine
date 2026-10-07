@@ -79,8 +79,8 @@ ecs.AddComponent(entity, BoxColliderAround(assets.GetMeshBounds(mesh)));
 ## How it fits together
 
 ```
- ECS components                  ECS system                  Physics module (src/physics/)
- ───────────────                 ──────────                  ─────────────────────────────
+ ECS components                  ECS system                  Physics module (src/engine/physics/)
+ ───────────────                 ──────────                  ────────────────────────────────────
  Transform  ┐                                                PhysicsWorld   ← the simulation
  Collider   ├─ authored ──────►  PhysicsSystem  ──calls──►   (engine types only;
  RigidBody  ┘                    (translates, every frame)    Jolt hidden inside)
@@ -94,7 +94,7 @@ There are three layers, and each one only knows about the one below it.
    acceleration and gravity switch. `PhysicsLink` is the odd one out: it's
    runtime state (see below) and you never write it.
 
-2. **`PhysicsSystem`** (`src/ecs/systems/physics_system.*`) translates between
+2. **`PhysicsSystem`** (`src/engine/ecs/systems/physics_system.*`) translates between
    the ECS and the physics world. It has no physics knowledge of its own. Each
    frame it runs these steps, in order:
 
@@ -112,7 +112,7 @@ There are three layers, and each one only knows about the one below it.
    6. **Pull results.** Copy dynamic bodies' new position, rotation and
       velocity back into `Transform` and `RigidBody`.
 
-3. **`PhysicsWorld`** (`src/physics/physics_world.*`) is the simulation, behind
+3. **`PhysicsWorld`** (`src/engine/physics/physics_world.*`) is the simulation, behind
    an API that uses only engine types: `BodyHandle`, `Pose`, `ShapeDesc`,
    `Material`, `Motion`. Jolt never appears in its header. It owns the Jolt
    world and everything Jolt needs while stepping, and it encodes every Jolt
@@ -170,7 +170,7 @@ per case, and each fails if its wake-up is removed.
 Jolt filters collisions in two stages. Every body has an **object layer**
 (ours: `kMoving`, `kNonMoving`), and object layers map to **broad-phase layers**
 (separate acceleration trees, so the static tree rarely needs rebuilding). We
-use Jolt's ready-made table classes (`src/physics/layers.*`): moving bodies
+use Jolt's ready-made table classes (`src/engine/physics/layers.*`): moving bodies
 collide with everything, static bodies never test against each other.
 
 ### Global setup
@@ -179,7 +179,7 @@ Jolt has process-wide state: an allocator, a factory and a type registry.
 `JoltRuntime` sets it up in its constructor and tears it down in its
 destructor. It must exist before any other Jolt object and outlive all of
 them, and there may only be one (a second one asserts, or throws in Release).
-`Game` owns it right after bgfx, and passes it to `PhysicsWorld`.
+`Engine` owns it right after bgfx, and passes it to `PhysicsWorld`.
 
 ### Capacity limits
 
@@ -197,7 +197,7 @@ copies rotations straight to and from Jolt.
 
 Euler angles only appear at the edges: `rotation_deg` in scene files and the
 inspector (both in degrees). They're converted with `EulerToQuat` and
-`QuatToEuler` in `src/math/rotation.h`.
+`QuatToEuler` in `src/engine/math/rotation.h`.
 
 bx has three traps here, all pinned down by `math_tests`:
 
@@ -232,7 +232,7 @@ Never define `JPH_*` macros yourself. The `Jolt` CMake target exports them, and
 if the engine's copy differs from Jolt's, `RegisterTypes()` fails a version
 check at startup.
 
-**Jolt stays inside `src/physics/`.** The `engine_physics` library links Jolt
+**Jolt stays inside `src/engine/physics/`.** The `engine_physics` library links Jolt
 privately, so no other part of the engine even gets Jolt's include paths. A
 Jolt include anywhere else fails to compile, which is the point. Inside the
 module, every `.cpp` includes `<Jolt/Jolt.h>` first (Jolt's other headers
@@ -241,7 +241,7 @@ alone.
 
 | Library | Contents |
 |---|---|
-| `engine_physics` | `src/physics/`: `PhysicsWorld`, `JoltRuntime`, layers, shared shape types |
+| `engine_physics` | `src/engine/physics/`: `PhysicsWorld`, `JoltRuntime`, layers, shared shape types |
 | `engine_physics_system` | `PhysicsSystem`, the ECS side |
 | `engine_math` | Rotation conventions |
 
@@ -256,7 +256,7 @@ ctest --test-dir build/Debug
 
 Physics needs no window and no graphics, so `physics_tests` runs the real
 `PhysicsSystem` and Jolt end to end in well under a second. Each test builds a
-`PhysicsHarness` (runtime, world, ECS and system, in the same order as `Game`)
+`PhysicsHarness` (runtime, world, ECS and system, in the same order as `Engine`)
 plus whatever scene pieces it needs, with values copied from
 `assets/scenes/debug.json`.
 

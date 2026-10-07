@@ -8,9 +8,9 @@
 #include <stdexcept>
 #include <string>
 
-#include "ecs/core/component_array.h"
-#include "ecs/core/ecs.h"
-#include "ecs/core/types.h"
+#include "engine/ecs/core/component_array.h"
+#include "engine/ecs/core/ecs.h"
+#include "engine/ecs/core/types.h"
 
 namespace {
 

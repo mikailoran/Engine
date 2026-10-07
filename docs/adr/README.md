@@ -11,6 +11,8 @@ these explain why it isn't built some other way.
 | [0003](0003-physics-behind-a-facade.md) | Hide Jolt behind a `PhysicsWorld` facade |
 | [0004](0004-sync-by-comparing.md) | Sync the ECS and physics by comparing, not with ECS hooks |
 | [0005](0005-quaternion-rotations.md) | Store rotations as quaternions |
+| [0006](0006-sdl3-windowing.md) | Own windowing and input with SDL3 |
+| [0007](0007-engine-game-editor-split.md) | Split the engine from its hosts, and the editor from the game |
 
 ## Adding one
 

@@ -25,7 +25,8 @@ set_target_properties(ecs_tests PROPERTIES
 )
 
 add_executable(math_tests
-  math/rotation_test.cpp)
+  math/rotation_test.cpp
+  math/camera_test.cpp)
 
 target_link_libraries(math_tests PRIVATE engine_math GTest::gtest_main)
 

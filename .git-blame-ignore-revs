@@ -3,3 +3,6 @@
 
 # Reformat src/ and tests/ with clang-format
 724974e39d42f9e901fad09bbe9b11ac317c45af
+
+# Move src/ into engine/devtools/game; include paths only
+fc06b480a3af763eb87226afe51866e3a59b1ed5
