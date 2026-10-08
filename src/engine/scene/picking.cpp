@@ -8,6 +8,7 @@
 #include <optional>
 
 #include "engine/ecs/components/camera.h"
+#include "engine/ecs/components/character_body.h"
 #include "engine/ecs/components/renderable.h"
 #include "engine/ecs/components/transform.h"
 #include "engine/ecs/core/ecs.h"
@@ -26,7 +27,10 @@ struct PickHit {
   float distance{0.0F};
 };
 
-/** @brief Finds the Renderable whose mesh bounds @p ray hits first. */
+/**
+ * @brief Finds the Renderable whose mesh bounds, or the character whose
+ * capsule, @p ray hits first.
+ */
 auto PickEntity(Ecs& ecs, const AssetRegistry& assets, const bx::Ray& ray)
     -> std::optional<PickHit> {
   std::optional<PickHit> nearest;
@@ -56,6 +60,21 @@ auto PickEntity(Ecs& ecs, const AssetRegistry& assets, const bx::Ray& ray)
           if (!nearest || distance < nearest->distance) {
             nearest = PickHit{.entity = entity, .distance = distance};
           }
+        }
+      });
+
+  // Characters may have no mesh, so their capsule stands in
+  ecs.View<Transform, CharacterBody>().ForEach(
+      [&](Entity entity, const Transform& transform,
+          const CharacterBody& body) -> void {
+        bx::Hit hit;
+        if (!bx::intersect(ray, CharacterCapsule(body, transform.position),
+                           &hit)) {
+          return;
+        }
+        const float distance = bx::distance(hit.pos, ray.pos);
+        if (!nearest || distance < nearest->distance) {
+          nearest = PickHit{.entity = entity, .distance = distance};
         }
       });
 

@@ -11,6 +11,7 @@
 #include <iterator>
 
 #include "engine/ecs/components/camera.h"
+#include "engine/ecs/components/character_body.h"
 #include "engine/ecs/components/collider.h"
 #include "engine/ecs/components/renderable.h"
 #include "engine/ecs/components/rigid_body.h"
@@ -154,6 +155,11 @@ void DebugDrawSystem::Update(Ecs& ecs, const AssetRegistry& assets,
                  const Collider& collider) -> void {
         DrawCollider(encoder, transform, collider);
       });
+  ecs.View<Transform, CharacterBody>().ForEach(
+      [&encoder](Entity /*entity*/, const Transform& transform,
+                 const CharacterBody& body) -> void {
+        encoder.draw(CharacterCapsule(body, transform.position));
+      });
   encoder.pop();
 
   encoder.push();
@@ -169,13 +175,19 @@ void DebugDrawSystem::Update(Ecs& ecs, const AssetRegistry& assets,
   encoder.setWireframe(true);
   encoder.setColor(kHighlightColor);
   for (const Entity entity : highlights_) {
-    if (!ecs.HasComponent<Transform>(entity) ||
-        !ecs.HasComponent<Renderable>(entity)) {
+    const auto* transform = ecs.TryGetComponent<Transform>(entity);
+    if (transform == nullptr) {
       continue;
     }
-    const auto& renderable = ecs.GetComponent<Renderable>(entity);
-    DrawHighlight(encoder, ecs.GetComponent<Transform>(entity),
-                  assets.GetMeshBounds(renderable.mesh_handle));
+    // A mesh's box, or else a character's capsule
+    if (const auto* renderable = ecs.TryGetComponent<Renderable>(entity)) {
+      DrawHighlight(encoder, *transform,
+                    assets.GetMeshBounds(renderable->mesh_handle));
+    } else if (const auto* body = ecs.TryGetComponent<CharacterBody>(entity)) {
+      bx::Capsule capsule = CharacterCapsule(*body, transform->position);
+      capsule.radius *= kHighlightGrowth;
+      encoder.draw(capsule);
+    }
   }
   highlights_.clear();
   encoder.pop();

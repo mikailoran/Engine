@@ -22,6 +22,7 @@ Physics works entirely through ECS components. You never call Jolt.
 | Something that blocks other things (floor, wall, prop) | `Transform` + `Collider` |
 | Something that falls, bounces and gets pushed | `Transform` + `Collider` + `RigidBody` |
 | Level geometry from a model (static only) | `Transform` + a mesh `Collider` |
+| A character that walks and pushes things | `Transform` + `CharacterBody` |
 
 That's it. The physics system notices the components and creates, updates and
 destroys the matching body by itself, every frame.
@@ -49,6 +50,16 @@ applied on top. More options:
 }
 ```
 
+A dynamic body's options, all optional:
+
+```jsonc
+"rigid_body": {
+  "has_gravity": true,
+  "velocity": [0, 0, 0],       // initial, m/s
+  "acceleration": [0, 0, 0]    // on top of gravity, m/s^2
+}
+```
+
 Physics never looks at an entity's `Renderable`. If a mesh isn't centred on
 its origin (the bunny sits on top of it), fit a box to it once when you create
 the entity:
@@ -56,6 +67,34 @@ the entity:
 ```cpp
 ecs.AddComponent(entity, BoxColliderAround(assets.GetMeshBounds(mesh)));
 ```
+
+### Characters
+
+A `CharacterBody` makes an entity an upright capsule that physics moves at the
+velocity you give it (Jolt's `CharacterVirtual`; see ADR 0009). Its
+`Transform`'s position is the **feet**.
+
+```jsonc
+"character_body": {
+  "height": 1.8,         // feet to head, m; more than twice the radius
+  "radius": 0.3,
+  "max_slope_deg": 45,   // steepest walkable slope
+  "mass": 70,            // kg: how hard it presses and pushes
+  "push_force": 200      // strongest push on a body, N
+}
+```
+
+- **You set `velocity`; physics adds gravity.** While it stands on the
+  ground the fall is dropped; otherwise each step adds `gravity * dt`. To
+  jump, set an upward velocity. Walking into a wall doesn't reset it: the
+  capsule slides along instead.
+- **It pushes dynamic bodies, but bodies don't hit it.** A falling prop passes
+  through the character, and only its push moves things, up to `push_force`.
+- **Whether it's on the ground** is `CharacterLink::OnGround()`, written by
+  physics each frame.
+- No stair stepping; it sticks to the floor walking down slopes.
+- A `Collider` on a character entity is ignored, so no body overlaps it.
+- Picking and highlighting use its capsule, since it may have no mesh.
 
 ### Mesh colliders
 
@@ -100,6 +139,8 @@ the same `.bin` the renderer draws or a separate, simpler one:
   a box collider is never thinner than 10 cm. See [Known issues](#known-issues).
 - **Spheres can't stretch.** A sphere on a non-uniformly scaled entity uses the
   largest scale axis.
+- **Characters walk through what falls on them.** See
+  [Characters](#characters).
 - **Mesh colliders block from the front only,** and never move. See
   [Mesh colliders](#mesh-colliders).
 
@@ -135,11 +176,16 @@ There are three layers, and each one only knows about the one below it.
    4. **Push edits.** Compare each entity's components with the copies stored
       in its `PhysicsLink`. Anything different was edited outside physics, so
       send it to the world.
-   5. **Step.** Advance the world in fixed 1/60 s steps, carrying any leftover
+   5. **The same four for characters**, between `CharacterBody` +
+      `Transform` and `CharacterLink`. A size edit rebuilds the character,
+      keeping its velocity.
+   6. **Step.** Advance the world in fixed 1/60 s steps, carrying any leftover
       time to the next frame (capped at 0.25 s so a long hitch can't queue
-      hundreds of steps).
-   6. **Pull results.** Copy dynamic bodies' new position, rotation and
-      velocity back into `Transform` and `RigidBody`.
+      hundreds of steps). Each step moves the characters, then the bodies.
+   7. **Pull results.** Copy dynamic bodies' new position, rotation and
+      velocity back into `Transform` and `RigidBody`, and characters' feet,
+      velocity and ground state into `Transform`, `CharacterBody` and
+      `CharacterLink`.
 
 3. **`PhysicsWorld`** (`src/engine/physics/physics_world.*`) is the simulation, behind
    an API that uses only engine types: `BodyHandle`, `Pose`, `ShapeDesc`,
@@ -291,7 +337,9 @@ plus whatever scene pieces it needs, with values copied from
 
 The tests cover body lifetime (destruction, reused ids, copied links, no
 leaks), the simulation (bouncing, friction, walls, rolling spheres) and every
-wake-up rule. The most important one is `RampContactMatchesTheRenderedTilt`: it
+wake-up rule. `character_test.cpp` drives characters through the facade alone
+(standing, falling, walls, the slope limit, jumping, pushing), and the
+harness covers their ECS sync. The most important one is `RampContactMatchesTheRenderedTilt`: it
 drops a box on the tilted ramp and checks it lands on the surface as the
 renderer draws it. It fails if the rotation convention between rendering and
 physics ever drifts apart.
@@ -317,6 +365,12 @@ Most of what's written here can quietly break on a Jolt upgrade. Checklist:
 ---
 
 ## Known issues
+
+- **Every body has the density of water.** A 1 m crate weighs a tonne, so the
+  character's default 200 N push can't move boxes; balls roll away. Mass and
+  density aren't configurable yet.
+- **Bodies pass through characters.** Jolt's inner body for the character
+  would fix it; see ADR 0009.
 
 - **Boxes are at least 10 cm thick.** `PhysicsWorld` grows each half-extent to
   cover Jolt's 5 cm rounded edges instead of shrinking the rounding for thin

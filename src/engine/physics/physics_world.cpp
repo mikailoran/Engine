@@ -8,26 +8,33 @@
 #include <Jolt/Core/TempAllocator.h>
 #include <Jolt/Geometry/AABox.h>
 #include <Jolt/Geometry/IndexedTriangle.h>
+#include <Jolt/Geometry/Plane.h>
 #include <Jolt/Math/Float3.h>
+#include <Jolt/Math/Math.h>
 #include <Jolt/Math/MathTypes.h>
 #include <Jolt/Math/Quat.h>
 #include <Jolt/Math/Real.h>
 #include <Jolt/Math/Vec3.h>
 #include <Jolt/Physics/Body/Body.h>
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
+#include <Jolt/Physics/Body/BodyFilter.h>
 #include <Jolt/Physics/Body/BodyID.h>
 #include <Jolt/Physics/Body/BodyInterface.h>
 #include <Jolt/Physics/Body/BodyLock.h>
 #include <Jolt/Physics/Body/BodyManager.h>
 #include <Jolt/Physics/Body/MotionType.h>
+#include <Jolt/Physics/Character/CharacterBase.h>
+#include <Jolt/Physics/Character/CharacterVirtual.h>
 #include <Jolt/Physics/Collision/BroadPhase/BroadPhaseLayer.h>
 #include <Jolt/Physics/Collision/ObjectLayer.h>
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
+#include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
 #include <Jolt/Physics/Collision/Shape/MeshShape.h>
 #include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
 #include <Jolt/Physics/Collision/Shape/ScaledShape.h>
 #include <Jolt/Physics/Collision/Shape/Shape.h>
 #include <Jolt/Physics/Collision/Shape/SphereShape.h>
+#include <Jolt/Physics/Collision/ShapeFilter.h>
 #include <Jolt/Physics/Collision/TransformedShape.h>
 #include <Jolt/Physics/EActivation.h>
 #include <Jolt/Physics/EPhysicsUpdateError.h>
@@ -46,6 +53,7 @@
 #include <vector>
 
 #include "engine/physics/body_handle.h"
+#include "engine/physics/character_handle.h"
 #include "engine/physics/collision_mesh_handle.h"
 #include "engine/physics/jolt_runtime.h"
 #include "engine/physics/layers.h"
@@ -64,6 +72,9 @@ constexpr JPH::uint kTempAllocatorBytes = 10U * 1024U * 1024U;
 
 /// How far past a body's bounds WakeTouching looks for neighbours, in m.
 constexpr float kWakeMargin = 0.1F;
+
+/// Upward speed past which a grounded character is leaving the ground, in m/s.
+constexpr float kLeavingGroundSpeed = 0.1F;
 
 /** @brief Converts a bx vector to Jolt's. */
 auto ToJolt(const bx::Vec3& v) -> JPH::Vec3 { return {v.x, v.y, v.z}; }
@@ -118,6 +129,17 @@ auto MakeMeshShape(const TriangleMesh& mesh)
 
 /// Built collision meshes, indexed by CollisionMeshHandle::Value.
 using MeshShapes = std::vector<JPH::RefConst<JPH::Shape>>;
+
+/// Characters by CharacterHandle::Value.
+using CharacterMap =
+    std::unordered_map<std::uint32_t, JPH::Ref<JPH::CharacterVirtual>>;
+
+/** @brief The character @p handle names. @pre It exists. */
+auto FindCharacter(const CharacterMap& characters, CharacterHandle handle)
+    -> JPH::CharacterVirtual& {
+  assert(characters.contains(handle.Value()) && "unknown character");
+  return *characters.at(handle.Value());
+}
 
 /** @brief The shape in @p result, or null if Jolt rejected it. */
 auto Built(const JPH::ShapeSettings::ShapeResult& result)
@@ -181,6 +203,53 @@ auto MakeShape(const ShapeDesc& unscaled, const bx::Vec3& scale,
 }
 
 /**
+ * @brief Builds a character's upright capsule, its origin at the bottom.
+ * @return The shape, or null if Jolt rejected it.
+ */
+auto MakeCharacterShape(const CharacterDesc& desc)
+    -> JPH::RefConst<JPH::Shape> {
+  assert(desc.radius > 0.0F && desc.height > 2.0F * desc.radius &&
+         "a character is taller than its two rounded ends");
+  const JPH::RefConst<JPH::Shape> capsule = Built(
+      JPH::CapsuleShapeSettings((0.5F * desc.height) - desc.radius, desc.radius)
+          .Create());
+  if (capsule == nullptr) {
+    return nullptr;
+  }
+  return Built(JPH::RotatedTranslatedShapeSettings(
+                   JPH::Vec3(0.0F, 0.5F * desc.height, 0.0F),
+                   JPH::Quat::sIdentity(), capsule)
+                   .Create());
+}
+
+/**
+ * @brief Adds gravity to @p character's velocity, then moves it @p dt
+ * seconds, sliding along and pushing what it hits.
+ */
+void MoveCharacter(JPH::CharacterVirtual& character, float dt,
+                   const JPH::PhysicsSystem& system,
+                   JPH::TempAllocator& allocator) {
+  const JPH::Vec3 gravity = system.GetGravity();
+  JPH::Vec3 velocity = character.GetLinearVelocity();
+  // Standing, not jumping: the ground has cancelled the fall so far
+  if (character.GetGroundState() ==
+          JPH::CharacterBase::EGroundState::OnGround &&
+      velocity.GetY() < kLeavingGroundSpeed) {
+    velocity.SetY(0.0F);
+  }
+  character.SetLinearVelocity(velocity + (gravity * dt));
+
+  // No stair stepping; stick to the floor walking down slopes
+  JPH::CharacterVirtual::ExtendedUpdateSettings settings;
+  settings.mWalkStairsStepUp = JPH::Vec3::sZero();
+  character.ExtendedUpdate(
+      dt, gravity, settings,
+      system.GetDefaultBroadPhaseLayerFilter(object_layer::kMoving),
+      system.GetDefaultLayerFilter(object_layer::kMoving), JPH::BodyFilter{},
+      JPH::ShapeFilter{}, allocator);
+}
+
+/**
  * @brief Wakes @p id's body and every body touching it.
  *
  * Static bodies never wake, so for a floor this wakes what rests on it.
@@ -220,6 +289,10 @@ struct PhysicsWorld::Impl {
   std::unordered_map<std::uint32_t, bx::Vec3> accelerations;
   /// Collision meshes, shared by every body that uses one.
   MeshShapes meshes;
+  /// Characters point at the system, so they follow it and die first.
+  CharacterMap characters;
+  /// The next CharacterHandle value; never reused.
+  std::uint32_t next_character{0};
   // Last, where its 64-byte alignment adds no padding. One thread per core
   // but one by default
   // TODO: learn about job systems and how to integrate ours to Jolt's
@@ -383,8 +456,7 @@ auto PhysicsWorld::GetVelocity(BodyHandle body) const -> bx::Vec3 {
 
 // TODO: if the per-frame sync shows in profiles, read via
 // GetBodyInterfaceNoLock() here and in Bodies(); safe between Steps
-auto PhysicsWorld::UserData(BodyHandle body) const
-    -> std::optional<std::uint64_t> {
+auto PhysicsWorld::UserData(BodyHandle body) const -> std::optional<UserTag> {
   const JPH::BodyInterface& body_interface = impl_->system.GetBodyInterface();
   const JPH::BodyID id = ToJolt(body);
   // A destroyed body's id fails the lock, even if its slot was reused
@@ -407,7 +479,76 @@ auto PhysicsWorld::Bodies() const -> std::vector<BodyEntry> {
   return bodies;
 }
 
+auto PhysicsWorld::CreateCharacter(const CharacterDesc& desc)
+    -> CharacterHandle {
+  JPH::CharacterVirtualSettings settings;
+  settings.mShape = MakeCharacterShape(desc);
+  settings.mMaxSlopeAngle = JPH::DegreesToRadians(desc.max_slope_deg);
+  settings.mMass = desc.mass;
+  settings.mMaxStrength = desc.push_force;
+  // Only contacts on the lower rounded end can hold it up
+  settings.mSupportingVolume = JPH::Plane(JPH::Vec3::sAxisY(), -desc.radius);
+
+  // Jolt's intrusive Ref owns it from creation
+  // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
+  JPH::Ref<JPH::CharacterVirtual> character = new JPH::CharacterVirtual(
+      &settings, ToJolt(desc.feet), JPH::Quat::sIdentity(), desc.user_data,
+      &impl_->system);
+  const CharacterHandle handle(impl_->next_character++);
+  impl_->characters.emplace(handle.Value(), std::move(character));
+  return handle;
+}
+
+auto PhysicsWorld::UserData(CharacterHandle character) const
+    -> std::optional<UserTag> {
+  const auto it = impl_->characters.find(character.Value());
+  if (it == impl_->characters.end()) {
+    return std::nullopt;
+  }
+  return it->second->GetUserData();
+}
+
+void PhysicsWorld::DestroyCharacter(CharacterHandle character) {
+  impl_->characters.erase(character.Value());
+}
+
+void PhysicsWorld::SetCharacterFeet(CharacterHandle character,
+                                    const bx::Vec3& feet) {
+  FindCharacter(impl_->characters, character).SetPosition(ToJolt(feet));
+}
+
+void PhysicsWorld::SetCharacterVelocity(CharacterHandle character,
+                                        const bx::Vec3& velocity) {
+  FindCharacter(impl_->characters, character)
+      .SetLinearVelocity(ToJolt(velocity));
+}
+
+auto PhysicsWorld::GetCharacter(CharacterHandle character) const
+    -> CharacterState {
+  const JPH::CharacterVirtual& found =
+      FindCharacter(impl_->characters, character);
+  return {.feet = ToBx(found.GetPosition()),
+          .velocity = ToBx(found.GetLinearVelocity()),
+          .on_ground = found.GetGroundState() ==
+                       JPH::CharacterBase::EGroundState::OnGround};
+}
+
+auto PhysicsWorld::Characters() const -> std::vector<CharacterEntry> {
+  std::vector<CharacterEntry> characters;
+  characters.reserve(impl_->characters.size());
+  for (const auto& [value, character] : impl_->characters) {
+    characters.push_back({.character = CharacterHandle(value),
+                          .user_data = character->GetUserData()});
+  }
+  return characters;
+}
+
 void PhysicsWorld::Step(float dt) {
+  // Characters move first, so their pushes take effect in this step
+  for (const auto& [value, character] : impl_->characters) {
+    MoveCharacter(*character, dt, impl_->system, impl_->temp_allocator);
+  }
+
   JPH::BodyInterface& body_interface = impl_->system.GetBodyInterface();
   for (const auto& [value, acceleration] : impl_->accelerations) {
     const JPH::BodyID id(value);

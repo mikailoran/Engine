@@ -92,6 +92,7 @@ FetchContent_MakeAvailable(JoltPhysics)
 add_library(engine_physics STATIC
   src/engine/util/handle.h
   src/engine/physics/body_handle.h
+  src/engine/physics/character_handle.h
   src/engine/physics/collision_mesh_handle.h
   src/engine/physics/jolt_runtime.h
   src/engine/physics/jolt_runtime.cpp
@@ -171,6 +172,8 @@ add_library(engine_runtime STATIC
   src/engine/bgfx_context.h
   src/engine/bgfx_context.cpp
   src/engine/ecs/components/camera.h
+  src/engine/ecs/components/character_body.h
+  src/engine/ecs/components/character_link.h
   src/engine/ecs/components/collider.h
   src/engine/ecs/components/physics_link.h
   src/engine/ecs/components/renderable.h

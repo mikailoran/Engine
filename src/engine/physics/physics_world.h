@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "engine/physics/body_handle.h"
+#include "engine/physics/character_handle.h"
 #include "engine/physics/collision_mesh_handle.h"
 #include "engine/physics/shape.h"
 
@@ -24,7 +25,10 @@ struct Pose {
 /** @brief Whether a body moves under forces and collisions. */
 enum class Motion : std::uint8_t { kStatic, kDynamic };
 
-/** @brief Everything needed to create a body. */
+/// Caller's tag for a body or character; physics stores it, never reads it.
+using UserTag = std::uint64_t;
+
+/** @brief Input to CreateBody: everything needed to create a body. */
 struct BodyDesc {
   ShapeDesc shape;
   Pose pose;
@@ -37,13 +41,49 @@ struct BodyDesc {
   /// Whether world gravity applies; dynamic bodies only.
   bool gravity{true};
   /// Caller's tag for the body, returned by Bodies and UserData.
-  std::uint64_t user_data{0};
+  UserTag user_data{0};
 };
 
-/** @brief A body in the world and the tag it was created with. */
+/** @brief Output of Bodies: a live body and the tag it was created with. */
 struct BodyEntry {
   BodyHandle body;
-  std::uint64_t user_data{0};
+  UserTag user_data{0};
+};
+
+/**
+ * @brief Input to CreateCharacter: an upright capsule that moves at the
+ * velocity it is given, sliding along what it hits.
+ */
+struct CharacterDesc {
+  /// Where the capsule's bottom touches, in world space.
+  bx::Vec3 feet{0.0F};
+  /// Capsule height from feet to head, in m; more than twice the radius.
+  float height{1.8F};
+  /// Capsule radius, in m.
+  float radius{0.3F};
+  /// Steepest slope it can walk up, in degrees.
+  float max_slope_deg{45.0F};
+  /// Mass in kg: how hard it pushes and presses on what it stands on.
+  float mass{70.0F};
+  /// Strongest push it gives a body, in N.
+  float push_force{200.0F};
+  /// Caller's tag for the character, returned by Characters.
+  UserTag user_data{0};
+};
+
+/** @brief Output of GetCharacter: a character's state after the last Step. */
+struct CharacterState {
+  bx::Vec3 feet{0.0F};
+  /// The velocity it moves with in m/s, before collisions slow it.
+  bx::Vec3 velocity{0.0F};
+  /// Whether it stands on walkable ground.
+  bool on_ground{false};
+};
+
+/** @brief Output of Characters: a live character and its creation tag. */
+struct CharacterEntry {
+  CharacterHandle character;
+  UserTag user_data{0};
 };
 
 /**
@@ -130,13 +170,49 @@ class PhysicsWorld {
    * @brief Returns @p body's tag, or nothing if it no longer exists. Stale
    * handles are safe to pass.
    */
-  [[nodiscard]] auto UserData(BodyHandle body) const
-      -> std::optional<std::uint64_t>;
+  [[nodiscard]] auto UserData(BodyHandle body) const -> std::optional<UserTag>;
 
   /** @brief Lists every body; a copy, so destroying while looping is safe. */
   [[nodiscard]] auto Bodies() const -> std::vector<BodyEntry>;
 
-  /** @brief Advances the simulation by exactly @p dt seconds. */
+  /**
+   * @brief Adds a character. It collides with every body and pushes dynamic
+   * ones, but bodies don't collide with it.
+   * @return The character, never invalid.
+   */
+  auto CreateCharacter(const CharacterDesc& desc) -> CharacterHandle;
+
+  /**
+   * @brief Returns @p character's tag, or nothing if it no longer exists.
+   * Stale handles are safe to pass.
+   */
+  [[nodiscard]] auto UserData(CharacterHandle character) const
+      -> std::optional<UserTag>;
+
+  /** @brief Removes @p character. Stale handles are safe to pass. */
+  void DestroyCharacter(CharacterHandle character);
+
+  /** @brief Teleports @p character's feet to @p feet. */
+  void SetCharacterFeet(CharacterHandle character, const bx::Vec3& feet);
+
+  /**
+   * @brief Sets the velocity @p character moves with, in m/s. Each Step adds
+   * gravity to it, and drops the downward part while on the ground.
+   */
+  void SetCharacterVelocity(CharacterHandle character,
+                            const bx::Vec3& velocity);
+
+  /** @brief Returns @p character's state after the last Step. */
+  [[nodiscard]] auto GetCharacter(CharacterHandle character) const
+      -> CharacterState;
+
+  /** @brief Lists every character; a copy, safe to destroy while looping. */
+  [[nodiscard]] auto Characters() const -> std::vector<CharacterEntry>;
+
+  /**
+   * @brief Advances the simulation by exactly @p dt seconds: moves every
+   * character, then steps the bodies.
+   */
   void Step(float dt);
 
  private:
