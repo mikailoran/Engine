@@ -40,6 +40,17 @@ auto ReadFloats(const nlohmann::json& data) -> std::array<float, N> {
   return data.get<std::array<float, N>>();
 }
 
+/** @brief Reads the optional positive number @p key into @p out. */
+inline void ReadPositive(const nlohmann::json& data, const char* key,
+                         float& out) {
+  if (data.contains(key)) {
+    out = data.at(key).get<float>();
+    if (out <= 0.0F) {
+      throw std::runtime_error(std::string(key) + " must be positive");
+    }
+  }
+}
+
 /** @brief Reads a JSON array of 3 numbers into a bx::Vec3. */
 inline auto ReadVec3(const nlohmann::json& data) -> bx::Vec3 {
   const auto values = ReadFloats<3>(data);

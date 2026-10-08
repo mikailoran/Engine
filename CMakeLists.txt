@@ -219,6 +219,26 @@ set_target_properties(engine_runtime PROPERTIES
   CXX_EXTENSIONS OFF
 )
 
+# --- Game logic -------------------------------------------------------------
+# Gameplay components and systems, shared by the game and later the editor.
+# Never SDL, ImGui or devtools.
+add_library(game_logic STATIC
+  src/game/logic/game_logic.h
+  src/game/logic/game_logic.cpp
+  src/game/logic/player.h
+  src/game/logic/player_system.h
+  src/game/logic/player_system.cpp)
+
+target_link_libraries(game_logic PUBLIC engine_runtime)
+
+target_compile_options(game_logic PRIVATE -Wall -Wextra -Wpedantic)
+
+set_target_properties(game_logic PROPERTIES
+  CXX_STANDARD 20
+  CXX_STANDARD_REQUIRED ON
+  CXX_EXTENSIONS OFF
+)
+
 # --- Game -------------------------------------------------------------------
 # The host: window, input, devtools and the frame loop around Engine.
 add_executable(game src/game/main.cpp
@@ -233,7 +253,8 @@ add_executable(game src/game/main.cpp
   src/devtools/ui.cpp)
 
 find_package(SDL3 CONFIG REQUIRED)
-target_link_libraries(game PRIVATE engine_runtime bgfx_imgui SDL3::SDL3)
+target_link_libraries(game PRIVATE game_logic engine_runtime bgfx_imgui
+  SDL3::SDL3)
 
 target_compile_options(game PRIVATE -Wall -Wextra -Wpedantic)
 

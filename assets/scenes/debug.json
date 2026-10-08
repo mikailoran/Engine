@@ -619,7 +619,7 @@
       }
     },
     {
-      "name": "character",
+      "name": "player",
       "components": {
         "transform": {
           "position": [
@@ -628,7 +628,8 @@
             1
           ]
         },
-        "character_body": {}
+        "character_body": {},
+        "player": {}
       }
     }
   ]
