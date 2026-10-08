@@ -49,6 +49,16 @@ applied on top. More options:
 }
 ```
 
+A dynamic body's options, all optional:
+
+```jsonc
+"rigid_body": {
+  "has_gravity": true,
+  "velocity": [0, 0, 0],       // initial, m/s
+  "acceleration": [0, 0, 0]    // on top of gravity, m/s^2
+}
+```
+
 Physics never looks at an entity's `Renderable`. If a mesh isn't centred on
 its origin (the bunny sits on top of it), fit a box to it once when you create
 the entity:
