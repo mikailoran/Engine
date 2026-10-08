@@ -7,19 +7,25 @@
 #include <Jolt/Core/Reference.h>
 #include <Jolt/Core/TempAllocator.h>
 #include <Jolt/Geometry/AABox.h>
+#include <Jolt/Geometry/IndexedTriangle.h>
+#include <Jolt/Math/Float3.h>
 #include <Jolt/Math/MathTypes.h>
 #include <Jolt/Math/Quat.h>
 #include <Jolt/Math/Real.h>
 #include <Jolt/Math/Vec3.h>
+#include <Jolt/Physics/Body/Body.h>
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
 #include <Jolt/Physics/Body/BodyID.h>
 #include <Jolt/Physics/Body/BodyInterface.h>
+#include <Jolt/Physics/Body/BodyLock.h>
 #include <Jolt/Physics/Body/BodyManager.h>
 #include <Jolt/Physics/Body/MotionType.h>
 #include <Jolt/Physics/Collision/BroadPhase/BroadPhaseLayer.h>
 #include <Jolt/Physics/Collision/ObjectLayer.h>
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
+#include <Jolt/Physics/Collision/Shape/MeshShape.h>
 #include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
+#include <Jolt/Physics/Collision/Shape/ScaledShape.h>
 #include <Jolt/Physics/Collision/Shape/Shape.h>
 #include <Jolt/Physics/Collision/Shape/SphereShape.h>
 #include <Jolt/Physics/Collision/TransformedShape.h>
@@ -31,13 +37,16 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <optional>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "engine/physics/body_handle.h"
+#include "engine/physics/collision_mesh_handle.h"
 #include "engine/physics/jolt_runtime.h"
 #include "engine/physics/layers.h"
 #include "engine/physics/shape.h"
@@ -82,18 +91,65 @@ auto IsZero(const bx::Vec3& v) -> bool {
   return v.x == 0.0F && v.y == 0.0F && v.z == 0.0F;
 }
 
-/** @brief Builds the inner shape of @p desc, centred on the origin. */
-auto MakeCentredShape(const ShapeDesc& desc)
+/** @brief Tests a vector for exact one on every axis. */
+auto IsOne(const bx::Vec3& v) -> bool {
+  return v.x == 1.0F && v.y == 1.0F && v.z == 1.0F;
+}
+
+/** @brief Builds a Jolt mesh from @p mesh's triangles. */
+auto MakeMeshShape(const TriangleMesh& mesh)
     -> JPH::ShapeSettings::ShapeResult {
+  assert(mesh.indices.size() % 3 == 0 && "mesh indices come in threes");
+  JPH::VertexList vertices;
+  vertices.reserve(mesh.vertices.size());
+  for (const bx::Vec3& v : mesh.vertices) {
+    vertices.emplace_back(v.x, v.y, v.z);
+  }
+  JPH::IndexedTriangleList triangles;
+  triangles.reserve(mesh.indices.size() / 3);
+  // Same winding as Jolt: counter-clockwise front in a right-handed frame
+  for (std::size_t i = 0; i + 2 < mesh.indices.size(); i += 3) {
+    triangles.emplace_back(mesh.indices.at(i), mesh.indices.at(i + 1),
+                           mesh.indices.at(i + 2), 0U);
+  }
+  return JPH::MeshShapeSettings(std::move(vertices), std::move(triangles))
+      .Create();
+}
+
+/// Built collision meshes, indexed by CollisionMeshHandle::Value.
+using MeshShapes = std::vector<JPH::RefConst<JPH::Shape>>;
+
+/** @brief The shape in @p result, or null if Jolt rejected it. */
+auto Built(const JPH::ShapeSettings::ShapeResult& result)
+    -> JPH::RefConst<JPH::Shape> {
+  assert(result.IsValid() && "Jolt rejected a shape");
+  return result.IsValid() ? result.Get() : nullptr;
+}
+
+/**
+ * @brief Builds the inner shape of @p desc, centred on the origin.
+ * @param scale Applied to meshes only; Scaled already sized the primitives.
+ * @return The shape, or null if Jolt rejected it.
+ */
+auto MakeCentredShape(const ShapeDesc& desc, const bx::Vec3& scale,
+                      const MeshShapes& meshes) -> JPH::RefConst<JPH::Shape> {
+  if (desc.kind == ShapeKind::kMesh) {
+    assert(desc.mesh.Value() < meshes.size() && "unknown collision mesh");
+    const JPH::RefConst<JPH::Shape>& mesh = meshes.at(desc.mesh.Value());
+    // Each body scales the shared mesh rather than rebuilding it
+    return IsOne(scale)
+               ? mesh
+               : Built(JPH::ScaledShapeSettings(mesh, ToJolt(scale)).Create());
+  }
   if (desc.kind == ShapeKind::kSphere) {
     assert(desc.radius > 0.0F && "sphere radius must be positive");
-    return JPH::SphereShapeSettings(desc.radius).Create();
+    return Built(JPH::SphereShapeSettings(desc.radius).Create());
   }
   // Each half extent must cover the box's rounded edges
   const JPH::Vec3 half_extent =
       JPH::Vec3::sMax(ToJolt(desc.half_extents),
                       JPH::Vec3::sReplicate(JPH::cDefaultConvexRadius));
-  return JPH::BoxShapeSettings(half_extent).Create();
+  return Built(JPH::BoxShapeSettings(half_extent).Create());
 }
 
 /** @brief @p desc with @p scale applied to its sizes and offset. */
@@ -111,18 +167,17 @@ auto Scaled(const ShapeDesc& desc, const bx::Vec3& scale) -> ShapeDesc {
  * @brief Builds the Jolt shape for @p desc at @p scale.
  * @return The shape, or null if Jolt rejected it.
  */
-auto MakeShape(const ShapeDesc& unscaled, const bx::Vec3& scale)
-    -> JPH::RefConst<JPH::Shape> {
+auto MakeShape(const ShapeDesc& unscaled, const bx::Vec3& scale,
+               const MeshShapes& meshes) -> JPH::RefConst<JPH::Shape> {
   const ShapeDesc desc = Scaled(unscaled, scale);
-  JPH::ShapeSettings::ShapeResult result = MakeCentredShape(desc);
+  JPH::RefConst<JPH::Shape> shape = MakeCentredShape(desc, scale, meshes);
   // Most shapes are centred, which needs no offset wrapper
-  if (result.IsValid() && !IsZero(desc.offset)) {
-    result = JPH::RotatedTranslatedShapeSettings(
-                 ToJolt(desc.offset), JPH::Quat::sIdentity(), result.Get())
-                 .Create();
+  if (shape != nullptr && !IsZero(desc.offset)) {
+    shape = Built(JPH::RotatedTranslatedShapeSettings(
+                      ToJolt(desc.offset), JPH::Quat::sIdentity(), shape)
+                      .Create());
   }
-  assert(result.IsValid() && "Jolt rejected a shape");
-  return result.IsValid() ? result.Get() : nullptr;
+  return shape;
 }
 
 /**
@@ -136,6 +191,13 @@ void WakeTouching(JPH::BodyInterface& body_interface, const JPH::BodyID& id) {
   bounds.ExpandBy(JPH::Vec3::sReplicate(kWakeMargin));
   body_interface.ActivateBodiesInAABox(bounds, JPH::BroadPhaseLayerFilter{},
                                        JPH::ObjectLayerFilter{});
+}
+
+/** @brief Whether @p id's body was created able to turn dynamic. */
+auto CanTurnDynamic(const JPH::PhysicsSystem& system, const JPH::BodyID& id)
+    -> bool {
+  const JPH::BodyLockRead lock(system.GetBodyLockInterface(), id);
+  return lock.Succeeded() && lock.GetBody().CanBeKinematicOrDynamic();
 }
 
 /** @brief Wakes a dynamic body on an edit; static bodies cannot wake. */
@@ -156,6 +218,8 @@ struct PhysicsWorld::Impl {
   JPH::TempAllocatorImpl temp_allocator{kTempAllocatorBytes};
   /// Per-body extra accelerations; Jolt has no persistent force.
   std::unordered_map<std::uint32_t, bx::Vec3> accelerations;
+  /// Collision meshes, shared by every body that uses one.
+  MeshShapes meshes;
   // Last, where its 64-byte alignment adds no padding. One thread per core
   // but one by default
   // TODO: learn about job systems and how to integrate ours to Jolt's
@@ -177,12 +241,14 @@ PhysicsWorld::PhysicsWorld(const JoltRuntime& /*runtime*/,
 PhysicsWorld::~PhysicsWorld() = default;
 
 auto PhysicsWorld::CreateBody(const BodyDesc& desc) -> BodyHandle {
-  const auto shape = MakeShape(desc.shape, desc.scale);
+  const auto shape = MakeShape(desc.shape, desc.scale, impl_->meshes);
   if (!shape) {
     return {};
   }
 
-  const bool dynamic = desc.motion == Motion::kDynamic;
+  // Jolt can't find a mesh's mass, so a mesh body stays static
+  const bool is_mesh = desc.shape.kind == ShapeKind::kMesh;
+  const bool dynamic = desc.motion == Motion::kDynamic && !is_mesh;
   JPH::BodyCreationSettings settings{
       shape, ToJolt(desc.pose.position), ToJolt(desc.pose.rotation),
       dynamic ? JPH::EMotionType::Dynamic : JPH::EMotionType::Static,
@@ -193,13 +259,24 @@ auto PhysicsWorld::CreateBody(const BodyDesc& desc) -> BodyHandle {
   settings.mLinearVelocity = ToJolt(desc.velocity);
   settings.mUserData = desc.user_data;
   // Lets a static body turn dynamic in place
-  settings.mAllowDynamicOrKinematic = true;
+  settings.mAllowDynamicOrKinematic = !is_mesh;
 
   const JPH::BodyID id = impl_->system.GetBodyInterface().CreateAndAddBody(
       settings,
       dynamic ? JPH::EActivation::Activate : JPH::EActivation::DontActivate);
   assert(!id.IsInvalid() && "Jolt is out of bodies");
   return BodyHandle(id.GetIndexAndSequenceNumber());
+}
+
+auto PhysicsWorld::CreateCollisionMesh(const TriangleMesh& mesh)
+    -> CollisionMeshHandle {
+  const JPH::RefConst<JPH::Shape> shape = Built(MakeMeshShape(mesh));
+  if (shape == nullptr) {
+    return {};
+  }
+  impl_->meshes.push_back(shape);
+  return CollisionMeshHandle(
+      static_cast<std::uint32_t>(impl_->meshes.size() - 1));
 }
 
 void PhysicsWorld::DestroyBody(BodyHandle body) {
@@ -225,12 +302,19 @@ void PhysicsWorld::SetPose(BodyHandle body, const Pose& pose) {
 
 void PhysicsWorld::SetShape(BodyHandle body, const ShapeDesc& shape,
                             const bx::Vec3& scale) {
-  const auto jolt_shape = MakeShape(shape, scale);
+  const auto jolt_shape = MakeShape(shape, scale, impl_->meshes);
   if (!jolt_shape) {
     return;
   }
   JPH::BodyInterface& body_interface = impl_->system.GetBodyInterface();
   const JPH::BodyID id = ToJolt(body);
+  // Jolt would compute the mesh's mass for a body that can turn dynamic
+  const bool mesh_on_movable =
+      shape.kind == ShapeKind::kMesh && CanTurnDynamic(impl_->system, id);
+  assert(!mesh_on_movable && "a mesh shape needs a body created with one");
+  if (mesh_on_movable) {
+    return;
+  }
   // Wake what touches the old shape, then the new one
   WakeTouching(body_interface, id);
   body_interface.SetShape(id, jolt_shape, true,
@@ -250,6 +334,10 @@ void PhysicsWorld::SetMaterial(BodyHandle body, const Material& material) {
 void PhysicsWorld::SetMotion(BodyHandle body, Motion motion) {
   JPH::BodyInterface& body_interface = impl_->system.GetBodyInterface();
   const JPH::BodyID id = ToJolt(body);
+  // Mesh bodies are created static-only
+  if (!CanTurnDynamic(impl_->system, id)) {
+    return;
+  }
   const bool dynamic = motion == Motion::kDynamic;
   body_interface.SetObjectLayer(
       id, dynamic ? object_layer::kMoving : object_layer::kNonMoving);

@@ -91,6 +91,7 @@ FetchContent_MakeAvailable(JoltPhysics)
 # JPH_* defines out of every target that links this.
 add_library(engine_physics STATIC
   src/engine/physics/body_handle.h
+  src/engine/physics/collision_mesh_handle.h
   src/engine/physics/jolt_runtime.h
   src/engine/physics/jolt_runtime.cpp
   src/engine/physics/layers.h

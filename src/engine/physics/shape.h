@@ -3,6 +3,9 @@
 #include <bx/math.h>
 
 #include <cstdint>
+#include <vector>
+
+#include "engine/physics/collision_mesh_handle.h"
 
 namespace engine::physics {
 
@@ -10,7 +13,17 @@ namespace engine::physics {
 // keeps its own copy. Jolt-free, like the rest of this module's headers.
 
 /** @brief The kind of a body's shape. */
-enum class ShapeKind : std::uint8_t { kBox, kSphere };
+enum class ShapeKind : std::uint8_t { kBox, kSphere, kMesh };
+
+/**
+ * @brief Triangles to build a collision mesh from, wound like the engine's
+ * meshes: counter-clockwise seen from the front.
+ */
+struct TriangleMesh {
+  std::vector<bx::Vec3> vertices;
+  /// Three per triangle, indexing into vertices.
+  std::vector<std::uint32_t> indices;
+};
 
 /**
  * @brief A shape in body space, before the body's scale. The defaults fit the
@@ -25,6 +38,8 @@ struct ShapeDesc {
   float radius{0.5F};
   /// Shape centre relative to the body's origin, in m.
   bx::Vec3 offset{0.0F};
+  /// kMesh only: from PhysicsWorld::CreateCollisionMesh. A mesh body is static.
+  CollisionMeshHandle mesh;
 };
 
 /** @brief How a body's surface responds to contact. */

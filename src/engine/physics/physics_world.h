@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "engine/physics/body_handle.h"
+#include "engine/physics/collision_mesh_handle.h"
 #include "engine/physics/shape.h"
 
 namespace engine::physics {
@@ -71,10 +72,19 @@ class PhysicsWorld {
   auto operator=(PhysicsWorld&&) -> PhysicsWorld& = delete;
 
   /**
-   * @brief Creates a body and adds it to the world.
+   * @brief Creates a body and adds it to the world. A mesh body is static
+   * whatever @p desc's motion, and can never turn dynamic.
    * @return The body, or an invalid handle if Jolt is out of bodies.
    */
   auto CreateBody(const BodyDesc& desc) -> BodyHandle;
+
+  /**
+   * @brief Builds a collision mesh for kMesh shapes to share. It lives until
+   * the world is destroyed.
+   * @param mesh Copied; free to discard afterwards.
+   * @return The mesh, or an invalid handle if Jolt rejected the triangles.
+   */
+  auto CreateCollisionMesh(const TriangleMesh& mesh) -> CollisionMeshHandle;
 
   /** @brief Removes and destroys @p body, waking what touched it. */
   void DestroyBody(BodyHandle body);
@@ -83,7 +93,8 @@ class PhysicsWorld {
   void SetPose(BodyHandle body, const Pose& pose);
 
   /**
-   * @brief Reshapes @p body in place, keeping its id and velocity.
+   * @brief Reshapes @p body in place, keeping its id and velocity. A mesh
+   * only fits a body created with a mesh.
    * @param scale Applied to @p shape: sizes and offset scale per axis.
    */
   void SetShape(BodyHandle body, const ShapeDesc& shape, const bx::Vec3& scale);
@@ -91,7 +102,10 @@ class PhysicsWorld {
   /** @brief Changes @p body's surface response, waking what touches it. */
   void SetMaterial(BodyHandle body, const Material& material);
 
-  /** @brief Switches @p body between static and dynamic in place. */
+  /**
+   * @brief Switches @p body between static and dynamic in place. Mesh bodies
+   * stay static.
+   */
   void SetMotion(BodyHandle body, Motion motion);
 
   /** @brief Sets @p body's linear velocity in m/s. */

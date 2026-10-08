@@ -73,6 +73,9 @@ void DrawCollider(DebugDrawEncoder& encoder, const Transform& transform,
       encoder.draw(sphere);
       break;
     }
+    case physics::ShapeKind::kMesh:
+      // Not drawn yet: a level-sized wireframe would hide the scene
+      break;
   }
 }
 
