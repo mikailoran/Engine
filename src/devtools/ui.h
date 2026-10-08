@@ -8,6 +8,8 @@ class Ecs;
 struct FrameContext;
 }  // namespace engine
 
+namespace devtools {
+
 /**
  * @brief Draws the debug settings window and applies its edits.
  *
@@ -72,3 +74,5 @@ class UiSystem {
   // Wheel notches summed over every frame, as imguiBeginFrame expects.
   float wheel_total_{0.0F};
 };
+
+}  // namespace devtools

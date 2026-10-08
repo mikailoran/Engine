@@ -22,6 +22,8 @@ using engine::ScreenPosition;
 using engine::Transform;
 using engine::YawPitchToQuat;
 
+namespace devtools {
+
 namespace {
 
 // Matches the examples' camera this replaces.
@@ -88,3 +90,5 @@ void FlyCameraSystem::Update(Ecs& ecs, const FrameContext& ctx,
 }
 
 void FlyCameraSystem::SetControlledCamera(Entity camera) { camera_ = camera; }
+
+}  // namespace devtools

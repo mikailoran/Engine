@@ -32,6 +32,8 @@ using engine::NativeSurface;
 using engine::PixelSize;
 using engine::SurfaceKind;
 
+namespace game {
+
 namespace {
 
 /** @brief An engine key and the physical key that drives it. */
@@ -222,3 +224,5 @@ auto Window::PumpEvents(Input& input) -> bool {
 
   return quit;
 }
+
+}  // namespace game

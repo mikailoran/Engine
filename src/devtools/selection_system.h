@@ -5,6 +5,8 @@ class Engine;
 struct FrameContext;
 }  // namespace engine
 
+namespace devtools {
+
 /**
  * @brief Selects the entity under the cursor on a fresh left click.
  *
@@ -18,3 +20,5 @@ struct FrameContext;
  */
 void UpdateSelection(engine::Engine& engine, const engine::FrameContext& ctx,
                      bool mouse_over_ui);
+
+}  // namespace devtools

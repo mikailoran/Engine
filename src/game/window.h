@@ -9,6 +9,8 @@ namespace engine {
 class Input;
 }  // namespace engine
 
+namespace game {
+
 /**
  * @brief The game's SDL window and event pump.
  *
@@ -62,3 +64,5 @@ class Window {
   // Whether SDL is currently sending text-input events.
   bool text_input_{false};
 };
+
+}  // namespace game

@@ -18,6 +18,8 @@ using engine::FrameContext;
 using engine::MouseButton;
 using engine::ScreenSize;
 
+namespace devtools {
+
 namespace {
 
 /** @brief Removes Selected from every entity. */
@@ -56,3 +58,5 @@ void UpdateSelection(Engine& engine, const FrameContext& ctx,
     ecs.AddComponent(*pick, Selected{});
   }
 }
+
+}  // namespace devtools

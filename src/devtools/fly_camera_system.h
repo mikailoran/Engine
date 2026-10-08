@@ -11,6 +11,8 @@ class Ecs;
 struct FrameContext;
 }  // namespace engine
 
+namespace devtools {
+
 /**
  * @brief Flies a camera entity from mouse and keyboard input.
  *
@@ -46,3 +48,5 @@ class FlyCameraSystem {
   // Cursor position last frame, to turn mouse motion into turning.
   engine::ScreenPosition last_mouse_{};
 };
+
+}  // namespace devtools

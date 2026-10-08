@@ -18,6 +18,10 @@
 #include "engine/platform/screen.h"
 #include "game/window.h"
 
+using devtools::FlyCameraSystem;
+using devtools::Selected;
+using devtools::UiSystem;
+using devtools::UpdateSelection;
 using engine::AssetRoot;
 using engine::Camera;
 using engine::Ecs;
@@ -29,6 +33,8 @@ using engine::PixelSize;
 using engine::RenderOptions;
 using engine::SetAssetRoot;
 using engine::Transform;
+
+namespace game {
 
 namespace {
 
@@ -129,13 +135,15 @@ auto Game::Run() -> int {
 
 }  // namespace
 
+}  // namespace game
+
 /** @brief Sets the asset root, then runs the game until its window closes. */
 auto main() -> int {
   // bgfx_utils prepends this to every asset path; must precede any load
   SetAssetRoot(AssetRoot());
 
   try {
-    Game game;
+    game::Game game;
     return game.Run();
   } catch (const std::exception& e) {
     std::cerr << "fatal: " << e.what() << '\n';

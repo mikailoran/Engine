@@ -48,6 +48,8 @@ using engine::ScreenPosition;
 using engine::Transform;
 using engine::physics::ShapeKind;
 
+namespace devtools {
+
 namespace {
 
 /** @brief Spawns a bunny. @return The new entity. */
@@ -347,3 +349,5 @@ void UiSystem::Update(Ecs& ecs, AssetRegistry& assets,
 
   imguiEndFrame();
 }
+
+}  // namespace devtools
