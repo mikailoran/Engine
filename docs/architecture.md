@@ -28,7 +28,9 @@ game (SDL exe) ───┘                           ▲
 | **Devtools** | `src/devtools/` | Engine, ImGui | Qt, SDL |
 | **Editor** | `src/editor/` | Engine, game logic, Qt | bgfx or Jolt directly |
 
-Includes stay `src/`-rooted: `"engine/ecs/core/types.h"`.
+Includes stay `src/`-rooted: `"engine/ecs/core/types.h"`. Namespaces follow
+the same split: `engine` (with `engine::physics` for the Jolt facade),
+`devtools`, `game`, and later `editor`.
 
 The editor links the game's logic rather than excluding it. Playing in the
 editor runs the real gameplay systems, and the inspector has to show gameplay
