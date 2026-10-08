@@ -92,6 +92,7 @@ FetchContent_MakeAvailable(JoltPhysics)
 add_library(engine_physics STATIC
   src/engine/util/handle.h
   src/engine/physics/body_handle.h
+  src/engine/physics/character_handle.h
   src/engine/physics/collision_mesh_handle.h
   src/engine/physics/jolt_runtime.h
   src/engine/physics/jolt_runtime.cpp

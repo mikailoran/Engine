@@ -39,6 +39,7 @@ set_target_properties(math_tests PROPERTIES
 )
 
 add_executable(physics_tests
+  physics/character_test.cpp
   physics/physics_system_test.cpp)
 
 target_link_libraries(physics_tests PRIVATE engine_physics_system engine_math
