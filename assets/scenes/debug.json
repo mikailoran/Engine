@@ -538,6 +538,28 @@
           ]
         }
       }
+    },
+    {
+      "name": "placeholder_shell",
+      "components": {
+        "transform": {
+          "position": [
+            0,
+            0,
+            14
+          ]
+        },
+        "renderable": {
+          "mesh": "assets/meshes/placeholder_shell.bin",
+          "color": [
+            0.75,
+            0.8,
+            0.7,
+            1
+          ],
+          "texture": "assets/textures/debug_grid.dds"
+        }
+      }
     }
   ]
 }
