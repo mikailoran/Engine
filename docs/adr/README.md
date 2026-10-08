@@ -13,6 +13,7 @@ these explain why it isn't built some other way.
 | [0005](0005-quaternion-rotations.md) | Store rotations as quaternions |
 | [0006](0006-sdl3-windowing.md) | Own windowing and input with SDL3 |
 | [0007](0007-engine-game-editor-split.md) | Split the engine from its hosts, and the editor from the game |
+| [0008](0008-right-handed-frame.md) | Use a right-handed, +Y up coordinate frame |
 
 ## Adding one
 
