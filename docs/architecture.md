@@ -5,9 +5,11 @@ describes **where the code is going**; `CLAUDE.md` and the code describe where
 it is today. The goals and milestones behind it are in
 [objectives.md](objectives.md).
 
-**Built so far (M1):** the engine is a library (`Engine`, in
+**Built so far (M1, M2a):** the engine is a library (`Engine`, in
 `src/engine/engine.h`) driven by the SDL `game` host, with the ImGui tools in
-`src/devtools/`. The game-logic library and the editor don't exist yet.
+`src/devtools/`. glTF meshes compile through the build, and a level shell can
+collide through a triangle-mesh collider (the first version of the static
+shell below). The game-logic library and the editor don't exist yet.
 
 ---
 
