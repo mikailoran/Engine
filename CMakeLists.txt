@@ -172,6 +172,8 @@ add_library(engine_runtime STATIC
   src/engine/bgfx_context.h
   src/engine/bgfx_context.cpp
   src/engine/ecs/components/camera.h
+  src/engine/ecs/components/character_body.h
+  src/engine/ecs/components/character_link.h
   src/engine/ecs/components/collider.h
   src/engine/ecs/components/physics_link.h
   src/engine/ecs/components/renderable.h

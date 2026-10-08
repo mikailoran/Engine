@@ -2,22 +2,26 @@
 
 namespace engine {
 
+class CharacterLink;
 class Ecs;
 class PhysicsLink;
 namespace physics {
 class PhysicsWorld;
 }  // namespace physics
+struct CharacterBody;
 struct FrameContext;
 struct RigidBody;
 
 /**
  * @brief Keeps a PhysicsWorld body for every entity with a Collider and a
- * Transform, and steps the world at a fixed rate.
+ * Transform, a character for every CharacterBody and Transform, and steps the
+ * world at a fixed rate.
  *
  * A Collider alone makes a static body; with a RigidBody it is dynamic. Each
- * body's entity gets a PhysicsLink that only this system writes. Bodies are
- * created and destroyed as components come and go, edits made outside physics
- * are pushed in, and dynamic bodies' motion is read back.
+ * body's entity gets a PhysicsLink, and each character's a CharacterLink, that
+ * only this system writes. Bodies and characters are created and destroyed as
+ * components come and go, edits made outside physics are pushed in, and
+ * motion is read back.
  */
 class PhysicsSystem {
  public:
@@ -68,6 +72,27 @@ class PhysicsSystem {
 
   /** @brief Copies dynamic bodies' poses and velocities back to the ECS. */
   static void PullResults(Ecs& ecs, const physics::PhysicsWorld& world);
+
+  /** @brief Destroys characters that no CharacterLink points to. */
+  static void SweepOrphanCharacters(Ecs& ecs, physics::PhysicsWorld& world);
+
+  /**
+   * @brief Unlinks entities that lost their CharacterBody or Transform,
+   * destroying their characters, and drops links that don't own theirs.
+   */
+  static void DetachCharacters(Ecs& ecs, physics::PhysicsWorld& world);
+
+  /** @brief Creates a character for each CharacterBody entity without one. */
+  static void AttachCharacters(Ecs& ecs, physics::PhysicsWorld& world);
+
+  /**
+   * @brief Pushes position, velocity and size edits into each character; a
+   * size edit rebuilds it, keeping its velocity.
+   */
+  static void PushCharacterEdits(Ecs& ecs, physics::PhysicsWorld& world);
+
+  /** @brief Copies characters' feet, velocities and ground state back. */
+  static void PullCharacters(Ecs& ecs, const physics::PhysicsWorld& world);
 
   /// Simulation step length, in seconds (60 Hz).
   static constexpr float kFixedDt = 1.0F / 60.0F;

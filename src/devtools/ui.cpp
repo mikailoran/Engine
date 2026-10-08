@@ -13,6 +13,8 @@
 #include <string>
 
 #include "devtools/selected.h"
+#include "engine/ecs/components/character_body.h"
+#include "engine/ecs/components/character_link.h"
 #include "engine/ecs/components/collider.h"
 #include "engine/ecs/components/physics_link.h"
 #include "engine/ecs/components/renderable.h"
@@ -31,6 +33,8 @@
 
 using engine::AssetRegistry;
 using engine::BoxColliderAround;
+using engine::CharacterBody;
+using engine::CharacterLink;
 using engine::Collider;
 using engine::Ecs;
 using engine::Entity;
@@ -173,6 +177,17 @@ auto DrawInspector(Ecs& ecs, AssetRegistry& assets) -> void {
                             0.0F, 0.0F, "%.1f");
           ImGui::DragFloat3("Velocity", &rigid_body.velocity.x, 0.1F, 0.0F,
                             0.0F, "%.1f");
+        });
+    DrawComponent<CharacterBody>(
+        ecs, entity, "Character Body",
+        [&ecs, entity](CharacterBody& body) -> void {
+          // Physics keeps it, adding gravity, until it is changed again
+          ImGui::DragFloat3("Velocity", &body.velocity.x, 0.1F, 0.0F, 0.0F,
+                            "%.1f");
+          if (const auto* link = ecs.TryGetComponent<CharacterLink>(entity)) {
+            ImGui::TextUnformatted(link->OnGround() ? "On ground"
+                                                    : "In the air");
+          }
         });
     DrawComponent<Collider>(
         ecs, entity, "Collider", [&ecs, entity](Collider& collider) -> void {

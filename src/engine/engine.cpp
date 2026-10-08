@@ -4,6 +4,8 @@
 #include <optional>
 
 #include "engine/ecs/components/camera.h"
+#include "engine/ecs/components/character_body.h"
+#include "engine/ecs/components/character_link.h"
 #include "engine/ecs/components/collider.h"
 #include "engine/ecs/components/directional_light.h"
 #include "engine/ecs/components/physics_link.h"
@@ -30,6 +32,8 @@ Engine::Engine(const NativeSurface& surface) : bgfx_context_(surface) {
   ecs_.RegisterComponent<RigidBody>();
   ecs_.RegisterComponent<Collider>();
   ecs_.RegisterComponent<PhysicsLink>();
+  ecs_.RegisterComponent<CharacterBody>();
+  ecs_.RegisterComponent<CharacterLink>();
 
   RegisterBuiltinLoaders(scene_loader_);
 }

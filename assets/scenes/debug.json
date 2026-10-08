@@ -617,6 +617,19 @@
         },
         "rigid_body": {}
       }
+    },
+    {
+      "name": "character",
+      "components": {
+        "transform": {
+          "position": [
+            -2,
+            0.5,
+            1
+          ]
+        },
+        "character_body": {}
+      }
     }
   ]
 }

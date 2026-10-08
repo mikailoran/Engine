@@ -202,6 +202,8 @@ TEST(Character, DestroyedCharacterLeavesTheList) {
   ASSERT_EQ(characters.size(), 1U);
   EXPECT_EQ(characters.front().character, kept);
   EXPECT_EQ(characters.front().user_data, physics::UserTag{7});
+  EXPECT_EQ(scene.World().UserData(kept), physics::UserTag{7});
+  EXPECT_FALSE(scene.World().UserData(doomed).has_value());
 }
 
 }  // namespace

@@ -499,6 +499,15 @@ auto PhysicsWorld::CreateCharacter(const CharacterDesc& desc)
   return handle;
 }
 
+auto PhysicsWorld::UserData(CharacterHandle character) const
+    -> std::optional<UserTag> {
+  const auto it = impl_->characters.find(character.Value());
+  if (it == impl_->characters.end()) {
+    return std::nullopt;
+  }
+  return it->second->GetUserData();
+}
+
 void PhysicsWorld::DestroyCharacter(CharacterHandle character) {
   impl_->characters.erase(character.Value());
 }

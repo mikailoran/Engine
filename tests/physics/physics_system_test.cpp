@@ -15,6 +15,8 @@
 #include <cstdint>
 #include <vector>
 
+#include "engine/ecs/components/character_body.h"
+#include "engine/ecs/components/character_link.h"
 #include "engine/ecs/components/collider.h"
 #include "engine/ecs/components/physics_link.h"
 #include "engine/ecs/components/rigid_body.h"
@@ -105,6 +107,8 @@ class PhysicsHarness {
     ecs_.RegisterComponent<Collider>();
     ecs_.RegisterComponent<RigidBody>();
     ecs_.RegisterComponent<PhysicsLink>();
+    ecs_.RegisterComponent<CharacterBody>();
+    ecs_.RegisterComponent<CharacterLink>();
   }
 
   /** @brief Runs @p frames frames of exactly one 60 Hz step each. */
@@ -131,6 +135,14 @@ class PhysicsHarness {
       -> Entity {
     const Entity entity = AddStatic(transform, collider);
     ecs_.AddComponent(entity, RigidBody{});
+    return entity;
+  }
+
+  /** @brief Adds a default character whose feet are at @p feet. */
+  auto AddCharacter(const bx::Vec3& feet) -> Entity {
+    const Entity entity = ecs_.CreateEntity();
+    ecs_.AddComponent(entity, At(feet));
+    ecs_.AddComponent(entity, CharacterBody{});
     return entity;
   }
 
@@ -172,6 +184,11 @@ class PhysicsHarness {
   /** @brief How many bodies the physics world holds. */
   [[nodiscard]] auto BodyCount() const -> std::size_t {
     return world_.Bodies().size();
+  }
+
+  /** @brief How many characters the physics world holds. */
+  [[nodiscard]] auto CharacterCount() const -> std::size_t {
+    return world_.Characters().size();
   }
 
   /** @brief How many entities are linked to a body. */
@@ -599,6 +616,100 @@ TEST(Physics, DestroyingASupportWakesWhatSleepsOnIt) {
   scene.Entities().Flush();
   scene.Run(30);
   EXPECT_GT(rest_y - scene.Get<Transform>(box).position.y, 0.5F);
+}
+
+// --- Characters
+// ----------------------------------------------------------------
+
+TEST(Physics, CharacterBodyStandsOnTheFloor) {
+  PhysicsHarness scene;
+  scene.AddFloor();
+  const Entity character = scene.AddCharacter({0.0F, 1.0F, 0.0F});
+  scene.Run(120);
+  EXPECT_EQ(scene.CharacterCount(), 1U);
+  EXPECT_TRUE(scene.Get<CharacterLink>(character).OnGround());
+  EXPECT_NEAR(scene.Get<Transform>(character).position.y, 0.0F, 0.05F);
+}
+
+TEST(Physics, CharacterVelocityEditMovesIt) {
+  PhysicsHarness scene;
+  scene.AddFloor();
+  const Entity character = scene.AddCharacter({0.0F, 0.0F, 0.0F});
+  scene.Run(30);
+  scene.Get<CharacterBody>(character).velocity = {2.0F, 0.0F, 0.0F};
+  scene.Run(60);
+  // One second at 2 m/s
+  EXPECT_NEAR(scene.Get<Transform>(character).position.x, 2.0F, 0.1F);
+  EXPECT_NEAR(scene.Get<CharacterBody>(character).velocity.x, 2.0F, 1e-4F);
+}
+
+TEST(Physics, CharacterPositionEditTeleportsIt) {
+  PhysicsHarness scene;
+  scene.AddFloor();
+  const Entity character = scene.AddCharacter({0.0F, 0.0F, 0.0F});
+  scene.Run(30);
+  scene.Get<Transform>(character).position = {5.0F, 0.0F, -3.0F};
+  scene.Run(1);
+  EXPECT_NEAR(scene.Get<Transform>(character).position.x, 5.0F, 1e-4F);
+  EXPECT_NEAR(scene.Get<Transform>(character).position.z, -3.0F, 1e-4F);
+}
+
+TEST(Physics, CharacterRadiusEditRebuildsTheCapsule) {
+  PhysicsHarness scene;
+  scene.AddFloor();
+  scene.AddWallEast();
+  const Entity character = scene.AddCharacter({17.0F, 0.0F, 0.0F});
+  scene.Get<CharacterBody>(character).velocity = {3.0F, 0.0F, 0.0F};
+  scene.Run(120);
+  // The wall's inner face is at x = 19.75
+  EXPECT_NEAR(scene.Get<Transform>(character).position.x, 19.45F, 0.05F);
+
+  scene.Get<CharacterBody>(character).radius = 0.6F;
+  scene.Run(120);
+  EXPECT_NEAR(scene.Get<Transform>(character).position.x, 19.15F, 0.05F);
+  EXPECT_EQ(scene.CharacterCount(), 1U);
+}
+
+TEST(Physics, RemovingCharacterBodyDestroysTheCharacter) {
+  PhysicsHarness scene;
+  const Entity character = scene.AddCharacter({0.0F, 0.0F, 0.0F});
+  scene.Run(1);
+  ASSERT_EQ(scene.CharacterCount(), 1U);
+  scene.Entities().RemoveComponent<CharacterBody>(character);
+  scene.Run(1);
+  EXPECT_EQ(scene.CharacterCount(), 0U);
+  EXPECT_FALSE(scene.Entities().HasComponent<CharacterLink>(character));
+}
+
+TEST(Physics, DestroyedEntityLosesItsCharacter) {
+  PhysicsHarness scene;
+  const Entity character = scene.AddCharacter({0.0F, 0.0F, 0.0F});
+  scene.Run(1);
+  scene.Entities().DestroyEntity(character);
+  scene.Entities().Flush();
+  scene.Run(1);
+  EXPECT_EQ(scene.CharacterCount(), 0U);
+}
+
+TEST(Physics, CopiedCharacterLinkGetsItsOwnCharacter) {
+  PhysicsHarness scene;
+  const Entity original = scene.AddCharacter({0.0F, 0.0F, 0.0F});
+  scene.Run(1);
+  const Entity copy = scene.AddCharacter({4.0F, 0.0F, 0.0F});
+  scene.Entities().AddComponent(copy, scene.Get<CharacterLink>(original));
+  scene.Run(1);
+  EXPECT_EQ(scene.CharacterCount(), 2U);
+  EXPECT_NE(scene.Get<CharacterLink>(copy).Character(),
+            scene.Get<CharacterLink>(original).Character());
+}
+
+TEST(Physics, ColliderOnACharacterMakesNoBody) {
+  PhysicsHarness scene;
+  const Entity character = scene.AddCharacter({0.0F, 0.0F, 0.0F});
+  scene.Entities().AddComponent(character, Collider{});
+  scene.Run(1);
+  EXPECT_EQ(scene.BodyCount(), 0U);
+  EXPECT_EQ(scene.CharacterCount(), 1U);
 }
 
 // --- Mesh colliders ----------------------------------------------------------

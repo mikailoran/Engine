@@ -182,6 +182,13 @@ class PhysicsWorld {
    */
   auto CreateCharacter(const CharacterDesc& desc) -> CharacterHandle;
 
+  /**
+   * @brief Returns @p character's tag, or nothing if it no longer exists.
+   * Stale handles are safe to pass.
+   */
+  [[nodiscard]] auto UserData(CharacterHandle character) const
+      -> std::optional<UserTag>;
+
   /** @brief Removes @p character. Stale handles are safe to pass. */
   void DestroyCharacter(CharacterHandle character);
 
