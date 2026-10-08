@@ -270,11 +270,12 @@ auto PhysicsWorld::CreateBody(const BodyDesc& desc) -> BodyHandle {
 
 auto PhysicsWorld::CreateCollisionMesh(const TriangleMesh& mesh)
     -> CollisionMeshHandle {
-  const JPH::RefConst<JPH::Shape> shape = Built(MakeMeshShape(mesh));
-  if (shape == nullptr) {
+  // Triangles come from files, so a rejection is reported, not asserted
+  const JPH::ShapeSettings::ShapeResult result = MakeMeshShape(mesh);
+  if (!result.IsValid()) {
     return {};
   }
-  impl_->meshes.push_back(shape);
+  impl_->meshes.emplace_back(result.Get());
   return CollisionMeshHandle(
       static_cast<std::uint32_t>(impl_->meshes.size() - 1));
 }

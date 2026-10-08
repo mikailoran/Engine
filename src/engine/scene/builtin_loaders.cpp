@@ -15,6 +15,7 @@
 #include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
 #include "engine/math/rotation.h"
+#include "engine/physics/physics_world.h"
 #include "engine/physics/shape.h"
 #include "engine/resource/asset_registry.h"
 #include "engine/scene/json_read.h"
@@ -28,7 +29,8 @@ using nlohmann::json;
 
 /** @brief Adds a Transform; every field is optional. Rotation is in degrees. */
 void LoadTransform(const json& data, Entity entity, Ecs& ecs,
-                   AssetRegistry& /*assets*/) {
+                   AssetRegistry& /*assets*/,
+                   physics::PhysicsWorld& /*physics*/) {
   CheckKeys(data, {"position", "rotation_deg", "scale"});
 
   Transform transform{};
@@ -51,7 +53,7 @@ void LoadTransform(const json& data, Entity entity, Ecs& ecs,
  * "texture_scale" optional.
  */
 void LoadRenderable(const json& data, Entity entity, Ecs& ecs,
-                    AssetRegistry& assets) {
+                    AssetRegistry& assets, physics::PhysicsWorld& /*physics*/) {
   CheckKeys(data, {"mesh", "color", "texture", "texture_scale"});
 
   Renderable renderable{};
@@ -75,7 +77,8 @@ void LoadRenderable(const json& data, Entity entity, Ecs& ecs,
 
 /** @brief Adds a DirectionalLight; every field is optional. */
 void LoadDirectionalLight(const json& data, Entity entity, Ecs& ecs,
-                          AssetRegistry& /*assets*/) {
+                          AssetRegistry& /*assets*/,
+                          physics::PhysicsWorld& /*physics*/) {
   CheckKeys(data,
             {"direction", "color", "intensity", "sky_color", "ground_color"});
   DirectionalLight light{};
@@ -97,25 +100,48 @@ void LoadDirectionalLight(const json& data, Entity entity, Ecs& ecs,
   ecs.AddComponent(entity, light);
 }
 
+/** @brief Parses a Collider's "shape" name. */
+auto ParseShapeKind(const std::string& name) -> physics::ShapeKind {
+  if (name == "box") {
+    return physics::ShapeKind::kBox;
+  }
+  if (name == "sphere") {
+    return physics::ShapeKind::kSphere;
+  }
+  if (name == "mesh") {
+    return physics::ShapeKind::kMesh;
+  }
+  throw std::runtime_error(R"(shape must be "box", "sphere" or "mesh")");
+}
+
 /**
- * @brief Reads a Collider's optional "shape" ("box" or "sphere"), its size
- * ("half_extents" for a box, "radius" for a sphere) and "offset".
+ * @brief Reads a Collider's optional "shape" ("box", "sphere" or "mesh"), the
+ * field that shape needs ("half_extents", "radius" or the "mesh" path) and
+ * "offset". A mesh's collision mesh is built in @p physics, once per path.
  */
-void ReadShapeKind(const json& data, Collider& collider) {
+void ReadShapeKind(const json& data, Collider& collider, AssetRegistry& assets,
+                   physics::PhysicsWorld& physics) {
   // TODO: Who defines default values?
   if (data.contains("shape")) {
-    const auto shape = data.at("shape").get<std::string>();
-    if (shape != "box" && shape != "sphere") {
-      throw std::runtime_error(R"(shape must be "box" or "sphere")");
-    }
-    collider.shape.kind = shape == "sphere" ? physics::ShapeKind::kSphere
-                                            : physics::ShapeKind::kBox;
+    collider.shape.kind = ParseShapeKind(data.at("shape").get<std::string>());
   }
-  const bool sphere = collider.shape.kind == physics::ShapeKind::kSphere;
-  // A size for the other shape is a typo, not something to ignore
-  if (data.contains(sphere ? "half_extents" : "radius")) {
-    throw std::runtime_error(sphere ? R"(half_extents needs shape "box")"
-                                    : R"(radius needs shape "sphere")");
+  const auto kind = collider.shape.kind;
+  // A field for another shape is a typo, not something to ignore
+  if (data.contains("half_extents") && kind != physics::ShapeKind::kBox) {
+    throw std::runtime_error(R"(half_extents needs shape "box")");
+  }
+  if (data.contains("radius") && kind != physics::ShapeKind::kSphere) {
+    throw std::runtime_error(R"(radius needs shape "sphere")");
+  }
+  if (data.contains("mesh") && kind != physics::ShapeKind::kMesh) {
+    throw std::runtime_error(R"(mesh needs shape "mesh")");
+  }
+  if (kind == physics::ShapeKind::kMesh && !data.contains("mesh")) {
+    throw std::runtime_error(R"(shape "mesh" needs a "mesh" path)");
+  }
+  if (kind == physics::ShapeKind::kMesh) {
+    collider.shape.mesh =
+        assets.LoadCollisionMesh(data.at("mesh").get<std::string>(), physics);
   }
   if (data.contains("half_extents")) {
     collider.shape.half_extents = ReadVec3(data.at("half_extents"));
@@ -153,15 +179,15 @@ void ReadColliderMaterial(const json& data, Collider& collider) {
 }
 
 /**
- * @brief Adds a Collider; every field is optional. Defaults to a box fitting
- * the unit primitive meshes.
+ * @brief Adds a Collider. Every field is optional except a mesh shape's
+ * "mesh" path; defaults to a box fitting the unit primitive meshes.
  */
 void LoadCollider(const json& data, Entity entity, Ecs& ecs,
-                  AssetRegistry& /*assets*/) {
-  CheckKeys(data, {"shape", "half_extents", "radius", "offset", "restitution",
-                   "friction"});
+                  AssetRegistry& assets, physics::PhysicsWorld& physics) {
+  CheckKeys(data, {"shape", "half_extents", "radius", "mesh", "offset",
+                   "restitution", "friction"});
   Collider collider{};
-  ReadShapeKind(data, collider);
+  ReadShapeKind(data, collider, assets, physics);
   ReadColliderMaterial(data, collider);
   ecs.AddComponent(entity, collider);
 }
@@ -171,7 +197,8 @@ void LoadCollider(const json& data, Entity entity, Ecs& ecs,
  * initial velocity in m/s, "acceleration" in m/s^2.
  */
 void LoadRigidBody(const json& data, Entity entity, Ecs& ecs,
-                   AssetRegistry& /*assets*/) {
+                   AssetRegistry& /*assets*/,
+                   physics::PhysicsWorld& /*physics*/) {
   CheckKeys(data, {"velocity", "acceleration", "has_gravity"});
   RigidBody rigid_body{};
   if (data.contains("velocity")) {
