@@ -18,15 +18,15 @@ auto EulerToQuat(const bx::Vec3& euler) -> bx::Quaternion;
 auto QuatToEuler(const bx::Quaternion& rotation) -> bx::Vec3;
 
 /**
- * @brief A look direction in radians. Zero looks along +Z; positive yaw turns
- * toward +X, positive pitch looks up.
+ * @brief A look direction in radians. Zero looks along -Z; positive yaw turns
+ * toward -X (counter-clockwise seen from above), positive pitch looks up.
  */
 struct YawPitch {
   float yaw{0.0F};
   float pitch{0.0F};
 };
 
-/** @brief Rotation pointing local +Z along @p angles, local +X level. */
+/** @brief Rotation pointing local -Z along @p angles, local +X level. */
 auto YawPitchToQuat(YawPitch angles) -> bx::Quaternion;
 
 }  // namespace engine

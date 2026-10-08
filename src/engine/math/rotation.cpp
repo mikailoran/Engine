@@ -35,11 +35,11 @@ auto QuatToEuler(const bx::Quaternion& rotation) -> bx::Vec3 {
 }
 
 auto YawPitchToQuat(YawPitch angles) -> bx::Quaternion {
-  // Pitch about local X, then yaw about world Y; +X tips +Z down, so negate
+  // Pitch about local X, then yaw about world Y
   const bx::Quaternion yaw_q =
       bx::fromAxisAngle({0.0F, 1.0F, 0.0F}, angles.yaw);
   const bx::Quaternion pitch_q =
-      bx::fromAxisAngle({1.0F, 0.0F, 0.0F}, -angles.pitch);
+      bx::fromAxisAngle({1.0F, 0.0F, 0.0F}, angles.pitch);
   return bx::mul(yaw_q, pitch_q);
 }
 

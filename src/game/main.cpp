@@ -74,7 +74,7 @@ Game::Game() {
   ecs.RegisterComponent<Selected>();
 
   const auto camera_entity = ecs.CreateEntity();
-  ecs.AddComponent(camera_entity, Transform{.position = {0.0F, 1.0F, -5.0F}});
+  ecs.AddComponent(camera_entity, Transform{.position = {0.0F, 1.0F, 5.0F}});
   ecs.AddComponent(camera_entity, Camera{});
   engine_.SetActiveCamera(camera_entity);
   fly_camera_.SetControlledCamera(camera_entity);

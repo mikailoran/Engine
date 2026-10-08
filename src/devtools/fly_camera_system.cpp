@@ -41,7 +41,8 @@ void FlyCameraSystem::Update(Ecs& ecs, const FrameContext& ctx,
   // Turn by how far the cursor moved since last frame, while right is held
   const ScreenPosition mouse = input.Mouse();
   if (!ui_has_mouse && input.Down(MouseButton::kRight)) {
-    angles_.yaw += kTurnRadiansPerPixel * (mouse.x - last_mouse_.x);
+    // Dragging right turns clockwise seen from above: negative yaw
+    angles_.yaw -= kTurnRadiansPerPixel * (mouse.x - last_mouse_.x);
     angles_.pitch = std::clamp(
         angles_.pitch - (kTurnRadiansPerPixel * (mouse.y - last_mouse_.y)),
         -kMaxPitch, kMaxPitch);
@@ -60,7 +61,7 @@ void FlyCameraSystem::Update(Ecs& ecs, const FrameContext& ctx,
       bx::mul(bx::Vec3{1.0F, 0.0F, 0.0F}, transform.rotation);
   const bx::Vec3 up = bx::mul(bx::Vec3{0.0F, 1.0F, 0.0F}, transform.rotation);
   const bx::Vec3 forward =
-      bx::mul(bx::Vec3{0.0F, 0.0F, 1.0F}, transform.rotation);
+      bx::mul(bx::Vec3{0.0F, 0.0F, -1.0F}, transform.rotation);
 
   // Scrolling the UI must not move the camera
   bx::Vec3 move = bx::mul(forward, ui_has_mouse ? 0.0F : input.Wheel());

@@ -123,10 +123,10 @@ class PhysicsHarness {
                         {0.5F, 4.0F, 40.0F}));
   }
 
-  /** @brief debug.json's ramp: 6 x 0.3 x 8, tilted -15 degrees about X. */
+  /** @brief debug.json's ramp: 6 x 0.3 x 8, tilted 15 degrees about X. */
   auto AddRamp(float restitution = 0.6F) -> Entity {
     return AddStatic(
-        At({0.0F, 1.0F, 14.0F}, EulerToQuat({bx::toRad(-15.0F), 0.0F, 0.0F}),
+        At({0.0F, 1.0F, -14.0F}, EulerToQuat({bx::toRad(15.0F), 0.0F, 0.0F}),
            {6.0F, 0.3F, 8.0F}),
         WithRestitution(Collider{}, restitution));
   }
@@ -392,9 +392,9 @@ TEST(Physics, RampContactMatchesTheRenderedTilt) {
   const bx::Vec3 up =
       bx::normalize(bx::sub(bx::mul({0.0F, 1.0F, 0.0F}, mtx.data()),
                             bx::mul({0.0F, 0.0F, 0.0F}, mtx.data())));
-  const Entity box =
-      scene.AddDynamic(At({0.0F, 3.5F, 16.0F}, bx::Quaternion{bx::InitIdentity},
-                          {0.5F, 0.5F, 0.5F}));
+  const Entity box = scene.AddDynamic(At({0.0F, 3.5F, -16.0F},
+                                         bx::Quaternion{bx::InitIdentity},
+                                         {0.5F, 0.5F, 0.5F}));
 
   // It bounces, so track its closest approach to the surface
   float closest = 1e9F;
@@ -422,7 +422,7 @@ TEST(Physics, SphereRestsAtItsLargestScaledRadius) {
 TEST(Physics, SphereRollsDownTheRamp) {
   PhysicsHarness scene;
   scene.AddRamp(0.0F);
-  const Entity ball = scene.AddDynamic(At({0.0F, 2.5F, 15.0F}),
+  const Entity ball = scene.AddDynamic(At({0.0F, 2.5F, -15.0F}),
                                        WithRestitution(Sphere(0.5F), 0.0F));
   scene.Run(1);
   const float start_z = scene.Get<Transform>(ball).position.z;
@@ -495,8 +495,8 @@ auto SleepingBoxOnRamp(PhysicsHarness& scene, Entity ramp) -> Entity {
   grippy.material.friction =
       10.0F;  // sqrt(10 * 0.2) = 1.4 > tan(15 deg): holds
   const Entity box =
-      scene.AddDynamic(At({0.0F, 3.0F, 14.0F}, bx::Quaternion{bx::InitIdentity},
-                          {0.5F, 0.5F, 0.5F}),
+      scene.AddDynamic(At({0.0F, 3.0F, -14.0F},
+                          bx::Quaternion{bx::InitIdentity}, {0.5F, 0.5F, 0.5F}),
                        grippy);
   scene.Run(240);
   return box;

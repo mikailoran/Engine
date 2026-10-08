@@ -11,9 +11,12 @@
 
 namespace engine {
 
+/// The engine's coordinate convention: right-handed, +Y up.
+inline constexpr bx::Handedness::Enum kHandedness = bx::Handedness::Right;
+
 /**
  * @brief Lens of a camera entity. Its Transform is the pose: the camera looks
- * along local +Z with local +Y up, and scale is ignored.
+ * along local -Z with local +Y up and +X right, and scale is ignored.
  */
 struct Camera {
   // Vertical field of view
@@ -29,13 +32,13 @@ struct Camera {
 /** @brief World-to-view matrix for a camera posed by @p transform. */
 inline auto ViewMatrix(const Transform& transform) -> std::array<float, 16> {
   const bx::Vec3 forward =
-      bx::mul(bx::Vec3{0.0F, 0.0F, 1.0F}, transform.rotation);
+      bx::mul(bx::Vec3{0.0F, 0.0F, -1.0F}, transform.rotation);
   const bx::Vec3 up = bx::mul(bx::Vec3{0.0F, 1.0F, 0.0F}, transform.rotation);
 
   // Rotated +Y as up, so it is never parallel to forward
   std::array<float, 16> view{};
   bx::mtxLookAt(view.data(), transform.position,
-                bx::add(transform.position, forward), up);
+                bx::add(transform.position, forward), up, kHandedness);
   return view;
 }
 
@@ -49,7 +52,7 @@ inline auto ProjectionMatrix(const Camera& camera, float aspect,
                              bool homogeneous_depth) -> std::array<float, 16> {
   std::array<float, 16> proj{};
   bx::mtxProj(proj.data(), camera.fov_degrees, aspect, camera.near_plane,
-              camera.far_plane, homogeneous_depth);
+              camera.far_plane, homogeneous_depth, kHandedness);
   return proj;
 }
 
