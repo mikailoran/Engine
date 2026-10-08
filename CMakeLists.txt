@@ -90,6 +90,7 @@ FetchContent_MakeAvailable(JoltPhysics)
 # PhysicsWorld's headers are Jolt-free; PRIVATE keeps Jolt's include paths and
 # JPH_* defines out of every target that links this.
 add_library(engine_physics STATIC
+  src/engine/util/handle.h
   src/engine/physics/body_handle.h
   src/engine/physics/collision_mesh_handle.h
   src/engine/physics/jolt_runtime.h
