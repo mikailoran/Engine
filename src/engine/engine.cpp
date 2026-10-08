@@ -53,7 +53,7 @@ void Engine::Render(const FrameContext& ctx, RenderOptions options) {
 void Engine::EndFrame() { ecs_.Flush(); }
 
 void Engine::LoadScene(const std::filesystem::path& path) {
-  scene_loader_.Load(path, ecs_, assets_);
+  scene_loader_.Load(path, ecs_, assets_, physics_world_);
 }
 
 void Engine::SetActiveCamera(Entity camera) {

@@ -68,18 +68,23 @@ auto SpawnEntity(Ecs& ecs, AssetRegistry& assets) -> Entity {
 
 /** @brief Draws a Collider's shape picker and the size fields it uses. */
 auto DrawShapeKind(Collider& collider) -> void {
-  constexpr std::array<const char*, 2> kShapeNames{"Box", "Sphere"};
-  int shape = static_cast<int>(collider.shape.kind);
-  if (ImGui::Combo("Shape", &shape, kShapeNames.data(),
-                   static_cast<int>(kShapeNames.size()))) {
-    collider.shape.kind = static_cast<ShapeKind>(shape);
+  // A mesh comes from a file, so it isn't offered in the picker
+  if (collider.shape.kind == ShapeKind::kMesh) {
+    ImGui::TextUnformatted("Shape: Mesh");
+  } else {
+    constexpr std::array<const char*, 2> kShapeNames{"Box", "Sphere"};
+    int shape = static_cast<int>(collider.shape.kind);
+    if (ImGui::Combo("Shape", &shape, kShapeNames.data(),
+                     static_cast<int>(kShapeNames.size()))) {
+      collider.shape.kind = static_cast<ShapeKind>(shape);
+    }
   }
   // A zero size is a degenerate shape Jolt rejects
   if (collider.shape.kind == ShapeKind::kBox) {
     ImGui::DragFloat3("Half Extents", &collider.shape.half_extents.x, 0.05F,
                       0.01F, std::numeric_limits<float>::max(), "%.2f",
                       ImGuiSliderFlags_AlwaysClamp);
-  } else {
+  } else if (collider.shape.kind == ShapeKind::kSphere) {
     ImGui::DragFloat("Radius", &collider.shape.radius, 0.05F, 0.01F,
                      std::numeric_limits<float>::max(), "%.2f",
                      ImGuiSliderFlags_AlwaysClamp);

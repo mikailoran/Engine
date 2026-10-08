@@ -28,7 +28,8 @@ void SceneLoader::Register(std::string key, ComponentLoader loader) {
 }
 
 void SceneLoader::LoadEntities(const nlohmann::json& scene, Ecs& ecs,
-                               AssetRegistry& assets) const {
+                               AssetRegistry& assets,
+                               physics::PhysicsWorld& physics) const {
   // Reject keys this version does not know, so typos fail loudly
   for (const auto& item : scene.items()) {
     if (item.key() != "version" && item.key() != "entities") {
@@ -55,7 +56,8 @@ void SceneLoader::LoadEntities(const nlohmann::json& scene, Ecs& ecs,
       }
 
       try {
-        it->second(component.value(), entity, ecs, assets);
+        const auto loader = it->second;
+        loader(component.value(), entity, ecs, assets, physics);
       } catch (const nlohmann::json::exception& e) {
         throw std::runtime_error(where + e.what());
       }
@@ -64,7 +66,8 @@ void SceneLoader::LoadEntities(const nlohmann::json& scene, Ecs& ecs,
 }
 
 void SceneLoader::Load(const std::filesystem::path& path, Ecs& ecs,
-                       AssetRegistry& assets) const {
+                       AssetRegistry& assets,
+                       physics::PhysicsWorld& physics) const {
   // Read the file relative to the asset root
   const auto full_path = std::filesystem::path(AssetRoot()) / path;
   std::ifstream file(full_path);
@@ -74,7 +77,7 @@ void SceneLoader::Load(const std::filesystem::path& path, Ecs& ecs,
 
   // Tag every error with the file; JSON errors become runtime_error
   try {
-    LoadEntities(nlohmann::json::parse(file), ecs, assets);
+    LoadEntities(nlohmann::json::parse(file), ecs, assets, physics);
   } catch (const nlohmann::json::exception& e) {
     throw std::runtime_error(full_path.string() + ": " + e.what());
   } catch (const std::runtime_error& e) {

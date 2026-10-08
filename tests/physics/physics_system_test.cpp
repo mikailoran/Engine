@@ -23,6 +23,7 @@
 #include "engine/ecs/core/types.h"
 #include "engine/math/rotation.h"
 #include "engine/physics/body_handle.h"
+#include "engine/physics/collision_mesh_handle.h"
 #include "engine/physics/jolt_runtime.h"
 #include "engine/physics/physics_world.h"
 #include "engine/physics/shape.h"
@@ -54,6 +55,28 @@ auto Sphere(float radius) -> Collider {
   Collider collider{};
   collider.shape.kind = physics::ShapeKind::kSphere;
   collider.shape.radius = radius;
+  return collider;
+}
+
+/**
+ * @brief A square at y = 0, @p half wide on X and Z, front face up as the
+ * renderer winds it.
+ */
+auto FloorSquare(float half) -> physics::TriangleMesh {
+  // Seen from above (+X right, -Z up on screen), both triangles run CCW
+  return {.vertices = {{-half, 0.0F, -half},
+                       {half, 0.0F, -half},
+                       {half, 0.0F, half},
+                       {-half, 0.0F, half}},
+          .indices = {0, 2, 1, 0, 3, 2}};
+}
+
+/** @brief A mesh Collider over @p mesh that doesn't bounce. */
+auto MeshCollider(physics::CollisionMeshHandle mesh) -> Collider {
+  Collider collider{};
+  collider.shape.kind = physics::ShapeKind::kMesh;
+  collider.shape.mesh = mesh;
+  collider.material.restitution = 0.0F;
   return collider;
 }
 
@@ -129,6 +152,12 @@ class PhysicsHarness {
         At({0.0F, 1.0F, -14.0F}, EulerToQuat({bx::toRad(15.0F), 0.0F, 0.0F}),
            {6.0F, 0.3F, 8.0F}),
         WithRestitution(Collider{}, restitution));
+  }
+
+  /** @brief Builds a collision mesh in the physics world. */
+  auto CreateCollisionMesh(const physics::TriangleMesh& mesh)
+      -> physics::CollisionMeshHandle {
+    return world_.CreateCollisionMesh(mesh);
   }
 
   /** @brief @p entity's @p Component. @pre It has one. */
@@ -570,6 +599,76 @@ TEST(Physics, DestroyingASupportWakesWhatSleepsOnIt) {
   scene.Entities().Flush();
   scene.Run(30);
   EXPECT_GT(rest_y - scene.Get<Transform>(box).position.y, 0.5F);
+}
+
+// --- Mesh colliders ----------------------------------------------------------
+
+TEST(Physics, MeshFloorHoldsWhatFallsOnIt) {
+  PhysicsHarness scene;
+  scene.AddStatic(At({0.0F, 0.0F, 0.0F}),
+                  MeshCollider(scene.CreateCollisionMesh(FloorSquare(10.0F))));
+  const Entity ball = scene.AddDynamic(At({0.0F, 3.0F, 0.0F}),
+                                       WithRestitution(Sphere(0.5F), 0.0F));
+  scene.Run(240);
+  EXPECT_NEAR(scene.Get<Transform>(ball).position.y, 0.5F, 0.03F);
+}
+
+TEST(Physics, MeshFloorIsOneSided) {
+  PhysicsHarness scene;
+  scene.AddStatic(At({0.0F, 0.0F, 0.0F}),
+                  MeshCollider(scene.CreateCollisionMesh(FloorSquare(10.0F))));
+  // Rising from below, it meets the floor's back face
+  const Entity ball = scene.AddDynamic(At({0.0F, -2.0F, 0.0F}), Sphere(0.5F));
+  scene.Get<RigidBody>(ball).has_gravity = false;
+  scene.Get<RigidBody>(ball).velocity = {0.0F, 5.0F, 0.0F};
+  scene.Run(60);
+  EXPECT_GT(scene.Get<Transform>(ball).position.y, 2.0F);
+}
+
+TEST(Physics, MeshFloorScalesWithItsTransform) {
+  PhysicsHarness scene;
+  // 2 m wide, scaled to 8 m on X and Z
+  scene.AddStatic(At({0.0F, 0.0F, 0.0F}, bx::Quaternion{bx::InitIdentity},
+                     {4.0F, 1.0F, 4.0F}),
+                  MeshCollider(scene.CreateCollisionMesh(FloorSquare(1.0F))));
+  const Entity ball = scene.AddDynamic(At({3.0F, 3.0F, -3.0F}),
+                                       WithRestitution(Sphere(0.5F), 0.0F));
+  scene.Run(240);
+  EXPECT_NEAR(scene.Get<Transform>(ball).position.y, 0.5F, 0.03F);
+}
+
+TEST(Physics, BodiesShareACollisionMeshAtTheirOwnScales) {
+  PhysicsHarness scene;
+  const physics::CollisionMeshHandle mesh =
+      scene.CreateCollisionMesh(FloorSquare(1.0F));
+  scene.AddStatic(At({-10.0F, 0.0F, 0.0F}), MeshCollider(mesh));
+  scene.AddStatic(At({10.0F, 0.0F, 0.0F}, bx::Quaternion{bx::InitIdentity},
+                     {4.0F, 1.0F, 4.0F}),
+                  MeshCollider(mesh));
+  const Entity small = scene.AddDynamic(At({-10.0F, 3.0F, 0.0F}),
+                                        WithRestitution(Sphere(0.5F), 0.0F));
+  // Only the scaled copy reaches 3 m from its centre
+  const Entity large = scene.AddDynamic(At({13.0F, 3.0F, 0.0F}),
+                                        WithRestitution(Sphere(0.5F), 0.0F));
+  scene.Run(240);
+  EXPECT_NEAR(scene.Get<Transform>(small).position.y, 0.5F, 0.03F);
+  EXPECT_NEAR(scene.Get<Transform>(large).position.y, 0.5F, 0.03F);
+}
+
+TEST(Physics, MeshColliderStaysStaticWithARigidBody) {
+  PhysicsHarness scene;
+  const Entity floor = scene.AddDynamic(
+      At({0.0F, 0.0F, 0.0F}),
+      MeshCollider(scene.CreateCollisionMesh(FloorSquare(10.0F))));
+  scene.Run(30);
+  EXPECT_EQ(scene.Get<Transform>(floor).position.y, 0.0F);
+
+  // Turning static and back asks for a motion change it ignores
+  scene.Entities().RemoveComponent<RigidBody>(floor);
+  scene.Run(1);
+  scene.Entities().AddComponent(floor, RigidBody{});
+  scene.Run(30);
+  EXPECT_EQ(scene.Get<Transform>(floor).position.y, 0.0F);
 }
 
 }  // namespace

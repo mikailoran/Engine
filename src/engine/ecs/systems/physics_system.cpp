@@ -36,7 +36,7 @@ auto Same(const bx::Quaternion& a, const bx::Quaternion& b) -> bool {
 /** @brief Tests whether two shapes are identical. */
 auto Same(const physics::ShapeDesc& a, const physics::ShapeDesc& b) -> bool {
   return a.kind == b.kind && Same(a.half_extents, b.half_extents) &&
-         a.radius == b.radius && Same(a.offset, b.offset);
+         a.radius == b.radius && Same(a.offset, b.offset) && a.mesh == b.mesh;
 }
 
 /** @brief Tests whether two materials are identical. */

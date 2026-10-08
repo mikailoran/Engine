@@ -21,6 +21,7 @@ Physics works entirely through ECS components. You never call Jolt.
 |---|---|
 | Something that blocks other things (floor, wall, prop) | `Transform` + `Collider` |
 | Something that falls, bounces and gets pushed | `Transform` + `Collider` + `RigidBody` |
+| Level geometry from a model (static only) | `Transform` + a mesh `Collider` |
 
 That's it. The physics system notices the components and creates, updates and
 destroys the matching body by itself, every frame.
@@ -38,21 +39,47 @@ applied on top. More options:
 
 ```jsonc
 "collider": {
-  "shape": "sphere",        // "box" (default) or "sphere"
+  "shape": "sphere",        // "box" (default), "sphere" or "mesh"
   "radius": 0.5,            // sphere only
   "half_extents": [1, 1, 1],// box only
+  "mesh": "assets/meshes/level.bin", // mesh only, and required for it
   "offset": [0, 0.5, 0],    // shape centre relative to the entity
   "restitution": 0.6,       // bounciness, 0 to 1
   "friction": 0.2           // 0 or more
 }
 ```
 
-Physics never looks at meshes. If a mesh isn't centred on its origin (the
-bunny sits on top of it), fit a box to it once when you create the entity:
+Physics never looks at an entity's `Renderable`. If a mesh isn't centred on
+its origin (the bunny sits on top of it), fit a box to it once when you create
+the entity:
 
 ```cpp
 ecs.AddComponent(entity, BoxColliderAround(assets.GetMeshBounds(mesh)));
 ```
+
+### Mesh colliders
+
+For level geometry, a collider can use the triangles of a compiled mesh file,
+the same `.bin` the renderer draws or a separate, simpler one:
+
+```json
+"collider": { "shape": "mesh", "mesh": "assets/meshes/placeholder_shell.bin" }
+```
+
+- **Static only.** Jolt can't compute a mass for a triangle mesh (it has no
+  volume), and two meshes can't collide with each other. A `RigidBody` on a
+  mesh entity is ignored. Moving props use boxes and spheres; a convex hull
+  shape is the planned answer for odd-shaped ones.
+- **One-sided.** Jolt's simulation ignores a triangle's back face, so things
+  pass through a mesh from behind. Triangles are counter-clockwise seen from
+  the front, as glTF, Blender and the renderer wind them; model closed
+  geometry with outward faces and it just works.
+- **Built once per file.** `AssetRegistry::LoadCollisionMesh` reads the
+  triangles and builds them in the `PhysicsWorld`, which owns the result.
+  Every collider naming that file shares it, each at its own scale, and
+  rescaling never rebuilds it.
+- **Not drawn by debug draw yet**, and the inspector shows the shape
+  read-only.
 
 ### Things that may surprise you
 
@@ -73,6 +100,8 @@ ecs.AddComponent(entity, BoxColliderAround(assets.GetMeshBounds(mesh)));
   a box collider is never thinner than 10 cm. See [Known issues](#known-issues).
 - **Spheres can't stretch.** A sphere on a non-uniformly scaled entity uses the
   largest scale axis.
+- **Mesh colliders block from the front only,** and never move. See
+  [Mesh colliders](#mesh-colliders).
 
 ---
 
@@ -296,7 +325,14 @@ Most of what's written here can quietly break on a Jolt upgrade. Checklist:
   derived from the quaternion; at gimbal lock the X and Z numbers can flip while
   you drag. The rotation itself stays correct.
 - **The scene loader isn't covered by tests.** Its loaders reach the asset
-  registry, which needs bgfx.
+  registry, which needs bgfx. That includes reading a mesh collider's
+  triangles from its file.
+- **Debug draw skips mesh colliders.** A level-sized wireframe would hide the
+  scene; drawing through Jolt's own debug renderer, filtered to highlighted
+  entities, is the planned fix.
+- **A mesh file used for both rendering and collision is read twice,** the
+  second time with a throwaway GPU upload. It costs milliseconds at level load;
+  building collision data at build time is the fix if load times grow.
 - **The per-frame sync takes a few Jolt locks per body.** Negligible today; a
   TODO in `physics_world.cpp` notes the lock-free alternative if it ever shows
   up in a profile.

@@ -90,7 +90,9 @@ FetchContent_MakeAvailable(JoltPhysics)
 # PhysicsWorld's headers are Jolt-free; PRIVATE keeps Jolt's include paths and
 # JPH_* defines out of every target that links this.
 add_library(engine_physics STATIC
+  src/engine/util/handle.h
   src/engine/physics/body_handle.h
+  src/engine/physics/collision_mesh_handle.h
   src/engine/physics/jolt_runtime.h
   src/engine/physics/jolt_runtime.cpp
   src/engine/physics/layers.h
@@ -292,23 +294,25 @@ add_dependencies(game shaders)
 set(ENGINE_MESH_DIR ${ENGINE_RUNTIME_DIR}/assets/meshes)
 file(MAKE_DIRECTORY ${ENGINE_MESH_DIR})
 
-# Base names of the meshes to compile
+# Mesh sources to compile, .obj or glTF; each becomes <base name>.bin
 set(ENGINE_MESHES
-  plane
-  cube
-  sphere
-  cylinder
-  cone
-  torus
-  bunny
+  plane.obj
+  cube.obj
+  sphere.obj
+  cylinder.obj
+  cone.obj
+  torus.obj
+  bunny.obj
+  placeholder_shell.glb
 )
 
 # One geometryc command per mesh. RH_UP_Y keeps the source's right-handed,
 # +Y up frame (the engine's, glTF's and .obj's), so nothing is mirrored
 set(ENGINE_MESH_OUTPUTS "")
-foreach(mesh IN LISTS ENGINE_MESHES)
+foreach(mesh_file IN LISTS ENGINE_MESHES)
+  get_filename_component(mesh ${mesh_file} NAME_WE)
   bgfx_compile_geometry(
-    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/meshes/${mesh}.obj
+    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/meshes/${mesh_file}
     OUTPUT ${ENGINE_MESH_DIR}/${mesh}.bin
     PACKNORMAL 1
     RH_UP_Y

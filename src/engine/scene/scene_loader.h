@@ -13,13 +13,18 @@ namespace engine {
 class Ecs;
 class AssetRegistry;
 
+namespace physics {
+class PhysicsWorld;
+}  // namespace physics
+
 /**
  * @brief Reads one component's JSON block and adds it to @p entity, loading
- * any assets it names through the registry.
+ * any assets it names through the registry; collision meshes are built in
+ * @p physics.
  */
 using ComponentLoader =
     std::function<void(const nlohmann::json& data, Entity entity, Ecs& ecs,
-                       AssetRegistry& assets)>;
+                       AssetRegistry& assets, physics::PhysicsWorld& physics)>;
 
 /**
  * @brief Loads JSON scene files into the ECS through per-component loaders.
@@ -38,16 +43,18 @@ class SceneLoader {
    * @param path Scene file, relative to the asset root.
    * @param ecs World to create the entities in.
    * @param assets Registry to load the scene's meshes and textures through.
+   * @param physics World to build the scene's collision meshes in.
    * @throws std::runtime_error On an unreadable file, malformed JSON, a wrong
    *         version, an unknown key or a missing field.
    */
-  void Load(const std::filesystem::path& path, Ecs& ecs,
-            AssetRegistry& assets) const;
+  void Load(const std::filesystem::path& path, Ecs& ecs, AssetRegistry& assets,
+            physics::PhysicsWorld& physics) const;
 
  private:
   /** @brief Validates a parsed scene and creates its entities. */
   void LoadEntities(const nlohmann::json& scene, Ecs& ecs,
-                    AssetRegistry& assets) const;
+                    AssetRegistry& assets,
+                    physics::PhysicsWorld& physics) const;
 
   std::unordered_map<std::string, ComponentLoader> loaders_;
 };

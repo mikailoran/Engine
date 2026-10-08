@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "engine/physics/collision_mesh_handle.h"
 #include "engine/resource/mesh_handle.h"
 #include "engine/resource/texture_handle.h"
 #include "engine/resource/unique_handle.h"
@@ -15,6 +16,10 @@
 struct Mesh;
 
 namespace engine {
+
+namespace physics {
+class PhysicsWorld;
+}  // namespace physics
 
 /** @brief unique_ptr deleter that frees a mesh with meshUnload. */
 struct MeshUnloader {
@@ -63,6 +68,22 @@ class AssetRegistry {
   [[nodiscard]] auto GetMeshBounds(MeshHandle handle) const -> bx::Aabb;
 
   /**
+   * @brief Builds a collision mesh from a compiled mesh file's triangles, or
+   * returns the handle of the one already built from that path.
+   *
+   * The triangles are read through a temporary load, so this does not load
+   * the render mesh. Same preconditions as LoadMesh.
+   *
+   * @param path Compiled mesh file, e.g. "assets/meshes/level01.bin".
+   * @param physics World to build the mesh in; every call must pass the same.
+   * @throws std::runtime_error If the file cannot be opened or Jolt rejects
+   *         its triangles.
+   */
+  auto LoadCollisionMesh(const std::filesystem::path& path,
+                         physics::PhysicsWorld& physics)
+      -> physics::CollisionMeshHandle;
+
+  /**
    * @brief Loads a texture, or returns the handle of one already loaded.
    *
    * Same idempotence and preconditions as LoadMesh. Loaded as sRGB with
@@ -86,6 +107,9 @@ class AssetRegistry {
   // TODO: figure out optimized key and also cross platform compatibility
   std::unordered_map<std::filesystem::path, MeshHandle> mesh_by_path_;
   std::vector<std::unique_ptr<Mesh, MeshUnloader>> meshes_;
+
+  std::unordered_map<std::filesystem::path, physics::CollisionMeshHandle>
+      collision_mesh_by_path_;
 
   std::unordered_map<std::filesystem::path, TextureHandle> texture_by_path_;
   std::vector<UniqueHandle<bgfx::TextureHandle>> textures_;
