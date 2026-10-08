@@ -1,0 +1,4 @@
+---
+# Same checks as the root, minus the static analyzer (slow on gtest macros).
+InheritParentConfig: true
+Checks: '-clang-analyzer-*'
