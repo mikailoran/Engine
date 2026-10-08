@@ -297,7 +297,8 @@
             1
           ]
         },
-        "collider": {}
+        "collider": {},
+        "rigid_body": {}
       }
     },
     {
@@ -324,7 +325,8 @@
             1
           ]
         },
-        "collider": {}
+        "collider": {},
+        "rigid_body": {}
       }
     },
     {
@@ -356,7 +358,8 @@
             1
           ]
         },
-        "collider": {}
+        "collider": {},
+        "rigid_body": {}
       }
     },
     {
@@ -412,7 +415,8 @@
         },
         "collider": {
           "shape": "sphere"
-        }
+        },
+        "rigid_body": {}
       }
     },
     {
@@ -441,6 +445,9 @@
         },
         "collider": {
           "shape": "sphere"
+        },
+        "rigid_body": {
+          "has_gravity": false
         }
       }
     },
@@ -470,7 +477,8 @@
         },
         "collider": {
           "shape": "sphere"
-        }
+        },
+        "rigid_body": {}
       }
     },
     {

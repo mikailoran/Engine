@@ -10,6 +10,7 @@
 #include "engine/ecs/components/collider.h"
 #include "engine/ecs/components/directional_light.h"
 #include "engine/ecs/components/renderable.h"
+#include "engine/ecs/components/rigid_body.h"
 #include "engine/ecs/components/transform.h"
 #include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
@@ -165,6 +166,26 @@ void LoadCollider(const json& data, Entity entity, Ecs& ecs,
   ecs.AddComponent(entity, collider);
 }
 
+/**
+ * @brief Adds a RigidBody; every field is optional. "velocity" is the
+ * initial velocity in m/s, "acceleration" in m/s^2.
+ */
+void LoadRigidBody(const json& data, Entity entity, Ecs& ecs,
+                   AssetRegistry& /*assets*/) {
+  CheckKeys(data, {"velocity", "acceleration", "has_gravity"});
+  RigidBody rigid_body{};
+  if (data.contains("velocity")) {
+    rigid_body.velocity = ReadVec3(data.at("velocity"));
+  }
+  if (data.contains("acceleration")) {
+    rigid_body.acceleration = ReadVec3(data.at("acceleration"));
+  }
+  if (data.contains("has_gravity")) {
+    rigid_body.has_gravity = data.at("has_gravity").get<bool>();
+  }
+  ecs.AddComponent(entity, rigid_body);
+}
+
 }  // namespace
 
 void RegisterBuiltinLoaders(SceneLoader& loader) {
@@ -172,6 +193,7 @@ void RegisterBuiltinLoaders(SceneLoader& loader) {
   loader.Register("renderable", LoadRenderable);
   loader.Register("directional_light", LoadDirectionalLight);
   loader.Register("collider", LoadCollider);
+  loader.Register("rigid_body", LoadRigidBody);
 }
 
 }  // namespace engine
