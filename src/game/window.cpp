@@ -75,6 +75,8 @@ constexpr auto kKeyBindings = std::to_array<KeyBinding>({
     {.key = Key::kRightShift, .scancode = SDL_SCANCODE_RSHIFT},
     {.key = Key::kLeftAlt,    .scancode = SDL_SCANCODE_LALT},
     {.key = Key::kRightAlt,   .scancode = SDL_SCANCODE_RALT},
+    {.key = Key::kSpace,      .scancode = SDL_SCANCODE_SPACE},
+    {.key = Key::kF1,         .scancode = SDL_SCANCODE_F1},
     // clang-format on
 });
 
@@ -133,6 +135,14 @@ void Window::SetTextInput(bool enabled) {
     SDL_StartTextInput(window_);
   } else {
     SDL_StopTextInput(window_);
+  }
+}
+
+void Window::SetRelativeMouse(bool enabled) {
+  // Hides the cursor and keeps it from leaving the window
+  if (!SDL_SetWindowRelativeMouseMode(window_, enabled)) {
+    std::cerr << std::format("relative mouse mode failed: {}\n",
+                             SDL_GetError());
   }
 }
 
@@ -208,6 +218,11 @@ auto Window::PumpEvents(Input& input) -> bool {
   const SDL_MouseButtonFlags buttons = SDL_GetMouseState(&x, &y);
   const float density = SDL_GetWindowPixelDensity(window_);
   input.SetMouse({.x = x * density, .y = y * density});
+  // Movement since the last call, which keeps counting while captured
+  float moved_x = 0.0F;
+  float moved_y = 0.0F;
+  SDL_GetRelativeMouseState(&moved_x, &moved_y);
+  input.AddMouseMotion({.x = moved_x * density, .y = moved_y * density});
   input.SetButton(MouseButton::kLeft, (buttons & SDL_BUTTON_LMASK) != 0);
   input.SetButton(MouseButton::kRight, (buttons & SDL_BUTTON_RMASK) != 0);
   input.SetButton(MouseButton::kMiddle, (buttons & SDL_BUTTON_MMASK) != 0);

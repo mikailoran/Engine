@@ -48,6 +48,9 @@ enum class Key : std::uint8_t {
   kRightShift,
   kLeftAlt,
   kRightAlt,
+  // Play: jump, and switching between play and the debug tools
+  kSpace,
+  kF1,
   // Number of keys above; not a key
   kCount,
 };
@@ -62,12 +65,14 @@ enum class Key : std::uint8_t {
 class Input {
  public:
   /**
-   * @brief Starts a frame: keeps last frame's buttons, zeroes the wheel and
-   * clears the text.
+   * @brief Starts a frame: keeps last frame's buttons and keys, zeroes the
+   * wheel and mouse motion, and clears the text.
    */
   void BeginFrame() {
     was_down_ = down_;
+    was_keys_ = keys_;
     wheel_ = 0.0F;
+    motion_ = {};
     text_.clear();
   }
 
@@ -82,6 +87,15 @@ class Input {
   /** @brief Records the cursor position. */
   void SetMouse(ScreenPosition position) { mouse_ = position; }
 
+  /**
+   * @brief Adds mouse movement for this frame, in backbuffer pixels. Unlike
+   * the cursor position, it keeps counting while the cursor is captured.
+   */
+  void AddMouseMotion(ScreenPosition moved) {
+    motion_.x += moved.x;
+    motion_.y += moved.y;
+  }
+
   /** @brief Adds wheel notches for this frame; positive is away from you. */
   void AddWheel(float notches) { wheel_ += notches; }
 
@@ -90,6 +104,9 @@ class Input {
 
   /** @brief Cursor position in backbuffer pixels, origin top-left. */
   [[nodiscard]] auto Mouse() const -> ScreenPosition { return mouse_; }
+
+  /** @brief Mouse movement this frame in backbuffer pixels; +y is down. */
+  [[nodiscard]] auto MouseMotion() const -> ScreenPosition { return motion_; }
 
   /** @brief Wheel notches this frame; positive is away from you. */
   [[nodiscard]] auto Wheel() const -> float { return wheel_; }
@@ -115,6 +132,11 @@ class Input {
     return down_.at(Index(button)) && !was_down_.at(Index(button));
   }
 
+  /** @brief Whether @p key went down this frame. */
+  [[nodiscard]] auto Pressed(Key key) const -> bool {
+    return keys_.at(Index(key)) && !was_keys_.at(Index(key));
+  }
+
  private:
   static constexpr std::size_t kButtonCount = 3;
   static constexpr auto kKeyCount = static_cast<std::size_t>(Key::kCount);
@@ -133,10 +155,12 @@ class Input {
   std::array<bool, kButtonCount> down_{};
   std::array<bool, kButtonCount> was_down_{};
 
-  // Held state this frame, indexed by Key.
+  // Held state this frame and last frame, indexed by Key.
   std::array<bool, kKeyCount> keys_{};
+  std::array<bool, kKeyCount> was_keys_{};
 
   ScreenPosition mouse_{};
+  ScreenPosition motion_{};
   float wheel_{0.0F};
   std::string text_;
 };
