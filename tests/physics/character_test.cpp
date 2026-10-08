@@ -201,7 +201,7 @@ TEST(Character, DestroyedCharacterLeavesTheList) {
   const auto characters = scene.World().Characters();
   ASSERT_EQ(characters.size(), 1U);
   EXPECT_EQ(characters.front().character, kept);
-  EXPECT_EQ(characters.front().user_data, std::uint64_t{7});
+  EXPECT_EQ(characters.front().user_data, physics::UserTag{7});
 }
 
 }  // namespace

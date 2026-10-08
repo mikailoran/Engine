@@ -71,7 +71,7 @@ struct CharacterDesc {
   UserTag user_data{0};
 };
 
-/** @brief A character's state after the last Step. */
+/** @brief Output of GetCharacter: a character's state after the last Step. */
 struct CharacterState {
   bx::Vec3 feet{0.0F};
   /// The velocity it moves with in m/s, before collisions slow it.
