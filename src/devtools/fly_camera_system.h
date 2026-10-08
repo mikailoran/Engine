@@ -18,7 +18,7 @@ namespace devtools {
  *
  * Right-drag turns, W/A/S/D move, Q/E go down and up, and the wheel moves
  * along the view. Owns the camera's rotation: it is rewritten every frame
- * from this system's yaw and pitch, which start level along +Z.
+ * from this system's yaw and pitch, which start level along -Z.
  */
 class FlyCameraSystem {
  public:

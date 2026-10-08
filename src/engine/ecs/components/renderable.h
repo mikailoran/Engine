@@ -21,8 +21,8 @@ struct Renderable {
   // Not owned by the component.
   bgfx::ProgramHandle program{bgfx::kInvalidHandle};
 
-  // Render state
-  std::uint64_t state{BGFX_STATE_MASK};
+  // Render state. Culls clockwise: front faces are counter-clockwise on screen
+  std::uint64_t state{BGFX_STATE_DEFAULT};
 
   // Which bgfx view to submit into.
   bgfx::ViewId view{0};

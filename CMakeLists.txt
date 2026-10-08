@@ -303,13 +303,15 @@ set(ENGINE_MESHES
   bunny
 )
 
-# One geometryc command per mesh
+# One geometryc command per mesh. RH_UP_Y keeps the source's right-handed,
+# +Y up frame (the engine's, glTF's and .obj's), so nothing is mirrored
 set(ENGINE_MESH_OUTPUTS "")
 foreach(mesh IN LISTS ENGINE_MESHES)
   bgfx_compile_geometry(
     FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/meshes/${mesh}.obj
     OUTPUT ${ENGINE_MESH_DIR}/${mesh}.bin
     PACKNORMAL 1
+    RH_UP_Y
   )
   list(APPEND ENGINE_MESH_OUTPUTS ${ENGINE_MESH_DIR}/${mesh}.bin)
 endforeach()
