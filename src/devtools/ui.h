@@ -1,9 +1,14 @@
 #pragma once
 
-class Ecs;
-class AssetRegistry;
-struct FrameContext;
 struct ImGuiContext;
+
+namespace engine {
+class AssetRegistry;
+class Ecs;
+struct FrameContext;
+}  // namespace engine
+
+namespace devtools {
 
 /**
  * @brief Draws the debug settings window and applies its edits.
@@ -32,7 +37,8 @@ class UiSystem {
    * @param assets Registry to load spawned entities' meshes through.
    * @param ctx Per-frame inputs.
    */
-  void Update(Ecs& ecs, AssetRegistry& assets, const FrameContext& ctx);
+  void Update(engine::Ecs& ecs, engine::AssetRegistry& assets,
+              const engine::FrameContext& ctx);
 
   /**
    * @brief Whether the UI wants the mouse, as of the last Update.
@@ -68,3 +74,5 @@ class UiSystem {
   // Wheel notches summed over every frame, as imguiBeginFrame expects.
   float wheel_total_{0.0F};
 };
+
+}  // namespace devtools

@@ -5,6 +5,8 @@
 #include <concepts>
 #include <utility>
 
+namespace engine {
+
 /** @brief A bgfx handle type that bgfx::destroy and bgfx::isValid accept. */
 template <class H>
 concept BgfxHandle = requires(H handle) {
@@ -68,3 +70,5 @@ class UniqueHandle {
 
   H handle_{kInvalid};
 };
+
+}  // namespace engine

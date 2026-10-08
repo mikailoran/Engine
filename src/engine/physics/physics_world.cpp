@@ -42,6 +42,8 @@
 #include "engine/physics/layers.h"
 #include "engine/physics/shape.h"
 
+namespace engine::physics {
+
 namespace {
 
 // Jolt drops body pairs and contacts beyond these
@@ -330,3 +332,5 @@ void PhysicsWorld::Step(float dt) {
   assert(error == JPH::EPhysicsUpdateError::None &&
          "Jolt ran out of body pairs or contacts");
 }
+
+}  // namespace engine::physics

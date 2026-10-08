@@ -7,6 +7,8 @@
 #include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
 
+namespace engine {
+
 TEST(EntityLifecycle, CreateReturnsDistinctIds) {
   Ecs ecs;
   std::set<Entity> seen;
@@ -37,3 +39,5 @@ TEST(EntityLifecycle, DestroyedIdIsNotImmediatelyReused) {
 
   EXPECT_NE(ecs.CreateEntity(), entity);
 }
+
+}  // namespace engine

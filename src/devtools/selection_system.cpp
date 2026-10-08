@@ -11,6 +11,15 @@
 #include "engine/platform/input.h"
 #include "engine/platform/screen.h"
 
+using engine::Ecs;
+using engine::Engine;
+using engine::Entity;
+using engine::FrameContext;
+using engine::MouseButton;
+using engine::ScreenSize;
+
+namespace devtools {
+
 namespace {
 
 /** @brief Removes Selected from every entity. */
@@ -49,3 +58,5 @@ void UpdateSelection(Engine& engine, const FrameContext& ctx,
     ecs.AddComponent(*pick, Selected{});
   }
 }
+
+}  // namespace devtools

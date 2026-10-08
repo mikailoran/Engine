@@ -18,6 +18,8 @@
 #include "engine/resource/texture_handle.h"
 #include "engine/resource/unique_handle.h"
 
+namespace engine {
+
 void MeshUnloader::operator()(Mesh* mesh) const noexcept { meshUnload(mesh); }
 
 auto AssetRegistry::LoadMesh(const std::filesystem::path& path) -> MeshHandle {
@@ -87,3 +89,5 @@ auto AssetRegistry::LoadTexture(const std::filesystem::path& path)
 
   return textures_.at(handle.idx).Get();
 }
+
+}  // namespace engine

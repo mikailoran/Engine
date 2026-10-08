@@ -15,6 +15,8 @@
 #include "engine/math/rotation.h"
 #include "engine/platform/screen.h"
 
+namespace engine {
+
 namespace {
 
 constexpr float kTolerance = 1e-4F;
@@ -95,3 +97,5 @@ TEST(Camera, CenterRayStartsOnNearPlaneAlongForward) {
 }
 
 }  // namespace
+
+}  // namespace engine

@@ -15,6 +15,8 @@
 #include "engine/platform/screen.h"
 #include "engine/resource/asset_registry.h"
 
+namespace engine {
+
 namespace {
 
 /** @brief An entity hit by a pick ray. */
@@ -70,3 +72,5 @@ auto Pick(Ecs& ecs, const AssetRegistry& assets, Entity camera,
   const auto hit = PickEntity(ecs, assets, ray);
   return hit ? std::optional<Entity>{hit->entity} : std::nullopt;
 }
+
+}  // namespace engine

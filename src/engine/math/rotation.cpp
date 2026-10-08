@@ -4,6 +4,8 @@
 
 #include <cmath>
 
+namespace engine {
+
 namespace {
 
 /// Below this cos(y), X and Z rotate about the same axis (gimbal lock).
@@ -40,3 +42,5 @@ auto YawPitchToQuat(YawPitch angles) -> bx::Quaternion {
       bx::fromAxisAngle({1.0F, 0.0F, 0.0F}, -angles.pitch);
   return bx::mul(yaw_q, pitch_q);
 }
+
+}  // namespace engine

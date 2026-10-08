@@ -5,6 +5,8 @@
 #include <array>
 #include <cstddef>
 
+namespace engine {
+
 /** @brief Position, rotation and scale of an entity, in world space. */
 struct Transform {
   bx::Vec3 position{0.0f};
@@ -30,3 +32,5 @@ inline auto ModelMatrix(const Transform& transform) -> std::array<float, 16> {
   bx::store(&mtx.at(12), transform.position);
   return mtx;
 }
+
+}  // namespace engine

@@ -17,6 +17,8 @@
 #include <memory>
 #include <stdexcept>
 
+namespace engine::physics {
+
 /** @brief The Jolt objects JoltRuntime owns. */
 struct JoltRuntime::State {
   /// Published through JPH::Factory::sInstance while this lives.
@@ -79,3 +81,5 @@ JoltRuntime::~JoltRuntime() {
   JPH::Factory::sInstance = nullptr;
   RuntimeAlive() = false;
 }
+
+}  // namespace engine::physics

@@ -8,6 +8,8 @@
 
 #include "engine/ecs/core/types.h"
 
+namespace engine {
+
 class Ecs;
 class AssetRegistry;
 
@@ -49,3 +51,5 @@ class SceneLoader {
 
   std::unordered_map<std::string, ComponentLoader> loaders_;
 };
+
+}  // namespace engine

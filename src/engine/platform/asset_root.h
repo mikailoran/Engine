@@ -2,6 +2,8 @@
 
 #include <string>
 
+namespace engine {
+
 /**
  * @brief Directory that runtime asset paths resolve against.
  *
@@ -15,3 +17,5 @@
  *      macOS); asserted, since bx returns an empty path otherwise.
  */
 auto AssetRoot() -> std::string;
+
+}  // namespace engine

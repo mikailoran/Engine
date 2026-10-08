@@ -21,6 +21,8 @@
 #include "engine/platform/frame_context.h"
 #include "engine/resource/asset_registry.h"
 
+namespace engine {
+
 namespace {
 
 // Rendered after view 0, sharing its depth buffer.
@@ -46,11 +48,11 @@ constexpr float kArrowHeadRadius = 0.05F;
 /** @brief Draws @p collider's shape as a wireframe, placed by @p transform. */
 void DrawCollider(DebugDrawEncoder& encoder, const Transform& transform,
                   const Collider& collider) {
-  const ShapeDesc& shape = collider.shape;
+  const physics::ShapeDesc& shape = collider.shape;
   const auto model = ModelMatrix(transform);
 
   switch (shape.kind) {
-    case ShapeKind::kBox: {
+    case physics::ShapeKind::kBox: {
       // Unit cube [-1, 1] -> shape space -> world
       std::array<float, 16> local{};
       bx::mtxSRT(local.data(), shape.half_extents.x, shape.half_extents.y,
@@ -61,7 +63,7 @@ void DrawCollider(DebugDrawEncoder& encoder, const Transform& transform,
       encoder.draw(obb);
       break;
     }
-    case ShapeKind::kSphere: {
+    case physics::ShapeKind::kSphere: {
       // Largest scale axis, as physics does; the model matrix would stretch it
       const bx::Vec3 size = bx::abs(transform.scale);
       const bx::Sphere sphere{
@@ -185,3 +187,5 @@ void DebugDrawSystem::Highlight(Entity entity) {
 void DebugDrawSystem::SetActiveCamera(Entity camera) {
   active_camera_ = camera;
 }
+
+}  // namespace engine

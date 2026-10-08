@@ -1,5 +1,7 @@
 #pragma once
 
+namespace engine {
+
 class SceneLoader;
 
 /**
@@ -7,3 +9,5 @@ class SceneLoader;
  * "collider" component loaders.
  */
 void RegisterBuiltinLoaders(SceneLoader& loader);
+
+}  // namespace engine

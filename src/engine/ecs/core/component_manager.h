@@ -9,6 +9,8 @@
 #include "engine/ecs/core/types.h"
 #include "engine/ecs/core/view.h"
 
+namespace engine {
+
 class ComponentManager {
  public:
   ComponentManager() = default;
@@ -34,7 +36,7 @@ class ComponentManager {
   /** @brief Views the entities having all @p Components. @pre Registered. */
   // ::View: inside this class, plain View names this member
   template <class... Components>
-  auto View() -> ::View<Components...>;
+  auto View() -> engine::View<Components...>;
 
   void EntityDestroyed(Entity entity);
 
@@ -98,8 +100,8 @@ auto ComponentManager::HasComponent(Entity entity) const -> bool {
 }
 
 template <class... Components>
-auto ComponentManager::View() -> ::View<Components...> {
-  return ::View<Components...>(GetComponentArray<Components>()...);
+auto ComponentManager::View() -> engine::View<Components...> {
+  return engine::View<Components...>(GetComponentArray<Components>()...);
 }
 
 inline void ComponentManager::EntityDestroyed(Entity entity) {
@@ -128,3 +130,5 @@ auto ComponentManager::GetComponentArray() const
   return *static_cast<const ComponentArray<Component>*>(
       component_arrays_.at(type_key).get());
 }
+
+}  // namespace engine

@@ -5,6 +5,8 @@
 #include "engine/ecs/core/types.h"
 #include "engine/platform/screen.h"
 
+namespace engine {
+
 class Ecs;
 class AssetRegistry;
 
@@ -20,3 +22,5 @@ class AssetRegistry;
  */
 auto Pick(Ecs& ecs, const AssetRegistry& assets, Entity camera,
           ScreenPosition position, ScreenSize size) -> std::optional<Entity>;
+
+}  // namespace engine

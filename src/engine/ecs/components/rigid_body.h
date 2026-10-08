@@ -2,6 +2,8 @@
 
 #include <bx/math.h>
 
+namespace engine {
+
 /**
  * @brief Makes a Collider entity's body dynamic: moved by gravity, forces and
  * collisions. Without a Collider it has no effect.
@@ -16,3 +18,5 @@ struct RigidBody {
   /// Whether world gravity (-9.81 m/s^2 on Y) applies.
   bool has_gravity{true};
 };
+
+}  // namespace engine

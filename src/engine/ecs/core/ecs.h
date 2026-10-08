@@ -8,6 +8,8 @@
 #include "engine/ecs/core/types.h"
 #include "engine/ecs/core/view.h"
 
+namespace engine {
+
 /** @brief Facade over the entity, component and system managers. */
 class Ecs {
  public:
@@ -79,7 +81,7 @@ class Ecs {
    * @pre Every type in @p Components is registered.
    */
   template <class... Components>
-  auto View() -> ::View<Components...>;
+  auto View() -> engine::View<Components...>;
 
  private:
   EntityManager entity_manager_;
@@ -128,6 +130,8 @@ auto Ecs::TryGetComponent(Entity entity) -> Component* {
 }
 
 template <class... Components>
-auto Ecs::View() -> ::View<Components...> {
+auto Ecs::View() -> engine::View<Components...> {
   return component_manager_.View<Components...>();
 }
+
+}  // namespace engine

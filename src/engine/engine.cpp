@@ -20,6 +20,8 @@
 #include "engine/scene/picking.h"
 #include "engine/scene/scene_loader.h"
 
+namespace engine {
+
 Engine::Engine(const NativeSurface& surface) : bgfx_context_(surface) {
   ecs_.RegisterComponent<Camera>();
   ecs_.RegisterComponent<Renderable>();
@@ -65,7 +67,7 @@ auto Engine::Pick(ScreenPosition position, ScreenSize size)
   if (!active_camera_) {
     return std::nullopt;
   }
-  return ::Pick(ecs_, assets_, *active_camera_, position, size);
+  return engine::Pick(ecs_, assets_, *active_camera_, position, size);
 }
 
 void Engine::Highlight(Entity entity) { debug_draw_.Highlight(entity); }
@@ -73,3 +75,5 @@ void Engine::Highlight(Entity entity) { debug_draw_.Highlight(entity); }
 auto Engine::World() -> Ecs& { return ecs_; }
 
 auto Engine::Assets() -> AssetRegistry& { return assets_; }
+
+}  // namespace engine

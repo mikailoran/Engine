@@ -2,6 +2,8 @@
 
 #include <cstdint>
 
+namespace engine::physics {
+
 /** @brief Opaque id of a body in a PhysicsWorld. Stale ids never alias. */
 class BodyHandle {
  public:
@@ -27,3 +29,5 @@ class BodyHandle {
  private:
   std::uint32_t value_{kInvalidHandle};
 };
+
+}  // namespace engine::physics

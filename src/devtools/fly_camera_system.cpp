@@ -12,6 +12,18 @@
 #include "engine/platform/input.h"
 #include "engine/platform/screen.h"
 
+using engine::Ecs;
+using engine::Entity;
+using engine::FrameContext;
+using engine::Input;
+using engine::Key;
+using engine::MouseButton;
+using engine::ScreenPosition;
+using engine::Transform;
+using engine::YawPitchToQuat;
+
+namespace devtools {
+
 namespace {
 
 // Matches the examples' camera this replaces.
@@ -78,3 +90,5 @@ void FlyCameraSystem::Update(Ecs& ecs, const FrameContext& ctx,
 }
 
 void FlyCameraSystem::SetControlledCamera(Entity camera) { camera_ = camera; }
+
+}  // namespace devtools

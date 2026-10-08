@@ -10,6 +10,8 @@
 #include "engine/physics/body_handle.h"
 #include "engine/physics/shape.h"
 
+namespace engine::physics {
+
 class JoltRuntime;
 
 /** @brief A body's position and rotation in world space. */
@@ -128,3 +130,5 @@ class PhysicsWorld {
   struct Impl;
   std::unique_ptr<Impl> impl_;
 };
+
+}  // namespace engine::physics

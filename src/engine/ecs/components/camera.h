@@ -9,6 +9,8 @@
 #include "engine/ecs/components/transform.h"
 #include "engine/platform/screen.h"
 
+namespace engine {
+
 /**
  * @brief Lens of a camera entity. Its Transform is the pose: the camera looks
  * along local +Z with local +Y up, and scale is ignored.
@@ -75,3 +77,5 @@ inline auto ScreenPositionToRay(const Camera& camera,
   bx::mtxInverse(inv_view_proj.data(), view_proj.data());
   return bx::makeRay(x_ndc, y_ndc, inv_view_proj.data());
 }
+
+}  // namespace engine

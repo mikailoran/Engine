@@ -2,6 +2,8 @@
 
 #include "engine/ecs/core/types.h"
 
+namespace engine {
+
 auto Ecs::CreateEntity() -> Entity { return entity_manager_.CreateEntity(); }
 
 void Ecs::DestroyEntity(Entity entity) {
@@ -20,3 +22,5 @@ void Ecs::Flush() {
   }
   pending_destroy_.clear();
 }
+
+}  // namespace engine

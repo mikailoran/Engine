@@ -4,6 +4,8 @@
 
 #include <cstdint>
 
+namespace engine::physics {
+
 // Shared by Collider (authoring) and PhysicsWorld (simulation), so neither
 // keeps its own copy. Jolt-free, like the rest of this module's headers.
 
@@ -32,3 +34,5 @@ struct Material {
   /// Sliding resistance, 0 or more. A contact uses sqrt(a * b) of its pair's.
   float friction{0.2F};
 };
+
+}  // namespace engine::physics

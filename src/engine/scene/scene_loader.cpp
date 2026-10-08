@@ -12,6 +12,8 @@
 #include "engine/ecs/core/ecs.h"
 #include "engine/platform/asset_root.h"
 
+namespace engine {
+
 namespace {
 
 // Scene format version this loader reads.
@@ -79,3 +81,5 @@ void SceneLoader::Load(const std::filesystem::path& path, Ecs& ecs,
     throw std::runtime_error(full_path.string() + ": " + e.what());
   }
 }
+
+}  // namespace engine

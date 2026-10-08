@@ -2,6 +2,8 @@
 
 #include <memory>
 
+namespace engine::physics {
+
 /**
  * @brief Owns Jolt's process-wide state: allocator, callbacks, factory and
  * registered types.
@@ -28,3 +30,5 @@ class JoltRuntime {
   struct State;
   std::unique_ptr<State> state_;
 };
+
+}  // namespace engine::physics

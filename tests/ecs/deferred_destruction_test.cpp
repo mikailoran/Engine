@@ -12,6 +12,8 @@
 #include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
 
+namespace engine {
+
 namespace {
 
 struct Position {
@@ -205,3 +207,5 @@ TEST(DeferredDestruction, ForEachCanDestroyADifferentEntity) {
   EXPECT_TRUE(Visited(ecs).contains(survivor));
   EXPECT_FLOAT_EQ(ecs.GetComponent<Position>(survivor).x, 1.0F);
 }
+
+}  // namespace engine

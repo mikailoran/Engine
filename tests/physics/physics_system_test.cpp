@@ -28,6 +28,8 @@
 #include "engine/physics/shape.h"
 #include "engine/platform/frame_context.h"
 
+namespace engine {
+
 namespace {
 
 /** @brief A Transform at @p position with optional rotation and scale. */
@@ -50,7 +52,7 @@ auto WithRestitution(Collider collider, float restitution) -> Collider {
 /** @brief A sphere Collider of @p radius, before scale. */
 auto Sphere(float radius) -> Collider {
   Collider collider{};
-  collider.shape.kind = ShapeKind::kSphere;
+  collider.shape.kind = physics::ShapeKind::kSphere;
   collider.shape.radius = radius;
   return collider;
 }
@@ -152,8 +154,9 @@ class PhysicsHarness {
   }
 
  private:
-  JoltRuntime runtime_;
-  PhysicsWorld world_{runtime_, static_cast<std::uint32_t>(kMaxEntities)};
+  physics::JoltRuntime runtime_;
+  physics::PhysicsWorld world_{runtime_,
+                               static_cast<std::uint32_t>(kMaxEntities)};
   Ecs ecs_;
   PhysicsSystem system_;
 };
@@ -201,7 +204,7 @@ TEST(Physics, RemovingRigidBodyKeepsTheBodyButMakesItStatic) {
   PhysicsHarness scene;
   const Entity box = scene.AddDynamic(At({0.0F, 5.0F, 0.0F}));
   scene.Run(1);
-  const BodyHandle body = scene.Get<PhysicsLink>(box).Body();
+  const physics::BodyHandle body = scene.Get<PhysicsLink>(box).Body();
 
   scene.Entities().RemoveComponent<RigidBody>(box);
   scene.Run(1);
@@ -222,7 +225,7 @@ TEST(Physics, SameFrameColliderSwapKeepsBodyAndTakesNewShape) {
   const Entity box = scene.AddDynamic(At({0.0F, 0.5F, 0.0F}),
                                       WithRestitution(Collider{}, 0.0F));
   scene.Run(60);
-  const BodyHandle body = scene.Get<PhysicsLink>(box).Body();
+  const physics::BodyHandle body = scene.Get<PhysicsLink>(box).Body();
 
   scene.Entities().RemoveComponent<Collider>(box);
   scene.Entities().AddComponent(box, WithRestitution(Sphere(1.0F), 0.0F));
@@ -236,7 +239,7 @@ TEST(Physics, ReusedEntityIdGetsAFreshBody) {
   PhysicsHarness scene;
   const Entity doomed = scene.AddDynamic(At({3.0F, 4.0F, 3.0F}));
   scene.Run(1);
-  const BodyHandle old_body = scene.Get<PhysicsLink>(doomed).Body();
+  const physics::BodyHandle old_body = scene.Get<PhysicsLink>(doomed).Body();
   scene.Entities().DestroyEntity(doomed);
   scene.Entities().Flush();
 
@@ -266,7 +269,7 @@ TEST(Physics, CopiedLinkGetsItsOwnBody) {
   scene.AddFloor();
   const Entity original = scene.AddDynamic(At({-14.0F, 0.5F, -4.0F}));
   scene.Run(1);
-  const BodyHandle body = scene.Get<PhysicsLink>(original).Body();
+  const physics::BodyHandle body = scene.Get<PhysicsLink>(original).Body();
 
   const Entity copy = scene.AddStatic(At({14.0F, 4.0F, 14.0F}));
   scene.Entities().AddComponent(copy, scene.Get<PhysicsLink>(original));
@@ -475,7 +478,7 @@ TEST(Physics, ScaleEditReshapesTheSameBody) {
                                       WithRestitution(Collider{}, 0.0F));
   scene.Run(180);
   const float rest_y = scene.Get<Transform>(box).position.y;
-  const BodyHandle body = scene.Get<PhysicsLink>(box).Body();
+  const physics::BodyHandle body = scene.Get<PhysicsLink>(box).Body();
 
   scene.Get<Transform>(box).scale = {2.0F, 2.0F, 2.0F};
   scene.Run(180);
@@ -570,3 +573,5 @@ TEST(Physics, DestroyingASupportWakesWhatSleepsOnIt) {
 }
 
 }  // namespace
+
+}  // namespace engine

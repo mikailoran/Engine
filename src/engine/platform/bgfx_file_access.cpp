@@ -29,7 +29,11 @@ class RootedFileReader : public bx::FileReader {
 
 }  // namespace
 
+namespace engine {
+
 void SetAssetRoot(std::string root) { Root() = std::move(root); }
+
+}  // namespace engine
 
 // bgfx_utils.cpp calls these by entry's names; entry itself is not linked
 namespace entry {

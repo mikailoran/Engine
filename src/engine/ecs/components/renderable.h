@@ -8,6 +8,8 @@
 #include "engine/resource/mesh_handle.h"
 #include "engine/resource/texture_handle.h"
 
+namespace engine {
+
 /**
  * @brief Everything needed to issue one draw call for an entity.
  */
@@ -33,3 +35,5 @@ struct Renderable {
   /// World units covered by one repeat of the texture. Must be positive.
   float texture_scale{1.0F};
 };
+
+}  // namespace engine

@@ -18,6 +18,8 @@
 #include "engine/resource/asset_registry.h"
 #include "engine/scene/scene_loader.h"
 
+namespace engine {
+
 struct FrameContext;
 
 /** @brief What Render draws this frame beyond the scene. */
@@ -94,11 +96,11 @@ class Engine {
   // Before anything that creates GPU resources
   BgfxContext bgfx_context_;
   // Before anything that uses Jolt
-  JoltRuntime jolt_runtime_;
+  physics::JoltRuntime jolt_runtime_;
 
   AssetRegistry assets_;
-  PhysicsWorld physics_world_{jolt_runtime_,
-                              static_cast<std::uint32_t>(kMaxEntities)};
+  physics::PhysicsWorld physics_world_{
+      jolt_runtime_, static_cast<std::uint32_t>(kMaxEntities)};
   Ecs ecs_;
   SceneLoader scene_loader_;
 
@@ -110,3 +112,5 @@ class Engine {
   // Camera rendered and picked from; empty until SetActiveCamera.
   std::optional<Entity> active_camera_;
 };
+
+}  // namespace engine

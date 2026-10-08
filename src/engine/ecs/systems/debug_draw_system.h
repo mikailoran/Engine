@@ -5,6 +5,8 @@
 
 #include "engine/ecs/core/types.h"
 
+namespace engine {
+
 class AssetRegistry;
 class Ecs;
 struct FrameContext;
@@ -60,3 +62,5 @@ class DebugDrawSystem {
   // This frame's Highlight requests, cleared by Update.
   std::vector<Entity> highlights_;
 };
+
+}  // namespace engine

@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <limits>
 
+namespace engine {
+
 /**
  * @brief Non-owning reference to a mesh held by AssetRegistry.
  *
@@ -26,3 +28,5 @@ constexpr MeshHandle kInvalidMesh{};
 constexpr auto IsValid(MeshHandle handle) -> bool {
   return handle.idx != std::numeric_limits<std::uint16_t>::max();
 }
+
+}  // namespace engine

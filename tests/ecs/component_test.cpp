@@ -12,6 +12,8 @@
 #include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
 
+namespace engine {
+
 namespace {
 
 struct Position {
@@ -357,3 +359,5 @@ TEST(ComponentStorage, RemovalNeverSelfMoveAssignsAComponent) {
 
   EXPECT_EQ(self_moves, 0);
 }
+
+}  // namespace engine

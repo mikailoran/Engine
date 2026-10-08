@@ -7,6 +7,8 @@
 #include <cstddef>
 #include <string>
 
+namespace engine {
+
 auto AssetRoot() -> std::string {
   const bx::FilePath exe_path(bx::Dir::Executable);
   const bx::StringView dir = exe_path.getPath();
@@ -15,3 +17,5 @@ auto AssetRoot() -> std::string {
 
   return {dir.getPtr(), static_cast<std::size_t>(dir.getLength())};
 }
+
+}  // namespace engine
