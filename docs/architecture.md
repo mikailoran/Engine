@@ -5,12 +5,14 @@ describes **where the code is going**; `CLAUDE.md` and the code describe where
 it is today. The goals and milestones behind it are in
 [objectives.md](objectives.md).
 
-**Built so far (M1, M2a, M2b):** the engine is a library (`Engine`, in
+**Built so far (M1, M2):** the engine is a library (`Engine`, in
 `src/engine/engine.h`) driven by the SDL `game` host, with the ImGui tools in
-`src/devtools/`. glTF meshes compile through the build, and a level shell can
-collide through a triangle-mesh collider (the first version of the static
-shell below). A kinematic character (`CharacterBody`) walks and pushes
-props, driven by its velocity; nothing controls it from input yet. The game-logic library and the editor don't exist yet.
+`src/devtools/`. glTF meshes compile through the build, and a level shell
+collides through a triangle-mesh collider (the first version of the static
+shell below). The game-logic library (`src/game/logic/`) holds the first
+gameplay: a first-person `Player` on a kinematic character (`CharacterBody`),
+walking a level made in Blender. The game starts in play mode; F1 switches to
+the devtools. The editor doesn't exist yet.
 
 ---
 
@@ -26,7 +28,7 @@ game (SDL exe) ───┘                           ▲
 | Layer | Directory | May include | Must never include |
 |---|---|---|---|
 | **Engine** | `src/engine/` | bgfx, bx, Jolt (only inside `physics/`), nlohmann/json | Qt, SDL, ImGui, game logic, editor |
-| **Game logic** | `src/game/logic/` (created with the first gameplay component) | Engine | Qt, SDL, editor |
+| **Game logic** | `src/game/logic/` (library `game_logic`) | Engine | Qt, SDL, ImGui, devtools, editor |
 | **Game host** | `src/game/` | Engine, game logic, devtools, SDL3 | Qt |
 | **Devtools** | `src/devtools/` | Engine, ImGui | Qt, SDL |
 | **Editor** | `src/editor/` | Engine, game logic, Qt | bgfx or Jolt directly |
@@ -120,8 +122,10 @@ state.
 
 The editor shouldn't hard-code the game's components. Game logic registers
 each component with the engine (its scene loader and saver, and a description
-of its fields), the way `RegisterBuiltinLoaders` registers loaders today. A
-generic inspector then shows a gameplay component it has never heard of.
+of its fields). Loaders are there today: `RegisterGameLogic` registers
+`Player` and its loader through `Engine::RegisterSceneLoader`, and the editor
+will call it too. A generic inspector then shows a gameplay component it has
+never heard of.
 
 ## Playing in the editor vs the game
 

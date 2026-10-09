@@ -86,7 +86,8 @@ velocity you give it (Jolt's `CharacterVirtual`; see ADR 0009). Its
 
 - **You set `velocity`; physics adds gravity.** While it stands on the
   ground the fall is dropped; otherwise each step adds `gravity * dt`. To
-  jump, set an upward velocity. Walking into a wall doesn't reset it: the
+  jump, set an upward velocity. In the game, `PlayerSystem`
+  (`src/game/logic/`) sets it from input. Walking into a wall doesn't reset it: the
   capsule slides along instead.
 - **It pushes dynamic bodies, but bodies don't hit it.** A falling prop passes
   through the character, and only its push moves things, up to `push_force`.
