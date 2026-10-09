@@ -327,7 +327,7 @@ set(ENGINE_MESHES
   cone.obj
   torus.obj
   bunny.obj
-  placeholder_shell.glb
+  level01.glb
 )
 
 # One geometryc command per mesh. RH_UP_Y keeps the source's right-handed,
@@ -379,6 +379,7 @@ set(ENGINE_SCENE_DIR ${ENGINE_RUNTIME_DIR}/assets/scenes)
 # Base names of the scene files to copy
 set(ENGINE_SCENES
   debug
+  level01
 )
 
 set(ENGINE_SCENE_OUTPUTS "")

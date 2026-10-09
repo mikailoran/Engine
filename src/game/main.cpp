@@ -102,8 +102,8 @@ Game::Game() {
   ecs.AddComponent(fly_camera_entity_, Camera{});
   fly_camera_.SetControlledCamera(fly_camera_entity_);
 
-  // Load the debug scene's decor as ordinary entities
-  engine_.LoadScene("assets/scenes/debug.json");
+  // The level and its props are ordinary entities
+  engine_.LoadScene("assets/scenes/level01.json");
   EnterMode(Mode::kPlay);
 }
 
