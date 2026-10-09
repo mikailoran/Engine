@@ -2,6 +2,8 @@
 
 #include <filesystem>
 #include <optional>
+#include <string>
+#include <utility>
 
 #include "engine/ecs/components/camera.h"
 #include "engine/ecs/components/character_body.h"
@@ -58,6 +60,10 @@ void Engine::EndFrame() { ecs_.Flush(); }
 
 void Engine::LoadScene(const std::filesystem::path& path) {
   scene_loader_.Load(path, ecs_, assets_, physics_world_);
+}
+
+void Engine::RegisterSceneLoader(std::string key, ComponentLoader loader) {
+  scene_loader_.Register(std::move(key), std::move(loader));
 }
 
 void Engine::SetActiveCamera(Entity camera) {

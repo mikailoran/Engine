@@ -57,6 +57,12 @@ class Window {
    */
   void SetTextInput(bool enabled);
 
+  /**
+   * @brief Captures the mouse: the cursor hides and stays in the window, and
+   * only its motion is reported. For mouse-look.
+   */
+  void SetRelativeMouse(bool enabled);
+
  private:
   // Created by SDL_CreateWindow; never null after construction.
   SDL_Window* window_{nullptr};

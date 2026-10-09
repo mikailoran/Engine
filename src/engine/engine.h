@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <optional>
+#include <string>
 
 #include "engine/bgfx_context.h"
 #include "engine/ecs/core/ecs.h"
@@ -66,6 +67,12 @@ class Engine {
    * @throws std::runtime_error If the scene or an asset it names won't load.
    */
   void LoadScene(const std::filesystem::path& path);
+
+  /**
+   * @brief Registers how scenes load a host's own component, under @p key.
+   * @pre @p key is not registered yet.
+   */
+  void RegisterSceneLoader(std::string key, ComponentLoader loader);
 
   /**
    * @brief Nominates the camera rendered and picked from. It must carry a

@@ -214,16 +214,6 @@ void LoadRigidBody(const json& data, Entity entity, Ecs& ecs,
   ecs.AddComponent(entity, rigid_body);
 }
 
-/** @brief Reads the optional positive float @p key into @p out. */
-void ReadPositive(const json& data, const char* key, float& out) {
-  if (data.contains(key)) {
-    out = data.at(key).get<float>();
-    if (out <= 0.0F) {
-      throw std::runtime_error(std::string(key) + " must be positive");
-    }
-  }
-}
-
 /**
  * @brief Adds a CharacterBody; every field is optional. Sizes in m, the slope
  * limit in degrees, "mass" in kg and "push_force" in N.

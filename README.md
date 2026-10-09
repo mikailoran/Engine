@@ -53,7 +53,11 @@ nlohmann/json and googletest. Run the tests with:
 ctest --test-dir build/Debug --output-on-failure
 ```
 
-Move the camera with **WASD** and look around by holding the **left mouse button**.
+The game starts in **play mode**, in first person: the mouse looks around,
+**WASD** walks, **Shift** sprints and **Space** jumps. **F1** switches to
+the debug tools and back: a free cursor, a fly camera (**WASD**, **Q**/**E**
+down and up, hold the **right mouse button** to look) and an inspector, where
+clicking an object selects it.
 
 ## Acknowledgements
 

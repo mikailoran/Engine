@@ -21,7 +21,7 @@ class BgfxContext {
   static constexpr std::uint32_t kResetFlags = BGFX_RESET_VSYNC;
 
   /** @brief Debug flags bgfx starts with. */
-  static constexpr std::uint32_t kDebugFlags = BGFX_DEBUG_TEXT;
+  static constexpr std::uint32_t kDebugFlags = BGFX_DEBUG_STATS;
 
   /**
    * @brief Brings up bgfx against @p surface, rendering on this thread.

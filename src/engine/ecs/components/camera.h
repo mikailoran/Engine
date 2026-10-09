@@ -26,7 +26,7 @@ struct Camera {
   float near_plane{0.1F};
 
   // Far clip distance.
-  float far_plane{100.0F};
+  float far_plane{500.0F};
 };
 
 /** @brief World-to-view matrix for a camera posed by @p transform. */
