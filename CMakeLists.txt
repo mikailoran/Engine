@@ -128,6 +128,31 @@ set_target_properties(engine_physics_system PROPERTIES
   CXX_EXTENSIONS OFF
 )
 
+# --- Assets -----------------------------------------------------------------
+# cgltf's implementation, from a file generated outside src/ so linting never
+# analyzes vendored code.
+file(CONFIGURE OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/cgltf_impl.cpp
+  CONTENT "#define CGLTF_IMPLEMENTATION\n#include <cgltf/cgltf.h>\n")
+add_library(engine_cgltf STATIC ${CMAKE_CURRENT_BINARY_DIR}/cgltf_impl.cpp)
+target_include_directories(engine_cgltf SYSTEM PUBLIC ${BGFX_DIR}/3rdparty)
+
+# glTF read into CPU-side mesh data. Needs no bgfx, so asset_tests can load
+# every asset. cgltf stays PRIVATE: its types never leave the reader.
+add_library(engine_assets STATIC
+  src/engine/resource/mesh_data.h
+  src/engine/resource/gltf_reader.h
+  src/engine/resource/gltf_reader.cpp)
+
+target_include_directories(engine_assets PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(engine_assets PUBLIC bx PRIVATE engine_cgltf)
+target_compile_options(engine_assets PRIVATE -Wall -Wextra -Wpedantic)
+
+set_target_properties(engine_assets PROPERTIES
+  CXX_STANDARD 20
+  CXX_STANDARD_REQUIRED ON
+  CXX_EXTENSIONS OFF
+)
+
 # --- Runtime layout ---------------------------------------------------------
 # Everything loaded at runtime is generated, and it is emitted here, beside the
 # executable. The app then derives its asset root from its own location
