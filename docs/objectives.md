@@ -91,24 +91,24 @@ Each milestone ends with something you can run and show.
 | M2a | **Level shell.** Rigid bodies in scene files, triangle-mesh colliders, glTF meshes through the build, mesh colliders loaded from files | A glTF shell built with the project renders, and props dropped on it rest on its mesh collider | Done |
 | M2b | **Kinematic character.** `CharacterVirtual` behind the facade and a `CharacterBody` component synced like bodies | Tests show the character standing, sliding along walls, respecting a slope limit, jumping and pushing a ball; in game, a capsule given a velocity pushes props | Done |
 | M2c | **First-person play.** Relative mouse input, the game-logic library, play and debug modes, the Blender level | M2's own goal: walk, sprint and jump around the Blender level and push props | Done |
-| M3 | **Scene authoring foundation.** glTF loaded at runtime with its materials and textures, a level as its glTF plus a scene file, a `Name` component, physics-surface assets | You walk around a textured level built in Blender from a CC0 kit; a level is its glTF plus a scene file | |
+| M3 | **Scene authoring foundation.** glTF loaded at runtime with its materials and textures, a level as its glTF plus a scene file | You walk around a textured level built in Blender from a CC0 kit; a level is its glTF plus a scene file | Done |
 | M3a | **glTF meshes.** A runtime glTF loader replacing geometryc and bgfx's `.bin`, multi-material meshes, a gather-then-submit renderer, an asset test | `game` plays as before from `.glb` files, and `asset_tests` loads every asset | Done |
 | M3b | **glTF materials and textures.** Base color factor and texture, decoded and mipmapped at load, UV-mapped shading | M3's own goal: walk around a textured level built from Kenney's Prototype Kit | Done |
-| M3c | **Names.** A `Name` component from the scene file, shown in the devtools | Selecting an entity shows its scene name | |
-| M3d | **Physics surfaces.** Surface assets referenced by colliders, with inline overrides | A crate on an "ice" surface slides visibly further | |
 | M4 | **Qt editor MVP.** Viewport, entity hierarchy, `Transform` inspector, picking, a simulate/pause toggle, scene saving | Move a crate in the editor, save, and `game` shows it there | |
 | M4a | **Qt viewport.** The `editor` executable, the engine rendering into an embedded Qt viewport, a navigable camera | The editor opens a level and you can look around it | |
-| M4b | **Select and edit.** An entity hierarchy over the ECS (by `Name`), viewport picking kept in sync with it, a `Transform` inspector | Select a crate in the viewport or the hierarchy, and move it with the inspector | |
+| M4b | **Select and edit.** A `Name` component from the scene file, an entity hierarchy over the ECS (by `Name`), viewport picking kept in sync with it, a `Transform` inspector | Select a crate in the viewport or the hierarchy, and move it with the inspector | |
 | M4c | **Simulate.** A simulate/pause toggle that steps physics in the editor | Props fall and settle while simulating, and freeze on pause | |
 | M4d | **Scene saving.** Writing the editor-owned scene file, a saver beside each component loader | M4's own goal; and load, save and load again gives an identical scene | |
-| M5 | **Physics lab.** Undo/redo, a generic inspector driven by component registration, constraints, a physics-surface library, play/stop with restore, physics debug overlays, telemetry plots, a "launch game" button | You can build a hinged door or a pendulum and tune it without touching JSON | |
+| M5 | **Physics lab.** Undo/redo, a generic inspector driven by component registration, constraints, a physics-surface library (surface assets referenced by colliders, with inline overrides), play/stop with restore, physics debug overlays, telemetry plots, a "launch game" button | You can build a hinged door or a pendulum and tune it without touching JSON | |
 
 M2, M3 and M4 are split into lettered parts, each on its own branch, so each
 part is reviewed and merged on its own. The editor deliberately comes after M2 and M3. Its features should come from
 real authoring needs, and it needs the engine API those milestones create.
 Scene saving waits for M4d for the same reason: the editor is its first
 user. Saving after simulating writes the simulated poses; restoring the
-pre-simulation state is M5's play/stop.
+pre-simulation state is M5's play/stop. `Name` and physics-surface assets
+moved out of M3 the same way: the editor's hierarchy (M4b) and surface
+library (M5) are their first users.
 
 ## Open questions
 
