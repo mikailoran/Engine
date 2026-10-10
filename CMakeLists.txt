@@ -17,11 +17,13 @@ add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>)
 # Opt-in bgfx samples; each builds only by name (e.g. example-01-cubes)
 option(ENGINE_BGFX_EXAMPLES "Define bgfx's example targets (built only on request)" OFF)
 set(BGFX_BUILD_EXAMPLES ${ENGINE_BGFX_EXAMPLES} CACHE BOOL "" FORCE)
-# example-common builds only for bgfx's own tools (geometryv, texturev); the
+# example-common builds only for bgfx's own tools (texturev); the
 # engine compiles the few helpers it uses itself (bgfx_helpers below)
 set(BGFX_BUILD_EXAMPLE_COMMON ON CACHE BOOL "" FORCE)
 # Tools stay ON for shaderc, and the wrapper ties example-common to them
 set(BGFX_BUILD_TOOLS ON CACHE BOOL "" FORCE)
+# Meshes load as glTF at runtime (ADR 0010), so geometryc is unused
+set(BGFX_BUILD_TOOLS_GEOMETRY OFF CACHE BOOL "" FORCE)
 add_subdirectory(third_party/bgfx.cmake SYSTEM)
 
 # --- ECS core ---------------------------------------------------------------
@@ -128,6 +130,31 @@ set_target_properties(engine_physics_system PROPERTIES
   CXX_EXTENSIONS OFF
 )
 
+# --- Assets -----------------------------------------------------------------
+# cgltf's implementation, from a file generated outside src/ so linting never
+# analyzes vendored code.
+file(CONFIGURE OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/cgltf_impl.cpp
+  CONTENT "#define CGLTF_IMPLEMENTATION\n#include <cgltf/cgltf.h>\n")
+add_library(engine_cgltf STATIC ${CMAKE_CURRENT_BINARY_DIR}/cgltf_impl.cpp)
+target_include_directories(engine_cgltf SYSTEM PUBLIC ${BGFX_DIR}/3rdparty)
+
+# glTF read into CPU-side mesh data. Needs no bgfx, so asset_tests can load
+# every asset. cgltf stays PRIVATE: its types never leave the reader.
+add_library(engine_assets STATIC
+  src/engine/resource/cpu_mesh.h
+  src/engine/resource/gltf_reader.h
+  src/engine/resource/gltf_reader.cpp)
+
+target_include_directories(engine_assets PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(engine_assets PUBLIC bx PRIVATE engine_cgltf)
+target_compile_options(engine_assets PRIVATE -Wall -Wextra -Wpedantic)
+
+set_target_properties(engine_assets PROPERTIES
+  CXX_STANDARD 20
+  CXX_STANDARD_REQUIRED ON
+  CXX_EXTENSIONS OFF
+)
+
 # --- Runtime layout ---------------------------------------------------------
 # Everything loaded at runtime is generated, and it is emitted here, beside the
 # executable. The app then derives its asset root from its own location
@@ -186,8 +213,9 @@ add_library(engine_runtime STATIC
   src/engine/ecs/systems/lighting_system.cpp
   src/engine/ecs/systems/render_system.h
   src/engine/ecs/systems/render_system.cpp
+  src/engine/resource/gpu_mesh.h
+  src/engine/resource/gpu_mesh.cpp
   src/engine/resource/mesh_handle.h
-  src/engine/resource/texture_handle.h
   src/engine/resource/asset_registry.h
   src/engine/resource/asset_registry.cpp
   src/engine/platform/asset_root.h
@@ -209,7 +237,8 @@ add_library(engine_runtime STATIC
 # bgfx_helpers publicly carries bgfx, bx and bimg with their include
 # directories, which engine headers need.
 target_link_libraries(engine_runtime PUBLIC bgfx_helpers ecs_core engine_math
-  engine_physics engine_physics_system nlohmann_json::nlohmann_json)
+  engine_physics engine_physics_system engine_assets
+  nlohmann_json::nlohmann_json)
 
 target_compile_options(engine_runtime PRIVATE -Wall -Wextra -Wpedantic)
 
@@ -310,67 +339,35 @@ bgfx_compile_shaders(
 add_custom_target(shaders DEPENDS ${VS_OUTPUTS} ${FS_OUTPUTS})
 add_dependencies(game shaders)
 
-# --- Meshes -----------------------------------------------------------------
-# Unlike bgfx_compile_shaders, bgfx_compile_geometry emits a bare custom command
-# with no mkdir, and geometryc will not create the directory either -- so create
-# it at configure time. The build tree persists from configure to build, so once
-# is enough.
-set(ENGINE_MESH_DIR ${ENGINE_RUNTIME_DIR}/assets/meshes)
-file(MAKE_DIRECTORY ${ENGINE_MESH_DIR})
-
-# Mesh sources to compile, .obj or glTF; each becomes <base name>.bin
-set(ENGINE_MESHES
-  plane.obj
-  cube.obj
-  sphere.obj
-  cylinder.obj
-  cone.obj
-  torus.obj
-  bunny.obj
-  level01.glb
+# --- Meshes and levels ------------------------------------------------------
+# glTF loads as authored (ADR 0010), so the files are only copied beside the
+# executable; edits recopy on build.
+set(ENGINE_GLTF_ASSETS
+  meshes/plane.glb
+  meshes/cube.glb
+  meshes/sphere.glb
+  meshes/cylinder.glb
+  meshes/cone.glb
+  meshes/torus.glb
+  meshes/bunny.glb
+  levels/level01.glb
 )
 
-# One geometryc command per mesh. RH_UP_Y keeps the source's right-handed,
-# +Y up frame (the engine's, glTF's and .obj's), so nothing is mirrored
-set(ENGINE_MESH_OUTPUTS "")
-foreach(mesh_file IN LISTS ENGINE_MESHES)
-  get_filename_component(mesh ${mesh_file} NAME_WE)
-  bgfx_compile_geometry(
-    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/meshes/${mesh_file}
-    OUTPUT ${ENGINE_MESH_DIR}/${mesh}.bin
-    PACKNORMAL 1
-    RH_UP_Y
+set(ENGINE_GLTF_OUTPUTS "")
+foreach(asset IN LISTS ENGINE_GLTF_ASSETS)
+  set(asset_src ${CMAKE_CURRENT_SOURCE_DIR}/assets/${asset})
+  set(asset_out ${ENGINE_RUNTIME_DIR}/assets/${asset})
+  get_filename_component(asset_dir ${asset_out} DIRECTORY)
+  add_custom_command(
+    OUTPUT ${asset_out}
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${asset_dir}
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${asset_src} ${asset_out}
+    MAIN_DEPENDENCY ${asset_src}
   )
-  list(APPEND ENGINE_MESH_OUTPUTS ${ENGINE_MESH_DIR}/${mesh}.bin)
+  list(APPEND ENGINE_GLTF_OUTPUTS ${asset_out})
 endforeach()
-add_custom_target(meshes DEPENDS ${ENGINE_MESH_OUTPUTS})
+add_custom_target(meshes DEPENDS ${ENGINE_GLTF_OUTPUTS})
 add_dependencies(game meshes)
-
-# --- Textures ---------------------------------------------------------------
-# bgfx_compile_texture is a bare custom command like geometry: create the
-# output directory at configure time.
-set(ENGINE_TEXTURE_DIR ${ENGINE_RUNTIME_DIR}/assets/textures)
-file(MAKE_DIRECTORY ${ENGINE_TEXTURE_DIR})
-
-# Base names of the textures to compile
-set(ENGINE_TEXTURES
-  debug_grid
-)
-
-# One texturec command per texture, with a full mip chain. RGBA8 because
-# Vulkan cannot sample RGB8 as sRGB, which bgfx treats as fatal.
-set(ENGINE_TEXTURE_OUTPUTS "")
-foreach(texture IN LISTS ENGINE_TEXTURES)
-  bgfx_compile_texture(
-    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/textures/${texture}.png
-    OUTPUT ${ENGINE_TEXTURE_DIR}/${texture}.dds
-    FORMAT RGBA8
-    MIPS
-  )
-  list(APPEND ENGINE_TEXTURE_OUTPUTS ${ENGINE_TEXTURE_DIR}/${texture}.dds)
-endforeach()
-add_custom_target(textures DEPENDS ${ENGINE_TEXTURE_OUTPUTS})
-add_dependencies(game textures)
 
 # --- Scenes -----------------------------------------------------------------
 # Scene files are copied beside the executable; edits recopy on build.

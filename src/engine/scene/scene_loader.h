@@ -42,7 +42,7 @@ class SceneLoader {
    *
    * @param path Scene file, relative to the asset root.
    * @param ecs World to create the entities in.
-   * @param assets Registry to load the scene's meshes and textures through.
+   * @param assets Registry to load the scene's meshes through.
    * @param physics World to build the scene's collision meshes in.
    * @throws std::runtime_error On an unreadable file, malformed JSON, a wrong
    *         version, an unknown key or a missing field.

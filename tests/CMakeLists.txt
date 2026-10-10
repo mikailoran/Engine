@@ -53,7 +53,24 @@ set_target_properties(physics_tests PROPERTIES
   CXX_EXTENSIONS OFF
 )
 
+add_executable(asset_tests
+  assets/gltf_reader_test.cpp)
+
+target_link_libraries(asset_tests PRIVATE engine_assets GTest::gtest_main)
+# Reads the source tree's assets, not the copies beside the executable
+target_compile_definitions(asset_tests PRIVATE
+  ENGINE_ASSET_DIR="${PROJECT_SOURCE_DIR}/assets")
+
+target_compile_options(asset_tests PRIVATE -Wall -Wextra -Wpedantic)
+
+set_target_properties(asset_tests PROPERTIES
+  CXX_STANDARD 20
+  CXX_STANDARD_REQUIRED ON
+  CXX_EXTENSIONS OFF
+)
+
 include(GoogleTest)
 gtest_discover_tests(ecs_tests)
 gtest_discover_tests(math_tests)
 gtest_discover_tests(physics_tests)
+gtest_discover_tests(asset_tests)

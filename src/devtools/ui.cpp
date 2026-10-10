@@ -29,7 +29,6 @@
 #include "engine/platform/screen.h"
 #include "engine/resource/asset_registry.h"
 #include "engine/resource/mesh_handle.h"
-#include "engine/resource/texture_handle.h"
 
 using engine::AssetRegistry;
 using engine::BoxColliderAround;
@@ -59,7 +58,7 @@ namespace {
 /** @brief Spawns a bunny. @return The new entity. */
 auto SpawnEntity(Ecs& ecs, AssetRegistry& assets) -> Entity {
   // TODO: remove paths
-  const MeshHandle mesh_handle = assets.LoadMesh("assets/meshes/bunny.bin");
+  const MeshHandle mesh_handle = assets.LoadMesh("assets/meshes/bunny.glb");
   const auto entity = ecs.CreateEntity();
   ecs.AddComponent(entity, Transform{.position = {0.0F, 3.0F, 0.0F}});
   ecs.AddComponent(entity, RigidBody{});
@@ -206,11 +205,6 @@ auto DrawInspector(Ecs& ecs, AssetRegistry& assets) -> void {
     DrawComponent<Renderable>(
         ecs, entity, "Renderable", [](Renderable& renderable) -> void {
           ImGui::ColorEdit3("Color", renderable.color.data());
-          if (IsValid(renderable.texture)) {
-            ImGui::DragFloat("Texture Scale", &renderable.texture_scale, 0.1F,
-                             0.01F, 10.0F, "%.2f",
-                             ImGuiSliderFlags_AlwaysClamp);
-          }
         });
 
     // After the sections, so a new component's header appears next frame
@@ -225,7 +219,7 @@ auto DrawInspector(Ecs& ecs, AssetRegistry& assets) -> void {
       // TODO: Should the renderer assert on no mesh?
       AddComponentMenuItem<Renderable>(
           ecs, entity, "Renderable", [&assets]() -> Renderable {
-            return {.mesh_handle = assets.LoadMesh("assets/meshes/cube.bin")};
+            return {.mesh_handle = assets.LoadMesh("assets/meshes/cube.glb")};
           });
       ImGui::EndPopup();
     }

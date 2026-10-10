@@ -96,7 +96,7 @@ class Engine {
   /** @brief The ECS world, for hosts and their tools to read and edit. */
   auto World() -> Ecs&;
 
-  /** @brief The registry every mesh and texture is loaded through. */
+  /** @brief The registry every mesh is loaded through. */
   auto Assets() -> AssetRegistry&;
 
  private:

@@ -6,16 +6,16 @@
 #include <cstdint>
 
 #include "engine/resource/mesh_handle.h"
-#include "engine/resource/texture_handle.h"
 
 namespace engine {
 
 /**
- * @brief Everything needed to issue one draw call for an entity.
+ * @brief Draws its entity's mesh at the entity's Transform, one draw per
+ * submesh. Read by RenderSystem, picking and debug draw.
  */
 struct Renderable {
-  /// Non owning handle for the Rendrable's mesh. Used with AssetRegistry
-  MeshHandle mesh_handle{};
+  /// The mesh to draw, owned by AssetRegistry and shared with other entities.
+  MeshHandle mesh_handle;
 
   // Shader program. An invalid handle uses RenderSystem's default.
   // Not owned by the component.
@@ -27,13 +27,8 @@ struct Renderable {
   // Which bgfx view to submit into.
   bgfx::ViewId view{0};
 
-  std::array<float, 4> color{0.8F, 0.8F, 0.8F, 1.0F};
-
-  /// Non owning albedo texture, tinted by color. Invalid means untextured.
-  TextureHandle texture{};
-
-  /// World units covered by one repeat of the texture. Must be positive.
-  float texture_scale{1.0F};
+  /// Linear RGBA tint. White leaves the mesh's own colors unchanged.
+  std::array<float, 4> color{1.0F, 1.0F, 1.0F, 1.0F};
 };
 
 }  // namespace engine
