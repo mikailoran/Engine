@@ -1,6 +1,5 @@
 #include "engine/scene/picking.h"
 
-#include <bgfx_utils.h>
 #include <bx/bounds.h>
 #include <bx/math.h>
 
@@ -15,6 +14,8 @@
 #include "engine/ecs/core/types.h"
 #include "engine/platform/screen.h"
 #include "engine/resource/asset_registry.h"
+#include "engine/resource/cpu_mesh.h"
+#include "engine/resource/gpu_mesh.h"
 
 namespace engine {
 
@@ -47,10 +48,10 @@ auto PickEntity(Ecs& ecs, const AssetRegistry& assets, const bx::Ray& ray)
         local_ray.pos = bx::mulH(ray.pos, inv_model.data());
         local_ray.dir = bx::normalize(bx::mulXyz0(ray.dir, inv_model.data()));
 
-        const Mesh* mesh = assets.GetMesh(renderable.mesh_handle);
-        for (const Group& group : mesh->m_groups) {
+        const GpuMesh& mesh = assets.GetMesh(renderable.mesh_handle);
+        for (const Submesh& submesh : mesh.submeshes) {
           bx::Hit hit;
-          if (!bx::intersect(local_ray, group.m_aabb, &hit)) {
+          if (!bx::intersect(local_ray, submesh.bounds, &hit)) {
             continue;
           }
 

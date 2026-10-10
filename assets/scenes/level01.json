@@ -34,7 +34,7 @@
       "components": {
         "transform": {},
         "renderable": {
-          "mesh": "assets/meshes/level01.bin",
+          "mesh": "assets/levels/level01.glb",
           "color": [
             0.85,
             0.85,
@@ -45,7 +45,7 @@
         },
         "collider": {
           "shape": "mesh",
-          "mesh": "assets/meshes/level01.bin"
+          "mesh": "assets/levels/level01.glb"
         }
       }
     },
@@ -65,7 +65,7 @@
           ]
         },
         "renderable": {
-          "mesh": "assets/meshes/sphere.bin",
+          "mesh": "assets/meshes/sphere.glb",
           "color": [
             0.8,
             0.25,
@@ -95,7 +95,7 @@
           ]
         },
         "renderable": {
-          "mesh": "assets/meshes/sphere.bin",
+          "mesh": "assets/meshes/sphere.glb",
           "color": [
             0.25,
             0.7,
@@ -125,7 +125,7 @@
           ]
         },
         "renderable": {
-          "mesh": "assets/meshes/sphere.bin",
+          "mesh": "assets/meshes/sphere.glb",
           "color": [
             0.3,
             0.45,
@@ -155,7 +155,7 @@
           ]
         },
         "renderable": {
-          "mesh": "assets/meshes/sphere.bin",
+          "mesh": "assets/meshes/sphere.glb",
           "color": [
             0.6,
             0.3,
@@ -180,7 +180,7 @@
           ]
         },
         "renderable": {
-          "mesh": "assets/meshes/cube.bin",
+          "mesh": "assets/meshes/cube.glb",
           "color": [
             0.8,
             0.45,
@@ -208,7 +208,7 @@
           ]
         },
         "renderable": {
-          "mesh": "assets/meshes/cube.bin",
+          "mesh": "assets/meshes/cube.glb",
           "color": [
             0.9,
             0.6,

@@ -15,7 +15,7 @@ namespace engine {
  */
 struct Renderable {
   /// Non owning handle for the Rendrable's mesh. Used with AssetRegistry
-  MeshHandle mesh_handle{};
+  MeshHandle mesh_handle;
 
   // Shader program. An invalid handle uses RenderSystem's default.
   // Not owned by the component.

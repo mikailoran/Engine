@@ -164,7 +164,7 @@ saves, then starts `game --scene <path>`.
   PNG/JPEG textures with bimg and generates mips at load. There is no import
   step and no mesh format of our own. `geometryc` and bgfx's `.bin` are gone.
 - **The loader is split in two.** glTF → `MeshData` runs on the CPU with no
-  bgfx, so collision meshes come from the same parse and a test can load every
+  bgfx, so collision meshes come from the same reader and a test can load every
   asset. `MeshData` → GPU `Mesh` uploads the buffers. cgltf types never leave
   the reader.
 - **Two files per level.** The `.glb` is re-exported from Blender; the scene

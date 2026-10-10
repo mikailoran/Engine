@@ -25,7 +25,7 @@ format of our own.
 
 - The vendored `cgltf` reads the file; its types stay inside the reader.
 - The loader is split: glTF → `MeshData` on the CPU (no bgfx), then
-  `MeshData` → GPU `Mesh`. Collision meshes come from the same parse, and
+  `MeshData` → GPU `Mesh`. Collision meshes come from the same reader, and
   `asset_tests` loads every asset so a bad one fails `ctest`, not the game.
 - Shaders take glTF's attributes as authored (float normals, `TEXCOORD_0`),
   uploaded as separate vertex streams with 32-bit indices.

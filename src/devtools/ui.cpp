@@ -59,7 +59,7 @@ namespace {
 /** @brief Spawns a bunny. @return The new entity. */
 auto SpawnEntity(Ecs& ecs, AssetRegistry& assets) -> Entity {
   // TODO: remove paths
-  const MeshHandle mesh_handle = assets.LoadMesh("assets/meshes/bunny.bin");
+  const MeshHandle mesh_handle = assets.LoadMesh("assets/meshes/bunny.glb");
   const auto entity = ecs.CreateEntity();
   ecs.AddComponent(entity, Transform{.position = {0.0F, 3.0F, 0.0F}});
   ecs.AddComponent(entity, RigidBody{});
@@ -225,7 +225,7 @@ auto DrawInspector(Ecs& ecs, AssetRegistry& assets) -> void {
       // TODO: Should the renderer assert on no mesh?
       AddComponentMenuItem<Renderable>(
           ecs, entity, "Renderable", [&assets]() -> Renderable {
-            return {.mesh_handle = assets.LoadMesh("assets/meshes/cube.bin")};
+            return {.mesh_handle = assets.LoadMesh("assets/meshes/cube.glb")};
           });
       ImGui::EndPopup();
     }

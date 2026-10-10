@@ -10,6 +10,7 @@
 #include <format>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 #include "engine/ecs/components/camera.h"
 #include "engine/ecs/components/renderable.h"
@@ -18,6 +19,8 @@
 #include "engine/ecs/core/types.h"
 #include "engine/platform/frame_context.h"
 #include "engine/resource/asset_registry.h"
+#include "engine/resource/cpu_mesh.h"
+#include "engine/resource/gpu_mesh.h"
 #include "engine/resource/texture_handle.h"
 
 namespace engine {
@@ -44,6 +47,30 @@ auto DrawDebugOverlay(const FrameContext& ctx) -> void {
   const float fps = ctx.dt > 0.0F ? 1.0F / ctx.dt : 0.0F;
   DebugText(0, 1, 0x0f,
             std::format("Frame {:.2f} ms ({:.0f} fps)", ctx.dt * 1000.0F, fps));
+}
+
+/** @brief One submesh to draw this frame. */
+struct DrawItem {
+  std::array<float, 16> model{};
+  Renderable renderable;
+  std::uint32_t submesh{0};
+};
+
+/** @brief One draw item per submesh of every visible Renderable. */
+auto GatherDraws(Ecs& ecs, const AssetRegistry& assets)
+    -> std::vector<DrawItem> {
+  std::vector<DrawItem> draws;
+  ecs.View<Transform, Renderable>().ForEach(
+      [&draws, &assets](Entity /*entity*/, const Transform& transform,
+                        const Renderable& renderable) -> void {
+        const auto model = ModelMatrix(transform);
+        const GpuMesh& mesh = assets.GetMesh(renderable.mesh_handle);
+        for (std::uint32_t i = 0; i < mesh.submeshes.size(); ++i) {
+          draws.push_back(
+              {.model = model, .renderable = renderable, .submesh = i});
+        }
+      });
+  return draws;
 }
 
 /** @brief Creates the 1x1 opaque white texture bound for untextured draws. */
@@ -103,30 +130,33 @@ void RenderSystem::Update(Ecs& ecs, const AssetRegistry& assets,
                       static_cast<uint16_t>(ctx.height));
   }
 
-  ecs.View<Transform, Renderable>().ForEach(
-      [this, &assets](Entity /*entity*/, const Transform& transform,
-                      const Renderable& renderable) -> void {
-        const auto mtx = ModelMatrix(transform);
+  // Gather first, then submit: instancing will batch between the two
+  for (const DrawItem& draw : GatherDraws(ecs, assets)) {
+    const Renderable& renderable = draw.renderable;
+    const GpuMesh& mesh = assets.GetMesh(renderable.mesh_handle);
+    const Submesh& submesh = mesh.submeshes.at(draw.submesh);
 
-        const auto program = bgfx::isValid(renderable.program)
-                                 ? renderable.program
-                                 : default_program_.Get();
-        const auto* mesh = assets.GetMesh(renderable.mesh_handle);
+    const auto program = bgfx::isValid(renderable.program)
+                             ? renderable.program
+                             : default_program_.Get();
+    const auto texture = IsValid(renderable.texture)
+                             ? assets.GetTexture(renderable.texture)
+                             : default_texture_.Get();
+    const std::array<float, 4> tex_params{1.0F / renderable.texture_scale, 0.0F,
+                                          0.0F, 0.0F};
 
-        const auto texture = IsValid(renderable.texture)
-                                 ? assets.GetTexture(renderable.texture)
-                                 : default_texture_.Get();
-        const std::array<float, 4> tex_params{1.0F / renderable.texture_scale,
-                                              0.0F, 0.0F, 0.0F};
-
-        // meshSubmit only discards state after its last group, so the color and
-        // texture hold for every group of the mesh.
-        bgfx::setUniform(u_color_.Get(), renderable.color.data());
-        bgfx::setUniform(u_tex_params_.Get(), tex_params.data());
-        bgfx::setTexture(0, s_albedo_.Get(), texture);
-        meshSubmit(mesh, renderable.view, program, mtx.data(),
-                   renderable.state);
-      });
+    bgfx::setTransform(draw.model.data());
+    bgfx::setVertexBuffer(0, mesh.positions.Get());
+    bgfx::setVertexBuffer(1, mesh.normals.Get());
+    bgfx::setVertexBuffer(2, mesh.uvs.Get());
+    bgfx::setIndexBuffer(mesh.indices.Get(), submesh.first_index,
+                         submesh.index_count);
+    bgfx::setUniform(u_color_.Get(), renderable.color.data());
+    bgfx::setUniform(u_tex_params_.Get(), tex_params.data());
+    bgfx::setTexture(0, s_albedo_.Get(), texture);
+    bgfx::setState(renderable.state);
+    bgfx::submit(renderable.view, program);
+  }
 
   bgfx::frame();
 }

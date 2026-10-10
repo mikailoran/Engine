@@ -45,7 +45,7 @@
           ]
         },
         "renderable": {
-          "mesh": "assets/meshes/cube.bin",
+          "mesh": "assets/meshes/cube.glb",
           "color": [
             0.85,
             0.85,
@@ -73,7 +73,7 @@
           ]
         },
         "renderable": {
-          "mesh": "assets/meshes/cube.bin",
+          "mesh": "assets/meshes/cube.glb",
           "color": [
             1,
             0.97,
@@ -101,7 +101,7 @@
           ]
         },
         "renderable": {
-          "mesh": "assets/meshes/cube.bin",
+          "mesh": "assets/meshes/cube.glb",
           "color": [
             1,
             0.97,
@@ -129,7 +129,7 @@
           ]
         },
         "renderable": {
-          "mesh": "assets/meshes/cube.bin",
+          "mesh": "assets/meshes/cube.glb",
           "color": [
             0.9,
             0.93,
@@ -157,7 +157,7 @@
           ]
         },
         "renderable": {
-          "mesh": "assets/meshes/cube.bin",
+          "mesh": "assets/meshes/cube.glb",
           "color": [
             0.9,
             0.93,
@@ -185,7 +185,7 @@
           ]
         },
         "renderable": {
-          "mesh": "assets/meshes/cylinder.bin",
+          "mesh": "assets/meshes/cylinder.glb",
           "color": [
             0.7,
             0.7,
@@ -213,7 +213,7 @@
           ]
         },
         "renderable": {
-          "mesh": "assets/meshes/cylinder.bin",
+          "mesh": "assets/meshes/cylinder.glb",
           "color": [
             0.7,
             0.7,
@@ -240,7 +240,7 @@
           ]
         },
         "renderable": {
-          "mesh": "assets/meshes/cylinder.bin",
+          "mesh": "assets/meshes/cylinder.glb",
           "color": [
             0.7,
             0.7,
@@ -267,7 +267,7 @@
           ]
         },
         "renderable": {
-          "mesh": "assets/meshes/cylinder.bin",
+          "mesh": "assets/meshes/cylinder.glb",
           "color": [
             0.7,
             0.7,
@@ -289,7 +289,7 @@
           ]
         },
         "renderable": {
-          "mesh": "assets/meshes/cube.bin",
+          "mesh": "assets/meshes/cube.glb",
           "color": [
             0.8,
             0.45,
@@ -317,7 +317,7 @@
           ]
         },
         "renderable": {
-          "mesh": "assets/meshes/cube.bin",
+          "mesh": "assets/meshes/cube.glb",
           "color": [
             0.9,
             0.6,
@@ -350,7 +350,7 @@
           ]
         },
         "renderable": {
-          "mesh": "assets/meshes/cube.bin",
+          "mesh": "assets/meshes/cube.glb",
           "color": [
             0.3,
             0.45,
@@ -383,7 +383,7 @@
           ]
         },
         "renderable": {
-          "mesh": "assets/meshes/cube.bin",
+          "mesh": "assets/meshes/cube.glb",
           "color": [
             0.55,
             0.4,
@@ -405,7 +405,7 @@
           ]
         },
         "renderable": {
-          "mesh": "assets/meshes/sphere.bin",
+          "mesh": "assets/meshes/sphere.glb",
           "color": [
             0.8,
             0.25,
@@ -435,7 +435,7 @@
           ]
         },
         "renderable": {
-          "mesh": "assets/meshes/sphere.bin",
+          "mesh": "assets/meshes/sphere.glb",
           "color": [
             0.25,
             0.7,
@@ -467,7 +467,7 @@
           ]
         },
         "renderable": {
-          "mesh": "assets/meshes/sphere.bin",
+          "mesh": "assets/meshes/sphere.glb",
           "color": [
             0.6,
             0.3,
@@ -497,7 +497,7 @@
           ]
         },
         "renderable": {
-          "mesh": "assets/meshes/cone.bin",
+          "mesh": "assets/meshes/cone.glb",
           "color": [
             0.2,
             0.7,
@@ -529,7 +529,7 @@
           ]
         },
         "renderable": {
-          "mesh": "assets/meshes/torus.bin",
+          "mesh": "assets/meshes/torus.glb",
           "color": [
             0.9,
             0.8,

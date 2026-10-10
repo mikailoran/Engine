@@ -7,7 +7,7 @@ namespace engine {
 /**
  * @brief Sets the directory every asset path is resolved against.
  *
- * bgfx_utils (loadProgram, meshLoad, loadTexture) opens files through
+ * bgfx_utils (loadProgram, loadTexture) opens files through
  * entry::getFileReader, which bgfx_file_access.cpp defines in place of bgfx's
  * entry layer; it prepends this root to each path.
  *

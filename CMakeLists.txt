@@ -22,6 +22,8 @@ set(BGFX_BUILD_EXAMPLES ${ENGINE_BGFX_EXAMPLES} CACHE BOOL "" FORCE)
 set(BGFX_BUILD_EXAMPLE_COMMON ON CACHE BOOL "" FORCE)
 # Tools stay ON for shaderc, and the wrapper ties example-common to them
 set(BGFX_BUILD_TOOLS ON CACHE BOOL "" FORCE)
+# Meshes load as glTF at runtime (ADR 0010), so geometryc is unused
+set(BGFX_BUILD_TOOLS_GEOMETRY OFF CACHE BOOL "" FORCE)
 add_subdirectory(third_party/bgfx.cmake SYSTEM)
 
 # --- ECS core ---------------------------------------------------------------
@@ -211,6 +213,8 @@ add_library(engine_runtime STATIC
   src/engine/ecs/systems/lighting_system.cpp
   src/engine/ecs/systems/render_system.h
   src/engine/ecs/systems/render_system.cpp
+  src/engine/resource/gpu_mesh.h
+  src/engine/resource/gpu_mesh.cpp
   src/engine/resource/mesh_handle.h
   src/engine/resource/texture_handle.h
   src/engine/resource/asset_registry.h
@@ -234,7 +238,8 @@ add_library(engine_runtime STATIC
 # bgfx_helpers publicly carries bgfx, bx and bimg with their include
 # directories, which engine headers need.
 target_link_libraries(engine_runtime PUBLIC bgfx_helpers ecs_core engine_math
-  engine_physics engine_physics_system nlohmann_json::nlohmann_json)
+  engine_physics engine_physics_system engine_assets
+  nlohmann_json::nlohmann_json)
 
 target_compile_options(engine_runtime PRIVATE -Wall -Wextra -Wpedantic)
 
@@ -335,40 +340,34 @@ bgfx_compile_shaders(
 add_custom_target(shaders DEPENDS ${VS_OUTPUTS} ${FS_OUTPUTS})
 add_dependencies(game shaders)
 
-# --- Meshes -----------------------------------------------------------------
-# Unlike bgfx_compile_shaders, bgfx_compile_geometry emits a bare custom command
-# with no mkdir, and geometryc will not create the directory either -- so create
-# it at configure time. The build tree persists from configure to build, so once
-# is enough.
-set(ENGINE_MESH_DIR ${ENGINE_RUNTIME_DIR}/assets/meshes)
-file(MAKE_DIRECTORY ${ENGINE_MESH_DIR})
-
-# Mesh sources to compile, .obj or glTF; each becomes <base name>.bin
-set(ENGINE_MESHES
-  plane.obj
-  cube.obj
-  sphere.obj
-  cylinder.obj
-  cone.obj
-  torus.obj
-  bunny.obj
-  level01.glb
+# --- Meshes and levels ------------------------------------------------------
+# glTF loads as authored (ADR 0010), so the files are only copied beside the
+# executable; edits recopy on build.
+set(ENGINE_GLTF_ASSETS
+  meshes/plane.glb
+  meshes/cube.glb
+  meshes/sphere.glb
+  meshes/cylinder.glb
+  meshes/cone.glb
+  meshes/torus.glb
+  meshes/bunny.glb
+  levels/level01.glb
 )
 
-# One geometryc command per mesh. RH_UP_Y keeps the source's right-handed,
-# +Y up frame (the engine's, glTF's and .obj's), so nothing is mirrored
-set(ENGINE_MESH_OUTPUTS "")
-foreach(mesh_file IN LISTS ENGINE_MESHES)
-  get_filename_component(mesh ${mesh_file} NAME_WE)
-  bgfx_compile_geometry(
-    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/meshes/${mesh_file}
-    OUTPUT ${ENGINE_MESH_DIR}/${mesh}.bin
-    PACKNORMAL 1
-    RH_UP_Y
+set(ENGINE_GLTF_OUTPUTS "")
+foreach(asset IN LISTS ENGINE_GLTF_ASSETS)
+  set(asset_src ${CMAKE_CURRENT_SOURCE_DIR}/assets/${asset})
+  set(asset_out ${ENGINE_RUNTIME_DIR}/assets/${asset})
+  get_filename_component(asset_dir ${asset_out} DIRECTORY)
+  add_custom_command(
+    OUTPUT ${asset_out}
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${asset_dir}
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${asset_src} ${asset_out}
+    MAIN_DEPENDENCY ${asset_src}
   )
-  list(APPEND ENGINE_MESH_OUTPUTS ${ENGINE_MESH_DIR}/${mesh}.bin)
+  list(APPEND ENGINE_GLTF_OUTPUTS ${asset_out})
 endforeach()
-add_custom_target(meshes DEPENDS ${ENGINE_MESH_OUTPUTS})
+add_custom_target(meshes DEPENDS ${ENGINE_GLTF_OUTPUTS})
 add_dependencies(game meshes)
 
 # --- Textures ---------------------------------------------------------------
