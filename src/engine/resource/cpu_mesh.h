@@ -11,7 +11,7 @@
 namespace engine {
 
 /** @brief A run of a mesh's indices that shares one material. */
-struct SubmeshData {
+struct Submesh {
   std::uint32_t first_index{0};
   std::uint32_t index_count{0};
   /// The glTF material's index; empty for primitives without one.
@@ -21,10 +21,10 @@ struct SubmeshData {
 };
 
 /**
- * @brief A model's geometry on the CPU, one stream per attribute, ready to
- * upload or to build a collision mesh from.
+ * @brief A mesh's geometry in RAM, one array per vertex attribute. Needs no
+ * bgfx; GpuMesh uploads it, and collision meshes are built from it.
  */
-struct MeshData {
+struct CpuMesh {
   std::vector<bx::Vec3> positions;
   /// Unit length, one per position.
   std::vector<bx::Vec3> normals;
@@ -33,7 +33,7 @@ struct MeshData {
   /// Three per triangle, counter-clockwise seen from the front.
   std::vector<std::uint32_t> indices;
   /// Cover indices exactly, in order, one per material.
-  std::vector<SubmeshData> submeshes;
+  std::vector<Submesh> submeshes;
   /// Box around every position.
   bx::Aabb bounds{.min = bx::InitZero, .max = bx::InitZero};
 };

@@ -17,7 +17,7 @@
 #include <utility>
 #include <vector>
 
-#include "engine/resource/mesh_data.h"
+#include "engine/resource/cpu_mesh.h"
 
 namespace engine {
 
@@ -39,7 +39,7 @@ struct MaterialBucket {
 
 /** @brief Vertices shared by all materials, plus each material's indices. */
 struct MeshBuilder {
-  MeshData mesh;
+  CpuMesh mesh;
   /// Index 0 holds primitives without a material, i + 1 material i.
   std::vector<MaterialBucket> buckets;
 };
@@ -122,7 +122,7 @@ void AppendPrimitive(const cgltf_data& data, const cgltf_primitive& primitive,
   bx::mtxInverse(inverse.data(), world.data());
   bx::mtxTranspose(normal_mtx.data(), inverse.data());
 
-  MeshData& mesh = builder.mesh;
+  CpuMesh& mesh = builder.mesh;
   const auto base = static_cast<std::uint32_t>(mesh.positions.size());
   const auto positions = UnpackFloats(*position, 3, "POSITION");
   const auto normals = UnpackFloats(*normal, 3, "NORMAL");
@@ -211,12 +211,12 @@ auto BoundsOf(const std::vector<bx::Vec3>& positions,
 
 /** @brief Concatenates the buckets into indices and one submesh each. */
 void CutSubmeshes(MeshBuilder& builder) {
-  MeshData& mesh = builder.mesh;
+  CpuMesh& mesh = builder.mesh;
   for (const MaterialBucket& bucket : builder.buckets) {
     if (bucket.indices.empty()) {
       continue;
     }
-    const SubmeshData submesh{
+    const Submesh submesh{
         .first_index = static_cast<std::uint32_t>(mesh.indices.size()),
         .index_count = static_cast<std::uint32_t>(bucket.indices.size()),
         .material = bucket.material,
@@ -229,7 +229,7 @@ void CutSubmeshes(MeshBuilder& builder) {
 }
 
 /** @brief Builds the mesh from the default scene, else the first one. */
-auto BuildMesh(const cgltf_data& data) -> MeshData {
+auto BuildMesh(const cgltf_data& data) -> CpuMesh {
   const cgltf_scene* scene = data.scene;
   if (scene == nullptr && data.scenes_count > 0) {
     scene = data.scenes;
@@ -262,7 +262,7 @@ auto BuildMesh(const cgltf_data& data) -> MeshData {
 
 }  // namespace
 
-auto ReadGltf(const std::filesystem::path& path) -> MeshData {
+auto ReadGltf(const std::filesystem::path& path) -> CpuMesh {
   // Tag every error with the file
   try {
     const CgltfData data = Parse(path);

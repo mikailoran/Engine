@@ -12,7 +12,7 @@
 #include <string>
 #include <vector>
 
-#include "engine/resource/mesh_data.h"
+#include "engine/resource/cpu_mesh.h"
 
 namespace engine {
 
@@ -31,8 +31,8 @@ auto GltfAssets() -> std::vector<std::filesystem::path> {
   return paths;
 }
 
-/** @brief Checks the invariants MeshData documents. */
-void ExpectWellFormed(const MeshData& mesh) {
+/** @brief Checks the invariants CpuMesh documents. */
+void ExpectWellFormed(const CpuMesh& mesh) {
   ASSERT_FALSE(mesh.indices.empty());
   EXPECT_EQ(mesh.indices.size() % 3, 0U);
   EXPECT_EQ(mesh.normals.size(), mesh.positions.size());
@@ -43,7 +43,7 @@ void ExpectWellFormed(const MeshData& mesh) {
 
   // Submeshes tile the indices in order
   std::size_t next = 0;
-  for (const SubmeshData& submesh : mesh.submeshes) {
+  for (const Submesh& submesh : mesh.submeshes) {
     EXPECT_EQ(submesh.first_index, next);
     EXPECT_GT(submesh.index_count, 0U);
     next = submesh.first_index + submesh.index_count;
@@ -57,7 +57,7 @@ TEST(GltfReader, EveryAssetLoads) {
 
   for (const auto& path : paths) {
     SCOPED_TRACE(path.string());
-    const MeshData mesh = ReadGltf(path);
+    const CpuMesh mesh = ReadGltf(path);
     ExpectWellFormed(mesh);
   }
 }

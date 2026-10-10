@@ -2,7 +2,7 @@
 
 #include <filesystem>
 
-#include "engine/resource/mesh_data.h"
+#include "engine/resource/cpu_mesh.h"
 
 namespace engine {
 
@@ -15,6 +15,6 @@ namespace engine {
  *         uses something unsupported: a required extension, non-triangle
  *         primitives, or primitives without normals.
  */
-auto ReadGltf(const std::filesystem::path& path) -> MeshData;
+auto ReadGltf(const std::filesystem::path& path) -> CpuMesh;
 
 }  // namespace engine
