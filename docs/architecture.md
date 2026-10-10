@@ -27,7 +27,7 @@ game (SDL exe) ───┘                           ▲
 
 | Layer | Directory | May include | Must never include |
 |---|---|---|---|
-| **Engine** | `src/engine/` | bgfx, bx, Jolt (only inside `physics/`), nlohmann/json | Qt, SDL, ImGui, game logic, editor |
+| **Engine** | `src/engine/` | bgfx, bx, bimg, Jolt (only inside `physics/`), cgltf (only in the glTF reader), nlohmann/json | Qt, SDL, ImGui, game logic, editor |
 | **Game logic** | `src/game/logic/` (library `game_logic`) | Engine | Qt, SDL, ImGui, devtools, editor |
 | **Game host** | `src/game/` | Engine, game logic, devtools, SDL3 | Qt |
 | **Devtools** | `src/devtools/` | Engine, ImGui | Qt, SDL |
@@ -147,38 +147,47 @@ saves, then starts `game --scene <path>`.
 ## Content pipeline
 
 ```
- Blender or a vendored pack (glTF, PNG)                   owns geometry and looks
-        │ export
-        ▼
- assets/…/level01.glb, textures/*.png                     (git)
-        │ build: geometryc, texturec, later an importer
-        ▼
- build/…/meshes/level01.bin, textures/*.dds,
-         levels/level01.env.json   (generated, never hand-edited)
-        │ referenced by
-        ▼
- assets/scenes/level01.json                               owned by the editor
+ CC0 packs (Kenney, Quaternius...) or our own models
+        │ assembled and textured in Blender           owns geometry and looks
+        ▼ export GLB
+ assets/levels/<level>.glb, assets/meshes/*.glb              (git)
         │ copied beside the executable at build time
         ▼
- the engine loads both, in the game and in the editor
+ the engine loads the glTF at runtime: meshes, materials, textures
+        ▲ referenced by
+        │
+ assets/scenes/<level>.json                                  owned by the editor
 ```
 
-- **Two files per level.** The environment file is regenerated on every
-  export; the scene file holds what the editor placed and tuned.
-  Re-exporting never wipes editor work.
+- **glTF is the runtime format** ([ADR 0010](adr/0010-gltf-runtime-format.md)).
+  The loader reads `.glb` files with the vendored `cgltf`, decodes their
+  PNG/JPEG textures with bimg and generates mips at load. There is no import
+  step and no mesh format of our own. `geometryc` and bgfx's `.bin` are gone.
+- **The loader is split in two.** glTF → `MeshData` runs on the CPU with no
+  bgfx, so collision meshes come from the same parse and a test can load every
+  asset. `MeshData` → GPU `Mesh` uploads the buffers. cgltf types never leave
+  the reader.
+- **Two files per level.** The `.glb` is re-exported from Blender; the scene
+  file places it (an ordinary entity with a renderable and a mesh collider on
+  the `.glb`) and holds what the editor placed and tuned. Re-exporting never
+  wipes editor work.
 - **The editor saves into the source tree** (`assets/scenes/`). The build
   copies scenes beside the executable, so a save into the build directory
   would be overwritten and never reach git.
-- **The static shell, first version:** one glTF exported from Blender,
-  compiled by `geometryc` (which reads glTF through the vendored `cgltf` and
-  flattens its nodes), and loaded as one static entity with a triangle-mesh
-  collider.
-- **The static shell, later:** an importer (on the vendored `cgltf`) writes
-  one entity per glTF node into the environment file. Nodes named `*-col`
-  become collision-only proxies, and glTF custom properties set physics
-  surfaces.
-- **In the editor,** the environment is visible and pickable (to click on it,
-  or to drop objects onto it) but locked.
+- **Blender is the level editor for geometry and looks.** It assembles kits
+  and fixes CC0 assets (units, transforms, materials) so the loader can
+  assume a clean export: metres and +Y up, base color materials, normals.
+- **The static shell, first version:** the `.glb` loads as one mesh, its node
+  transforms baked in, with one triangle-mesh collider (no seams).
+- **The static shell, later:** one entity per glTF node, sharing meshes, so
+  repeated kit pieces become instanced draws; a scene key then expands a
+  `.glb` into those entities. Nodes named `*-col` become collision-only
+  proxies.
+- **Scaling up:** when load time or VRAM matters, `gltfpack` writes optimised
+  standard glTF (quantized meshes, meshopt compression, KTX2 textures), and
+  the loader learns those extensions.
+- **In the editor,** the level is visible and pickable (to click on it, or to
+  drop objects onto it) but locked.
 
 ## Materials
 
@@ -186,8 +195,8 @@ Two different things share the name:
 
 | | Render material | Physics surface |
 |---|---|---|
-| Holds | Shader, albedo texture, tint, tiling | Friction, restitution, later density and damping |
+| Holds | Base color and texture; later normal, metallic-roughness, alpha | Friction, restitution, later density and damping |
 | Today | Inline on `Renderable` | Inline on `Collider` (`Material` in `physics/shape.h`) |
-| Planned | An asset file referenced by path, loaded once by `AssetRegistry` | An asset file referenced by path; `Collider` can still override inline |
-| Created by | Hand-written files, or the importer from glTF materials | The editor |
-| Assigned by | The editor (choosing from a list) or the environment file | The editor |
+| Planned | Inside the glTF, loaded with its mesh; no separate asset files | An asset file referenced by path; `Collider` can still override inline |
+| Created by | Blender | The editor |
+| Assigned by | Blender | The editor, per placed object and for the level |

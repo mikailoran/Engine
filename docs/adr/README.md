@@ -15,6 +15,7 @@ these explain why it isn't built some other way.
 | [0007](0007-engine-game-editor-split.md) | Split the engine from its hosts, and the editor from the game |
 | [0008](0008-right-handed-frame.md) | Use a right-handed, +Y up coordinate frame |
 | [0009](0009-kinematic-character.md) | A kinematic character on Jolt's `CharacterVirtual` |
+| [0010](0010-gltf-runtime-format.md) | Load glTF directly at runtime, with no format of our own |
 
 ## Adding one
 
