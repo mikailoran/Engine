@@ -146,7 +146,9 @@ add_library(engine_assets STATIC
   src/engine/resource/gltf_reader.cpp)
 
 target_include_directories(engine_assets PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(engine_assets PUBLIC bx PRIVATE engine_cgltf)
+# bimg decodes PNG/JPEG; bimg_encode only for imageGenerateMips
+target_link_libraries(engine_assets PUBLIC bx
+  PRIVATE engine_cgltf bimg bimg_decode bimg_encode)
 target_compile_options(engine_assets PRIVATE -Wall -Wextra -Wpedantic)
 
 set_target_properties(engine_assets PROPERTIES
@@ -350,7 +352,9 @@ set(ENGINE_GLTF_ASSETS
   meshes/cone.glb
   meshes/torus.glb
   meshes/bunny.glb
+  meshes/uv_cube.glb
   levels/level01.glb
+  levels/kenney_prototype_01.glb
 )
 
 set(ENGINE_GLTF_OUTPUTS "")
@@ -377,6 +381,7 @@ set(ENGINE_SCENE_DIR ${ENGINE_RUNTIME_DIR}/assets/scenes)
 set(ENGINE_SCENES
   debug
   level01
+  kenney_prototype_01
 )
 
 set(ENGINE_SCENE_OUTPUTS "")

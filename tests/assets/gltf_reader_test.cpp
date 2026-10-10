@@ -5,6 +5,7 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
@@ -31,6 +32,25 @@ auto GltfAssets() -> std::vector<std::filesystem::path> {
   return paths;
 }
 
+/** @brief Checks @p image holds every mip level down to 1x1, in RGBA8. */
+void ExpectFullMipChain(const CpuImage& image) {
+  ASSERT_GT(image.width, 0);
+  ASSERT_GT(image.height, 0);
+  std::size_t bytes = 0;
+  std::uint32_t width = image.width;
+  std::uint32_t height = image.height;
+  std::uint8_t levels = 1;
+  bytes += std::size_t{width} * height * 4;
+  while (width > 1 || height > 1) {
+    width = std::max(width / 2, 1U);
+    height = std::max(height / 2, 1U);
+    bytes += std::size_t{width} * height * 4;
+    ++levels;
+  }
+  EXPECT_EQ(image.mip_count, levels);
+  EXPECT_EQ(image.rgba8.size(), bytes);
+}
+
 /** @brief Checks the invariants CpuMesh documents. */
 void ExpectWellFormed(const CpuMesh& mesh) {
   ASSERT_FALSE(mesh.indices.empty());
@@ -49,6 +69,21 @@ void ExpectWellFormed(const CpuMesh& mesh) {
     next = submesh.first_index + submesh.index_count;
   }
   EXPECT_EQ(next, mesh.indices.size());
+
+  // Every reference lands inside its array
+  for (const Submesh& submesh : mesh.submeshes) {
+    if (submesh.material) {
+      EXPECT_LT(*submesh.material, mesh.materials.size());
+    }
+  }
+  for (const MeshMaterial& material : mesh.materials) {
+    if (material.base_color_image) {
+      EXPECT_LT(*material.base_color_image, mesh.images.size());
+    }
+  }
+  for (const CpuImage& image : mesh.images) {
+    ExpectFullMipChain(image);
+  }
 }
 
 TEST(GltfReader, EveryAssetLoads) {
@@ -60,6 +95,21 @@ TEST(GltfReader, EveryAssetLoads) {
     const CpuMesh mesh = ReadGltf(path);
     ExpectWellFormed(mesh);
   }
+}
+
+TEST(GltfReader, ReadsBaseColorTexture) {
+  // A Blender cube with its generated 512x512 color grid packed in
+  const CpuMesh mesh =
+      ReadGltf(std::filesystem::path(ENGINE_ASSET_DIR) / "meshes/uv_cube.glb");
+
+  ASSERT_EQ(mesh.submeshes.size(), 1U);
+  ASSERT_EQ(mesh.materials.size(), 1U);
+  ASSERT_EQ(mesh.images.size(), 1U);
+  EXPECT_EQ(mesh.submeshes.front().material, 0U);
+  EXPECT_EQ(mesh.materials.front().base_color_image, 0U);
+  EXPECT_EQ(mesh.images.front().width, 512);
+  EXPECT_EQ(mesh.images.front().height, 512);
+  EXPECT_EQ(mesh.images.front().mip_count, 10);
 }
 
 TEST(GltfReader, ErrorNamesTheFile) {

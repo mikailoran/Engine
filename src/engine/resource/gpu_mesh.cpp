@@ -39,15 +39,35 @@ auto CreateIndices(const std::vector<std::uint32_t>& indices)
                                               BGFX_BUFFER_INDEX32));
 }
 
+/** @brief Uploads @p image as an sRGB texture with its mips. */
+auto CreateTexture(const CpuImage& image) -> UniqueHandle<bgfx::TextureHandle> {
+  // Default sampler addressing is repeat, which tiled UVs rely on
+  constexpr std::uint64_t kFlags = BGFX_TEXTURE_SRGB |
+                                   BGFX_SAMPLER_MIN_ANISOTROPIC |
+                                   BGFX_SAMPLER_MAG_ANISOTROPIC;
+  const auto size = static_cast<std::uint32_t>(image.rgba8.size());
+  return UniqueHandle(
+      bgfx::createTexture2D(image.width, image.height, image.mip_count > 1, 1,
+                            bgfx::TextureFormat::RGBA8, kFlags,
+                            bgfx::copy(image.rgba8.data(), size)));
+}
+
 }  // namespace
 
 auto UploadMesh(const CpuMesh& mesh) -> GpuMesh {
-  return {.positions = CreateStream(mesh.positions, bgfx::Attrib::Position),
-          .normals = CreateStream(mesh.normals, bgfx::Attrib::Normal),
-          .uvs = CreateStream(mesh.uvs, bgfx::Attrib::TexCoord0),
-          .indices = CreateIndices(mesh.indices),
-          .submeshes = mesh.submeshes,
-          .bounds = mesh.bounds};
+  GpuMesh gpu{.positions = CreateStream(mesh.positions, bgfx::Attrib::Position),
+              .normals = CreateStream(mesh.normals, bgfx::Attrib::Normal),
+              .uvs = CreateStream(mesh.uvs, bgfx::Attrib::TexCoord0),
+              .indices = CreateIndices(mesh.indices),
+              .submeshes = mesh.submeshes,
+              .bounds = mesh.bounds,
+              .materials = mesh.materials,
+              .textures = {}};
+  gpu.textures.reserve(mesh.images.size());
+  for (const CpuImage& image : mesh.images) {
+    gpu.textures.push_back(CreateTexture(image));
+  }
+  return gpu;
 }
 
 }  // namespace engine

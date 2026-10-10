@@ -93,7 +93,7 @@ Each milestone ends with something you can run and show.
 | M2c | **First-person play.** Relative mouse input, the game-logic library, play and debug modes, the Blender level | M2's own goal: walk, sprint and jump around the Blender level and push props | Done |
 | M3 | **Scene authoring foundation.** glTF loaded at runtime with its materials and textures, a level as its glTF plus a scene file, a `Name` component, physics-surface assets | You walk around a textured level built in Blender from a CC0 kit; a level is its glTF plus a scene file | |
 | M3a | **glTF meshes.** A runtime glTF loader replacing geometryc and bgfx's `.bin`, multi-material meshes, a gather-then-submit renderer, an asset test | `game` plays as before from `.glb` files, and `asset_tests` loads every asset | Done |
-| M3b | **glTF materials and textures.** Base color factor and texture, decoded and mipmapped at load, UV-mapped shading | M3's own goal: walk around a textured level built from Kenney's Prototype Kit | |
+| M3b | **glTF materials and textures.** Base color factor and texture, decoded and mipmapped at load, UV-mapped shading | M3's own goal: walk around a textured level built from Kenney's Prototype Kit | Done |
 | M3c | **Names.** A `Name` component from the scene file, shown in the devtools | Selecting an entity shows its scene name | |
 | M3d | **Physics surfaces.** Surface assets referenced by colliders, with inline overrides | A crate on an "ice" surface slides visibly further | |
 | M4 | **Qt editor MVP.** Viewport, entity hierarchy, `Transform` inspector, picking, a simulate/pause toggle, scene saving | Move a crate in the editor, save, and `game` shows it there | |

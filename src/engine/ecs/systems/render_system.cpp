@@ -5,9 +5,11 @@
 #include <bgfx_utils.h>
 #include <bx/math.h>
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <format>
+#include <functional>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -78,6 +80,22 @@ auto GatherDraws(Ecs& ecs, const AssetRegistry& assets)
   return draws;
 }
 
+/** @brief Creates the 1x1 opaque white texture bound for untextured draws. */
+auto CreateWhiteTexture() -> bgfx::TextureHandle {
+  constexpr uint32_t kWhite = 0xffffffff;
+  return bgfx::createTexture2D(1, 1, false, 1, bgfx::TextureFormat::RGBA8,
+                               BGFX_TEXTURE_NONE,
+                               bgfx::copy(&kWhite, sizeof(kWhite)));
+}
+
+/** @brief Multiplies two RGBA colors channel by channel. */
+auto Modulate(const std::array<float, 4>& a, const std::array<float, 4>& b)
+    -> std::array<float, 4> {
+  std::array<float, 4> product{};
+  std::ranges::transform(a, b, product.begin(), std::multiplies<>{});
+  return product;
+}
+
 }  // namespace
 
 RenderSystem::RenderSystem()
@@ -86,7 +104,9 @@ RenderSystem::RenderSystem()
                                   bgfx::UniformType::Vec4)),
       u_color_(bgfx::createUniform("u_color", bgfx::UniformType::Vec4)),
       u_eye_pos_(bgfx::createUniform("u_eyePos", bgfx::UniformFreq::Frame,
-                                     bgfx::UniformType::Vec4)) {
+                                     bgfx::UniformType::Vec4)),
+      s_albedo_(bgfx::createUniform("s_albedo", bgfx::UniformType::Sampler)),
+      default_texture_(CreateWhiteTexture()) {
   // Members are built, so throwing here still releases them
   if (!default_program_) {
     throw std::runtime_error("failed to link vs_mesh/fs_mesh program");
@@ -140,7 +160,18 @@ void RenderSystem::Update(Ecs& ecs, const AssetRegistry& assets,
     bgfx::setVertexBuffer(2, mesh.uvs.Get());
     bgfx::setIndexBuffer(mesh.indices.Get(), submesh.first_index,
                          submesh.index_count);
-    bgfx::setUniform(u_color_.Get(), renderable.color.data());
+    // Primitives without a glTF material draw the default (white, untextured)
+    const MeshMaterial material = submesh.material
+                                      ? mesh.materials.at(*submesh.material)
+                                      : MeshMaterial{};
+    const auto texture =
+        material.base_color_image
+            ? mesh.textures.at(*material.base_color_image).Get()
+            : default_texture_.Get();
+    const auto color = Modulate(material.base_color, renderable.color);
+
+    bgfx::setUniform(u_color_.Get(), color.data());
+    bgfx::setTexture(0, s_albedo_.Get(), texture);
     bgfx::setState(renderable.state);
     bgfx::submit(renderable.view, program);
   }
