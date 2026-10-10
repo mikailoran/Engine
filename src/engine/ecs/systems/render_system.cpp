@@ -21,7 +21,6 @@
 #include "engine/resource/asset_registry.h"
 #include "engine/resource/cpu_mesh.h"
 #include "engine/resource/gpu_mesh.h"
-#include "engine/resource/texture_handle.h"
 
 namespace engine {
 
@@ -49,14 +48,20 @@ auto DrawDebugOverlay(const FrameContext& ctx) -> void {
             std::format("Frame {:.2f} ms ({:.0f} fps)", ctx.dt * 1000.0F, fps));
 }
 
-/** @brief One submesh to draw this frame. */
+/** @brief One submesh to draw this frame, and what to draw it with. */
 struct DrawItem {
+  /// The entity's model matrix, from its Transform.
   std::array<float, 16> model{};
+  /// A copy of the entity's Renderable.
   Renderable renderable;
+  /// Index into the mesh's submeshes.
   std::uint32_t submesh{0};
 };
 
-/** @brief One draw item per submesh of every visible Renderable. */
+/**
+ * @brief One draw item per submesh of every entity with a Transform and a
+ * Renderable, in view order.
+ */
 auto GatherDraws(Ecs& ecs, const AssetRegistry& assets)
     -> std::vector<DrawItem> {
   std::vector<DrawItem> draws;
@@ -73,13 +78,6 @@ auto GatherDraws(Ecs& ecs, const AssetRegistry& assets)
   return draws;
 }
 
-/** @brief Creates the 1x1 opaque white texture bound for untextured draws. */
-auto CreateWhiteTexture() -> bgfx::TextureHandle {
-  constexpr uint32_t kWhite = 0xffffffff;
-  return bgfx::createTexture2D(1, 1, false, 1, bgfx::TextureFormat::RGBA8,
-                               BGFX_TEXTURE_NONE,
-                               bgfx::copy(&kWhite, sizeof(kWhite)));
-}
 }  // namespace
 
 RenderSystem::RenderSystem()
@@ -88,11 +86,7 @@ RenderSystem::RenderSystem()
                                   bgfx::UniformType::Vec4)),
       u_color_(bgfx::createUniform("u_color", bgfx::UniformType::Vec4)),
       u_eye_pos_(bgfx::createUniform("u_eyePos", bgfx::UniformFreq::Frame,
-                                     bgfx::UniformType::Vec4)),
-      s_albedo_(bgfx::createUniform("s_albedo", bgfx::UniformType::Sampler)),
-      u_tex_params_(
-          bgfx::createUniform("u_texParams", bgfx::UniformType::Vec4)),
-      default_texture_(CreateWhiteTexture()) {
+                                     bgfx::UniformType::Vec4)) {
   // Members are built, so throwing here still releases them
   if (!default_program_) {
     throw std::runtime_error("failed to link vs_mesh/fs_mesh program");
@@ -139,11 +133,6 @@ void RenderSystem::Update(Ecs& ecs, const AssetRegistry& assets,
     const auto program = bgfx::isValid(renderable.program)
                              ? renderable.program
                              : default_program_.Get();
-    const auto texture = IsValid(renderable.texture)
-                             ? assets.GetTexture(renderable.texture)
-                             : default_texture_.Get();
-    const std::array<float, 4> tex_params{1.0F / renderable.texture_scale, 0.0F,
-                                          0.0F, 0.0F};
 
     bgfx::setTransform(draw.model.data());
     bgfx::setVertexBuffer(0, mesh.positions.Get());
@@ -152,8 +141,6 @@ void RenderSystem::Update(Ecs& ecs, const AssetRegistry& assets,
     bgfx::setIndexBuffer(mesh.indices.Get(), submesh.first_index,
                          submesh.index_count);
     bgfx::setUniform(u_color_.Get(), renderable.color.data());
-    bgfx::setUniform(u_tex_params_.Get(), tex_params.data());
-    bgfx::setTexture(0, s_albedo_.Get(), texture);
     bgfx::setState(renderable.state);
     bgfx::submit(renderable.view, program);
   }

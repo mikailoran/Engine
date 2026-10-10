@@ -38,7 +38,7 @@ void SetAssetRoot(std::string root) { Root() = std::move(root); }
 // bgfx_utils.cpp calls these by entry's names; entry itself is not linked
 namespace entry {
 
-/** @brief The reader bgfx_utils loads shaders, meshes and textures through. */
+/** @brief The reader bgfx_utils loads shaders through. */
 // NOLINTNEXTLINE(readability-identifier-naming)
 auto getFileReader() -> bx::FileReaderI* {
   static RootedFileReader reader;

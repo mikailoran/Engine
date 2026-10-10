@@ -5,11 +5,11 @@ describes **where the code is going**; `CLAUDE.md` and the code describe where
 it is today. The goals and milestones behind it are in
 [objectives.md](objectives.md).
 
-**Built so far (M1, M2):** the engine is a library (`Engine`, in
+**Built so far (M1, M2, M3a):** the engine is a library (`Engine`, in
 `src/engine/engine.h`) driven by the SDL `game` host, with the ImGui tools in
-`src/devtools/`. glTF meshes compile through the build, and a level shell
-collides through a triangle-mesh collider (the first version of the static
-shell below). The game-logic library (`src/game/logic/`) holds the first
+`src/devtools/`. Meshes load from glTF at runtime, untextured for now, and a
+level shell collides through a triangle-mesh collider (the first version of
+the static shell below). The game-logic library (`src/game/logic/`) holds the first
 gameplay: a first-person `Player` on a kinematic character (`CharacterBody`),
 walking a level made in Blender. The game starts in play mode; F1 switches to
 the devtools. The editor doesn't exist yet.

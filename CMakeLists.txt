@@ -17,7 +17,7 @@ add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>)
 # Opt-in bgfx samples; each builds only by name (e.g. example-01-cubes)
 option(ENGINE_BGFX_EXAMPLES "Define bgfx's example targets (built only on request)" OFF)
 set(BGFX_BUILD_EXAMPLES ${ENGINE_BGFX_EXAMPLES} CACHE BOOL "" FORCE)
-# example-common builds only for bgfx's own tools (geometryv, texturev); the
+# example-common builds only for bgfx's own tools (texturev); the
 # engine compiles the few helpers it uses itself (bgfx_helpers below)
 set(BGFX_BUILD_EXAMPLE_COMMON ON CACHE BOOL "" FORCE)
 # Tools stay ON for shaderc, and the wrapper ties example-common to them
@@ -216,7 +216,6 @@ add_library(engine_runtime STATIC
   src/engine/resource/gpu_mesh.h
   src/engine/resource/gpu_mesh.cpp
   src/engine/resource/mesh_handle.h
-  src/engine/resource/texture_handle.h
   src/engine/resource/asset_registry.h
   src/engine/resource/asset_registry.cpp
   src/engine/platform/asset_root.h
@@ -369,32 +368,6 @@ foreach(asset IN LISTS ENGINE_GLTF_ASSETS)
 endforeach()
 add_custom_target(meshes DEPENDS ${ENGINE_GLTF_OUTPUTS})
 add_dependencies(game meshes)
-
-# --- Textures ---------------------------------------------------------------
-# bgfx_compile_texture is a bare custom command like geometry: create the
-# output directory at configure time.
-set(ENGINE_TEXTURE_DIR ${ENGINE_RUNTIME_DIR}/assets/textures)
-file(MAKE_DIRECTORY ${ENGINE_TEXTURE_DIR})
-
-# Base names of the textures to compile
-set(ENGINE_TEXTURES
-  debug_grid
-)
-
-# One texturec command per texture, with a full mip chain. RGBA8 because
-# Vulkan cannot sample RGB8 as sRGB, which bgfx treats as fatal.
-set(ENGINE_TEXTURE_OUTPUTS "")
-foreach(texture IN LISTS ENGINE_TEXTURES)
-  bgfx_compile_texture(
-    FILE ${CMAKE_CURRENT_SOURCE_DIR}/assets/textures/${texture}.png
-    OUTPUT ${ENGINE_TEXTURE_DIR}/${texture}.dds
-    FORMAT RGBA8
-    MIPS
-  )
-  list(APPEND ENGINE_TEXTURE_OUTPUTS ${ENGINE_TEXTURE_DIR}/${texture}.dds)
-endforeach()
-add_custom_target(textures DEPENDS ${ENGINE_TEXTURE_OUTPUTS})
-add_dependencies(game textures)
 
 # --- Scenes -----------------------------------------------------------------
 # Scene files are copied beside the executable; edits recopy on build.

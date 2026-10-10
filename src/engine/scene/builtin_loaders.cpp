@@ -50,28 +50,17 @@ void LoadTransform(const json& data, Entity entity, Ecs& ecs,
 }
 
 /**
- * @brief Adds a Renderable; "mesh" is required, "color", "texture" and
- * "texture_scale" optional.
+ * @brief Adds a Renderable. "mesh" (a glTF path) is required; "color", an
+ * RGBA tint, is optional and defaults to white.
  */
 void LoadRenderable(const json& data, Entity entity, Ecs& ecs,
                     AssetRegistry& assets, physics::PhysicsWorld& /*physics*/) {
-  CheckKeys(data, {"mesh", "color", "texture", "texture_scale"});
+  CheckKeys(data, {"mesh", "color"});
 
   Renderable renderable{};
   renderable.mesh_handle = assets.LoadMesh(data.at("mesh").get<std::string>());
   if (data.contains("color")) {
     renderable.color = ReadFloats<4>(data.at("color"));
-  }
-  if (data.contains("texture")) {
-    renderable.texture =
-        assets.LoadTexture(data.at("texture").get<std::string>());
-  }
-  if (data.contains("texture_scale")) {
-    renderable.texture_scale = data.at("texture_scale").get<float>();
-    // The shader divides by it
-    if (renderable.texture_scale <= 0.0F) {
-      throw std::runtime_error("texture_scale must be positive");
-    }
   }
   ecs.AddComponent(entity, renderable);
 }

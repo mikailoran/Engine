@@ -28,7 +28,12 @@ struct GpuMesh {
   bx::Aabb bounds{.min = bx::InitZero, .max = bx::InitZero};
 };
 
-/** @brief Uploads @p mesh's buffers. Requires bgfx::init. */
+/**
+ * @brief Uploads a CPU mesh's vertex streams and indices to the GPU.
+ *
+ * Requires bgfx::init. The returned mesh owns its buffers, so it must be
+ * destroyed before bgfx::shutdown.
+ */
 auto UploadMesh(const CpuMesh& mesh) -> GpuMesh;
 
 }  // namespace engine

@@ -81,7 +81,9 @@ auto UnpackFloats(const cgltf_accessor& accessor, std::size_t components,
   return floats;
 }
 
-/** @brief Whether a column-major 4x4 mirrors space (negative 3x3 determinant).
+/**
+ * @brief Whether a column-major 4x4 mirrors space, i.e. its upper 3x3 has a
+ * negative determinant.
  */
 auto IsMirror(const std::array<float, 16>& m) -> bool {
   const auto x = bx::load<bx::Vec3>(&m.at(0));

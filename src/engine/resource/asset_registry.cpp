@@ -1,8 +1,5 @@
 #include "engine/resource/asset_registry.h"
 
-#include <bgfx/bgfx.h>
-#include <bgfx/defines.h>
-#include <bgfx_utils.h>
 #include <bx/bounds.h>
 
 #include <cassert>
@@ -19,8 +16,6 @@
 #include "engine/resource/gltf_reader.h"
 #include "engine/resource/gpu_mesh.h"
 #include "engine/resource/mesh_handle.h"
-#include "engine/resource/texture_handle.h"
-#include "engine/resource/unique_handle.h"
 
 namespace engine {
 
@@ -79,35 +74,6 @@ auto AssetRegistry::LoadCollisionMesh(const std::filesystem::path& path,
 
   collision_mesh_by_path_.emplace(path, handle);
   return handle;
-}
-
-auto AssetRegistry::LoadTexture(const std::filesystem::path& path)
-    -> TextureHandle {
-  // Texture previously loaded: return handle from map
-  if (auto it = texture_by_path_.find(path); it != texture_by_path_.end()) {
-    return it->second;
-  }
-
-  // Default sampler addressing is repeat, which tiling relies on
-  constexpr uint64_t kFlags = BGFX_TEXTURE_SRGB | BGFX_SAMPLER_MIN_ANISOTROPIC |
-                              BGFX_SAMPLER_MAG_ANISOTROPIC;
-  UniqueHandle texture(loadTexture(path.c_str(), kFlags));
-  if (!texture) {
-    throw std::runtime_error("cannot load texture: " + path.string());
-  }
-
-  const TextureHandle handle{static_cast<std::uint16_t>(textures_.size())};
-  textures_.push_back(std::move(texture));
-  texture_by_path_.emplace(path, handle);
-  return handle;
-}
-
-[[nodiscard]] auto AssetRegistry::GetTexture(TextureHandle handle) const
-    -> bgfx::TextureHandle {
-  assert(IsValid(handle) && "Trying to get invalid texture handle.");
-  assert(handle.idx < textures_.size() && "Texture handle out of range.");
-
-  return textures_.at(handle.idx).Get();
 }
 
 }  // namespace engine

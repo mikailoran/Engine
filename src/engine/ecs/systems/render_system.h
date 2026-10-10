@@ -16,8 +16,8 @@ struct FrameContext;
 /**
  * @brief Draws every entity carrying {Transform, Renderable}.
  *
- * Owns view 0 and the resources shared across entities (shader program,
- * uniforms and the fallback white texture). Releases them on destruction,
+ * Owns view 0 and the resources shared across entities (shader program and
+ * uniforms). Releases them on destruction,
  * which must precede bgfx::shutdown.
  */
 class RenderSystem {
@@ -36,7 +36,7 @@ class RenderSystem {
    * @brief Submits one frame.
    *
    * @param ecs World to read Transform and Renderable from.
-   * @param assets Registry to resolve mesh and texture handles through.
+   * @param assets Registry to resolve mesh handles through.
    * @param ctx Per-frame inputs.
    */
   void Update(Ecs& ecs, const AssetRegistry& assets, const FrameContext& ctx);
@@ -63,15 +63,6 @@ class RenderSystem {
 
   // Per-frame camera world position.
   UniqueHandle<bgfx::UniformHandle> u_eye_pos_;
-
-  // Albedo sampler, stage 0.
-  UniqueHandle<bgfx::UniformHandle> s_albedo_;
-
-  // Per-draw texture tiling, set from Renderable::texture_scale.
-  UniqueHandle<bgfx::UniformHandle> u_tex_params_;
-
-  // 1x1 white, bound for untextured entities so they keep their plain color.
-  UniqueHandle<bgfx::TextureHandle> default_texture_;
 
   // Entity supplying view and projection; empty until SetActiveCamera.
   std::optional<Entity> active_camera_;

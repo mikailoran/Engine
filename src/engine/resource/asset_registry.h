@@ -1,6 +1,5 @@
 #pragma once
 
-#include <bgfx/bgfx.h>
 #include <bx/bounds.h>
 
 #include <filesystem>
@@ -10,8 +9,6 @@
 #include "engine/physics/collision_mesh_handle.h"
 #include "engine/resource/gpu_mesh.h"
 #include "engine/resource/mesh_handle.h"
-#include "engine/resource/texture_handle.h"
-#include "engine/resource/unique_handle.h"
 
 namespace engine {
 
@@ -20,7 +17,8 @@ class PhysicsWorld;
 }  // namespace physics
 
 /**
- * @brief Single owner of every loaded mesh and texture, keyed by file path.
+ * @brief Single owner of every loaded mesh and collision mesh, keyed by file
+ * path.
  *
  * Loads each path at most once and hands out non-owning handles, so any
  * number of entities can share one asset without sharing responsibility for
@@ -55,7 +53,7 @@ class AssetRegistry {
   [[nodiscard]] auto GetMesh(MeshHandle handle) const -> const GpuMesh&;
 
   /**
-   * @brief Returns the box around all of a mesh's groups, in mesh space.
+   * @brief Returns the box around all of a mesh's submeshes, in mesh space.
    * @param handle Handle from LoadMesh; same preconditions as GetMesh.
    */
   [[nodiscard]] auto GetMeshBounds(MeshHandle handle) const -> bx::Aabb;
@@ -69,32 +67,12 @@ class AssetRegistry {
    *
    * @param path glTF file, e.g. "assets/levels/level01.glb".
    * @param physics World to build the mesh in; every call must pass the same.
-   * @throws std::runtime_error If the file cannot be opened or Jolt rejects
-   *         its triangles.
+   * @throws std::runtime_error If the file cannot be read as a mesh or Jolt
+   *         rejects its triangles.
    */
   auto LoadCollisionMesh(const std::filesystem::path& path,
                          physics::PhysicsWorld& physics)
       -> physics::CollisionMeshHandle;
-
-  /**
-   * @brief Loads a texture, or returns the handle of one already loaded.
-   *
-   * Same idempotence and preconditions as LoadMesh. Loaded as sRGB with
-   * anisotropic filtering and repeat addressing.
-   *
-   * @param path Compiled texture file, e.g. "assets/textures/debug_grid.dds".
-   * @return Handle to the texture.
-   * @throws std::runtime_error If the texture cannot be loaded.
-   */
-  auto LoadTexture(const std::filesystem::path& path) -> TextureHandle;
-
-  /**
-   * @brief Resolves a handle to the bgfx texture it refers to.
-   *
-   * @param handle Handle from LoadTexture; must be valid and not yet unloaded.
-   * @return bgfx texture owned by this registry, valid for its lifetime.
-   */
-  auto GetTexture(TextureHandle handle) const -> bgfx::TextureHandle;
 
  private:
   // TODO: figure out optimized key and also cross platform compatibility
@@ -103,9 +81,6 @@ class AssetRegistry {
 
   std::unordered_map<std::filesystem::path, physics::CollisionMeshHandle>
       collision_mesh_by_path_;
-
-  std::unordered_map<std::filesystem::path, TextureHandle> texture_by_path_;
-  std::vector<UniqueHandle<bgfx::TextureHandle>> textures_;
 };
 
 }  // namespace engine

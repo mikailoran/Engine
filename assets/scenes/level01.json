@@ -40,8 +40,7 @@
             0.85,
             0.9,
             1
-          ],
-          "texture": "assets/textures/debug_grid.dds"
+          ]
         },
         "collider": {
           "shape": "mesh",
