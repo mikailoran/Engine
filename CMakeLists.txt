@@ -354,6 +354,7 @@ set(ENGINE_GLTF_ASSETS
   meshes/bunny.glb
   meshes/uv_cube.glb
   levels/level01.glb
+  levels/kenney_prototype_01.glb
 )
 
 set(ENGINE_GLTF_OUTPUTS "")
@@ -380,6 +381,7 @@ set(ENGINE_SCENE_DIR ${ENGINE_RUNTIME_DIR}/assets/scenes)
 set(ENGINE_SCENES
   debug
   level01
+  kenney_prototype_01
 )
 
 set(ENGINE_SCENE_OUTPUTS "")

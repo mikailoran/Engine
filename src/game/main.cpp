@@ -103,7 +103,7 @@ Game::Game() {
   fly_camera_.SetControlledCamera(fly_camera_entity_);
 
   // The level and its props are ordinary entities
-  engine_.LoadScene("assets/scenes/level01.json");
+  engine_.LoadScene("assets/scenes/kenney_prototype_01.json");
   EnterMode(Mode::kPlay);
 }
 
