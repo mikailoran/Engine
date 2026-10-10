@@ -12,8 +12,8 @@
 namespace engine {
 
 /**
- * @brief A mesh's GPU buffers, shared by every entity that draws it. Made by
- * UploadMesh from a CpuMesh.
+ * @brief A mesh's GPU buffers and textures, shared by every entity that
+ * draws it. Made by UploadMesh from a CpuMesh.
  *
  * One vertex stream per attribute, bound as streams 0 (position), 1 (normal)
  * and 2 (UV), and 32-bit indices. Must be destroyed before bgfx::shutdown.
@@ -26,10 +26,14 @@ struct GpuMesh {
   std::vector<Submesh> submeshes;
   /// Box around every submesh, in mesh space.
   bx::Aabb bounds{.min = bx::InitZero, .max = bx::InitZero};
+  /// Indexed by Submesh::material.
+  std::vector<MeshMaterial> materials;
+  /// Indexed by MeshMaterial::base_color_image: sRGB, mipmapped, repeating.
+  std::vector<UniqueHandle<bgfx::TextureHandle>> textures;
 };
 
 /**
- * @brief Uploads a CPU mesh's vertex streams and indices to the GPU.
+ * @brief Uploads a CPU mesh's vertex streams, indices and images to the GPU.
  *
  * Requires bgfx::init. The returned mesh owns its buffers, so it must be
  * destroyed before bgfx::shutdown.

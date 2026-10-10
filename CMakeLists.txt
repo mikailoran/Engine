@@ -352,6 +352,7 @@ set(ENGINE_GLTF_ASSETS
   meshes/cone.glb
   meshes/torus.glb
   meshes/bunny.glb
+  meshes/uv_cube.glb
   levels/level01.glb
 )
 

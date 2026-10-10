@@ -16,8 +16,8 @@ struct FrameContext;
 /**
  * @brief Draws every entity carrying {Transform, Renderable}.
  *
- * Owns view 0 and the resources shared across entities (shader program and
- * uniforms). Releases them on destruction,
+ * Owns view 0 and the resources shared across entities (shader program,
+ * uniforms and the fallback white texture). Releases them on destruction,
  * which must precede bgfx::shutdown.
  */
 class RenderSystem {
@@ -58,11 +58,17 @@ class RenderSystem {
 
   UniqueHandle<bgfx::UniformHandle> u_time_;
 
-  // Per-draw surface color, set from Renderable::color before each submit.
+  // Per-draw surface color: the material's base color times the entity's tint.
   UniqueHandle<bgfx::UniformHandle> u_color_;
 
   // Per-frame camera world position.
   UniqueHandle<bgfx::UniformHandle> u_eye_pos_;
+
+  // Base color sampler, stage 0.
+  UniqueHandle<bgfx::UniformHandle> s_albedo_;
+
+  // 1x1 white, bound for untextured submeshes so they keep their plain color.
+  UniqueHandle<bgfx::TextureHandle> default_texture_;
 
   // Entity supplying view and projection; empty until SetActiveCamera.
   std::optional<Entity> active_camera_;

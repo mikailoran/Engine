@@ -1,9 +1,9 @@
-$input v_wpos, v_normal
+$input v_wpos, v_normal, v_texcoord0
 
 #include <bgfx_shader.sh>
 
 uniform vec4 u_time;
-// Linear RGBA surface color, set per draw by RenderSystem.
+// Linear RGBA: the material's base color times the entity's tint.
 uniform vec4 u_color;
 // Camera world position.
 uniform vec4 u_eyePos;
@@ -15,11 +15,14 @@ uniform vec4 u_lightColor;
 uniform vec4 u_skyColor;
 uniform vec4 u_groundColor;
 
+// sRGB base color texture; 1x1 white for untextured submeshes.
+SAMPLER2D(s_albedo, 0);
+
 void main()
 {
 	vec3 n = normalize(v_normal);
 
-	vec3 albedo = u_color.xyz;
+	vec3 albedo = u_color.xyz * texture2D(s_albedo, v_texcoord0).xyz;
 	vec3 v = normalize(u_eyePos.xyz - v_wpos);
 	vec3 l = u_lightDir.xyz;
 	vec3 h = normalize(l + v);
