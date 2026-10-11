@@ -49,11 +49,14 @@ set_target_properties(ecs_core PROPERTIES
 )
 
 # --- Math -------------------------------------------------------------------
-# Rotation conventions shared by rendering, scenes and physics. A library so
+# Rotation conventions shared by rendering, scenes and physics, and shadow
+# fitting. A library so
 # math_tests can link it without the engine.
 add_library(engine_math STATIC
   src/engine/math/rotation.cpp
   src/engine/math/rotation.h
+  src/engine/math/shadow_fit.cpp
+  src/engine/math/shadow_fit.h
   src/engine/math/vector.h)
 
 target_include_directories(engine_math PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
