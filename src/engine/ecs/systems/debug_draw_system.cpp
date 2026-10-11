@@ -20,14 +20,12 @@
 #include "engine/ecs/core/types.h"
 #include "engine/physics/shape.h"
 #include "engine/platform/frame_context.h"
+#include "engine/render_views.h"
 #include "engine/resource/asset_registry.h"
 
 namespace engine {
 
 namespace {
-
-// Rendered after view 0, sharing its depth buffer.
-constexpr bgfx::ViewId kDebugView = 1;
 
 constexpr std::uint32_t kGridColor = 0xff808080;       // ABGR
 constexpr std::uint32_t kColliderColor = 0xff00ff00;   // ABGR

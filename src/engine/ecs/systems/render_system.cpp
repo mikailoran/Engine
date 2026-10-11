@@ -20,6 +20,7 @@
 #include "engine/ecs/core/types.h"
 #include "engine/math/vector.h"
 #include "engine/platform/frame_context.h"
+#include "engine/render_views.h"
 #include "engine/resource/asset_registry.h"
 #include "engine/resource/cpu_mesh.h"
 #include "engine/resource/gpu_mesh.h"
@@ -112,9 +113,9 @@ RenderSystem::RenderSystem()
     throw std::runtime_error("failed to link vs_mesh/fs_mesh program");
   }
 
-  // View 0 clears the backbuffer each frame.
-  bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, kClearColor, 1.0F,
-                     0);
+  // The scene view clears the backbuffer each frame
+  bgfx::setViewClear(kSceneView, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH,
+                     kClearColor, 1.0F, 0);
 }
 
 void RenderSystem::Update(Ecs& ecs, const AssetRegistry& assets,
@@ -122,7 +123,7 @@ void RenderSystem::Update(Ecs& ecs, const AssetRegistry& assets,
   DrawDebugOverlay(ctx);
   bgfx::setFrameUniform(u_time_.Get(), &ctx.time);
 
-  // View and projection for view 0, from the camera's pose and lens
+  // View and projection for the scene view, from the camera's pose and lens
   {
     // No camera set: a default lens at the world origin
     const Transform pose = active_camera_
@@ -138,8 +139,8 @@ void RenderSystem::Update(Ecs& ecs, const AssetRegistry& assets,
     const auto eye_pos = ToVec4(pose.position, 1.0F);
     bgfx::setFrameUniform(u_eye_pos_.Get(), eye_pos.data());
 
-    bgfx::setViewTransform(0, view.data(), proj.data());
-    bgfx::setViewRect(0, 0, 0, static_cast<uint16_t>(ctx.width),
+    bgfx::setViewTransform(kSceneView, view.data(), proj.data());
+    bgfx::setViewRect(kSceneView, 0, 0, static_cast<uint16_t>(ctx.width),
                       static_cast<uint16_t>(ctx.height));
   }
 

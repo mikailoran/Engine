@@ -5,6 +5,7 @@
 #include <array>
 #include <cstdint>
 
+#include "engine/render_views.h"
 #include "engine/resource/mesh_handle.h"
 
 namespace engine {
@@ -25,7 +26,7 @@ struct Renderable {
   std::uint64_t state{BGFX_STATE_DEFAULT};
 
   // Which bgfx view to submit into.
-  bgfx::ViewId view{0};
+  bgfx::ViewId view{kSceneView};
 
   /// Linear RGBA tint. White leaves the mesh's own colors unchanged.
   std::array<float, 4> color{1.0F, 1.0F, 1.0F, 1.0F};

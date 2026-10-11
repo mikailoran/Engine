@@ -16,14 +16,14 @@ struct FrameContext;
 /**
  * @brief Draws every entity carrying {Transform, Renderable}.
  *
- * Owns view 0 and the resources shared across entities (shader program,
+ * Owns kSceneView and the resources shared across entities (shader program,
  * uniforms and the fallback white texture). Releases them on destruction,
  * which must precede bgfx::shutdown.
  */
 class RenderSystem {
  public:
   /**
-   * @brief Creates the shared GPU resources and sets view 0's clear.
+   * @brief Creates the shared GPU resources and sets kSceneView's clear.
    *
    * Requires bgfx::init to have completed, and the asset root to be set via
    * SetAssetRoot, since loadProgram resolves its paths against it.
