@@ -322,6 +322,7 @@ set(BGFX_SHADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/bgfx.cmake/bgfx/src)
 bgfx_compile_shaders(
   TYPE VERTEX
   SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/vs_mesh.sc
+          ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/vs_sky.sc
   VARYING_DEF ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/varying.def.sc
   OUTPUT_DIR ${ENGINE_RUNTIME_DIR}/shaders
   INCLUDE_DIRS ${BGFX_SHADER_DIR}
@@ -331,6 +332,7 @@ bgfx_compile_shaders(
 bgfx_compile_shaders(
   TYPE FRAGMENT
   SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/fs_mesh.sc
+          ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/fs_sky.sc
   VARYING_DEF ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/varying.def.sc
   OUTPUT_DIR ${ENGINE_RUNTIME_DIR}/shaders
   INCLUDE_DIRS ${BGFX_SHADER_DIR}
