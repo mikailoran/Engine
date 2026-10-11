@@ -59,7 +59,7 @@ void Engine::Render(const FrameContext& ctx, RenderOptions options) {
   if (options.debug_draw) {
     debug_draw_.Update(ecs_, assets_, ctx);
   }
-  render_.Update(ecs_, assets_, ctx);
+  render_.Update(ecs_, assets_, ctx, shadow_.Map());
 }
 
 void Engine::EndFrame() { ecs_.Flush(); }

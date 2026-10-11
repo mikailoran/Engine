@@ -38,8 +38,10 @@ class RenderSystem {
    * @param ecs World to read Transform and Renderable from.
    * @param assets Registry to resolve mesh handles through.
    * @param ctx Per-frame inputs.
+   * @param shadow_map The sun's depth map, from ShadowSystem::Map.
    */
-  void Update(Ecs& ecs, const AssetRegistry& assets, const FrameContext& ctx);
+  void Update(Ecs& ecs, const AssetRegistry& assets, const FrameContext& ctx,
+              bgfx::TextureHandle shadow_map);
 
   /**
    * @brief Nominates the entity supplying view and projection.
@@ -66,6 +68,9 @@ class RenderSystem {
 
   // Base color sampler, stage 0.
   UniqueHandle<bgfx::UniformHandle> s_albedo_;
+
+  // Shadow map sampler, stage 1.
+  UniqueHandle<bgfx::UniformHandle> s_shadow_map_;
 
   // 1x1 white, bound for untextured submeshes so they keep their plain color.
   UniqueHandle<bgfx::TextureHandle> default_texture_;

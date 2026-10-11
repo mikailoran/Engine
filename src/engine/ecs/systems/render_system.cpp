@@ -107,6 +107,8 @@ RenderSystem::RenderSystem()
       u_eye_pos_(bgfx::createUniform("u_eyePos", bgfx::UniformFreq::Frame,
                                      bgfx::UniformType::Vec4)),
       s_albedo_(bgfx::createUniform("s_albedo", bgfx::UniformType::Sampler)),
+      s_shadow_map_(
+          bgfx::createUniform("s_shadowMap", bgfx::UniformType::Sampler)),
       default_texture_(CreateWhiteTexture()) {
   // Members are built, so throwing here still releases them
   if (!default_program_) {
@@ -119,7 +121,8 @@ RenderSystem::RenderSystem()
 }
 
 void RenderSystem::Update(Ecs& ecs, const AssetRegistry& assets,
-                          const FrameContext& ctx) {
+                          const FrameContext& ctx,
+                          bgfx::TextureHandle shadow_map) {
   DrawDebugOverlay(ctx);
   bgfx::setFrameUniform(u_time_.Get(), &ctx.time);
 
@@ -172,6 +175,7 @@ void RenderSystem::Update(Ecs& ecs, const AssetRegistry& assets,
 
     bgfx::setUniform(u_color_.Get(), color.data());
     bgfx::setTexture(0, s_albedo_.Get(), texture);
+    bgfx::setTexture(1, s_shadow_map_.Get(), shadow_map);
     bgfx::setState(renderable.state);
     bgfx::submit(renderable.view, program);
   }

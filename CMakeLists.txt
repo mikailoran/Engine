@@ -351,6 +351,15 @@ bgfx_compile_shaders(
 )
 
 # add_custom_command outputs are only built when a target depends on them.
+# bgfx_compile_shaders tracks only each source, so add the shadow include
+foreach(SHADER_OUTPUT IN LISTS FS_OUTPUTS)
+  # The first profile's output names each shader's command
+  if(SHADER_OUTPUT MATCHES "/spirv/fs_mesh\\.sc\\.bin$")
+    add_custom_command(OUTPUT ${SHADER_OUTPUT} APPEND
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/shadow.sh)
+  endif()
+endforeach()
+
 add_custom_target(shaders DEPENDS ${VS_OUTPUTS} ${FS_OUTPUTS})
 add_dependencies(game shaders)
 
