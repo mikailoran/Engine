@@ -331,8 +331,8 @@ set(BGFX_SHADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/bgfx.cmake/bgfx/src)
 bgfx_compile_shaders(
   TYPE VERTEX
   SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/vs_mesh.sc
-          ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/vs_sky.sc
-          ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/vs_shadow.sc
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/vs_sky.sc
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/vs_shadow.sc
   VARYING_DEF ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/varying.def.sc
   OUTPUT_DIR ${ENGINE_RUNTIME_DIR}/shaders
   INCLUDE_DIRS ${BGFX_SHADER_DIR}
@@ -342,8 +342,8 @@ bgfx_compile_shaders(
 bgfx_compile_shaders(
   TYPE FRAGMENT
   SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/fs_mesh.sc
-          ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/fs_sky.sc
-          ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/fs_shadow.sc
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/fs_sky.sc
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/fs_shadow.sc
   VARYING_DEF ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/varying.def.sc
   OUTPUT_DIR ${ENGINE_RUNTIME_DIR}/shaders
   INCLUDE_DIRS ${BGFX_SHADER_DIR}
@@ -422,6 +422,29 @@ foreach(scene IN LISTS ENGINE_SCENES)
 endforeach()
 add_custom_target(scenes DEPENDS ${ENGINE_SCENE_OUTPUTS})
 add_dependencies(game scenes)
+
+# --- Qt Editor --------------------------------------------------------------
+option(ENGINE_BUILD_EDITOR "Build the Qt scene editor" ON)
+if(ENGINE_BUILD_EDITOR)
+  # Widgets brings in Core and Gui
+  find_package(Qt6 6.9 REQUIRED COMPONENTS Widgets)
+
+  add_executable(editor
+    src/editor/main.cpp
+    src/editor/main_window.h
+    src/editor/main_window.cpp)
+  target_link_libraries(editor PRIVATE game_logic engine_runtime Qt6::Widgets)
+
+  target_compile_options(editor PRIVATE -Wall -Wextra -Wpedantic)
+  set_target_properties(editor PROPERTIES
+    CXX_STANDARD 20
+    CXX_STANDARD_REQUIRED ON
+    CXX_EXTENSIONS OFF
+    AUTOMOC ON
+    RUNTIME_OUTPUT_DIRECTORY ${ENGINE_RUNTIME_DIR}
+  )
+  add_dependencies(editor shaders meshes scenes)
+endif()
 
 # --- Tests ------------------------------------------------------------------
 # Off-switch so a plain game build never triggers googletest's network fetch.
