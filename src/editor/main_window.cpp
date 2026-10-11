@@ -40,7 +40,13 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
   // The container takes ownership of the viewport and lays it out like a widget
   auto viewport = std::make_unique<ViewportWindow>();
   viewport_ = viewport.get();
-  setCentralWidget(QWidget::createWindowContainer(viewport.release(), this));
+  QWidget* container = QWidget::createWindowContainer(viewport.release(), this);
+  // Clicking or tabbing to the viewport gives the game the keyboard
+  container->setFocusPolicy(Qt::StrongFocus);
+  // On Wayland the keyboard reaches the container, not the window inside it
+  container->installEventFilter(viewport_);
+  setCentralWidget(container);
+  container->setFocus();
 
   // Queued: load after the expose event that created the engine has returned
   connect(

@@ -1,5 +1,6 @@
 #include "editor/viewport_window.h"
 
+#include <QtCore/qnamespace.h>
 #include <QtCore/qtmetamacros.h>
 #include <QtGui/qguiapplication_platform.h>
 #include <qpa/qplatformwindow_p.h>
@@ -8,36 +9,127 @@
 #include <QDebug>
 #include <QEvent>
 #include <QExposeEvent>
+#include <QFocusEvent>
 #include <QGuiApplication>
+#include <QKeyEvent>
+#include <QObject>
 #include <QPlatformSurfaceEvent>
 #include <QSurface>
 #include <QTimer>
 #include <QWindow>
 #include <QtLogging>
+#include <algorithm>
+#include <array>
 #include <bit>
 #include <cassert>
 #include <chrono>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <exception>
 #include <filesystem>
 #include <format>
+#include <optional>
 #include <stdexcept>
 #include <string>
 
 #include "engine/engine.h"
 #include "engine/platform/frame_context.h"
+#include "engine/platform/input.h"
 #include "engine/platform/native_surface.h"
 #include "engine/platform/screen.h"
 #include "game/game_logic.h"
 
 using engine::Engine;
 using engine::FrameContext;
+using engine::Input;
+using engine::Key;
 using engine::NativeSurface;
 using engine::PixelSize;
 using engine::SurfaceKind;
 
 namespace editor {
+
+namespace {
+
+/** @brief An engine key and the Qt key that drives it. */
+struct KeyBinding {
+  Key key;
+  Qt::Key qt_key;
+};
+
+// Keys as the layout names them. Qt has one key per modifier, not a left and a
+// right one, so it drives the left one and the right ones stay unbound
+constexpr auto kKeyBindings = std::to_array<KeyBinding>({
+    // clang-format off
+    {.key = Key::kW,         .qt_key = Qt::Key_W},
+    {.key = Key::kA,         .qt_key = Qt::Key_A},
+    {.key = Key::kS,         .qt_key = Qt::Key_S},
+    {.key = Key::kD,         .qt_key = Qt::Key_D},
+    {.key = Key::kQ,         .qt_key = Qt::Key_Q},
+    {.key = Key::kE,         .qt_key = Qt::Key_E},
+    {.key = Key::kC,         .qt_key = Qt::Key_C},
+    {.key = Key::kV,         .qt_key = Qt::Key_V},
+    {.key = Key::kX,         .qt_key = Qt::Key_X},
+    {.key = Key::kY,         .qt_key = Qt::Key_Y},
+    {.key = Key::kZ,         .qt_key = Qt::Key_Z},
+    {.key = Key::kTab,       .qt_key = Qt::Key_Tab},
+    {.key = Key::kLeft,      .qt_key = Qt::Key_Left},
+    {.key = Key::kRight,     .qt_key = Qt::Key_Right},
+    {.key = Key::kUp,        .qt_key = Qt::Key_Up},
+    {.key = Key::kDown,      .qt_key = Qt::Key_Down},
+    {.key = Key::kPageUp,    .qt_key = Qt::Key_PageUp},
+    {.key = Key::kPageDown,  .qt_key = Qt::Key_PageDown},
+    {.key = Key::kHome,      .qt_key = Qt::Key_Home},
+    {.key = Key::kEnd,       .qt_key = Qt::Key_End},
+    {.key = Key::kDelete,    .qt_key = Qt::Key_Delete},
+    {.key = Key::kBackspace, .qt_key = Qt::Key_Backspace},
+    {.key = Key::kEnter,     .qt_key = Qt::Key_Return},
+    {.key = Key::kEscape,    .qt_key = Qt::Key_Escape},
+    {.key = Key::kLeftCtrl,  .qt_key = Qt::Key_Control},
+    {.key = Key::kLeftShift, .qt_key = Qt::Key_Shift},
+    {.key = Key::kLeftAlt,   .qt_key = Qt::Key_Alt},
+    {.key = Key::kSpace,     .qt_key = Qt::Key_Space},
+    {.key = Key::kF1,        .qt_key = Qt::Key_F1},
+    // clang-format on
+});
+
+/** @brief Whether Qt can report @p key: every key but the right modifiers. */
+constexpr auto QtReports(Key key) -> bool {
+  return key != Key::kRightCtrl && key != Key::kRightShift &&
+         key != Key::kRightAlt;
+}
+
+/** @brief Whether every Key Qt reports appears in exactly one binding. */
+constexpr auto BindsEveryKeyOnce() -> bool {
+  std::array<int, static_cast<std::size_t>(Key::kCount)> uses{};
+  for (const KeyBinding& binding : kKeyBindings) {
+    ++uses.at(static_cast<std::size_t>(binding.key));
+  }
+  for (std::size_t index = 0; index < uses.size(); ++index) {
+    const int expected = QtReports(static_cast<Key>(index)) ? 1 : 0;
+    if (uses.at(index) != expected) {
+      return false;
+    }
+  }
+  return true;
+}
+
+static_assert(BindsEveryKeyOnce(), "every Key Qt reports needs one binding");
+
+/** @brief The engine key for a QKeyEvent::key(), if the engine has one. */
+auto KeyFromQt(int qt_key) -> std::optional<Key> {
+  const auto* const binding = std::ranges::find_if(
+      kKeyBindings, [qt_key](const KeyBinding& candidate) -> bool {
+        return candidate.qt_key == qt_key;
+      });
+  if (binding == kKeyBindings.end()) {
+    return std::nullopt;
+  }
+  return binding->key;
+}
+
+}  // namespace
 
 ViewportWindow::ViewportWindow(QWindow* parent) : QWindow(parent) {
   // bgfx renders with Vulkan, so Qt must not back this with buffers of its own
@@ -94,6 +186,36 @@ auto ViewportWindow::event(QEvent* e) -> bool {
   return QWindow::event(e);
 }
 
+auto ViewportWindow::eventFilter(QObject* watched, QEvent* event) -> bool {
+  switch (event->type()) {
+    case QEvent::KeyPress:
+    case QEvent::KeyRelease:
+      // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
+      RecordKey(static_cast<QKeyEvent*>(event),
+                event->type() == QEvent::KeyPress);
+      // RecordKey ignores the keys the engine doesn't read
+      return event->isAccepted();
+    case QEvent::FocusOut:
+      input_ = Input{};
+      break;
+    default:
+      break;
+  }
+  return QWindow::eventFilter(watched, event);
+}
+
+void ViewportWindow::keyPressEvent(QKeyEvent* event) { RecordKey(event, true); }
+
+void ViewportWindow::keyReleaseEvent(QKeyEvent* event) {
+  RecordKey(event, false);
+}
+
+void ViewportWindow::focusOutEvent(QFocusEvent* event) {
+  // Releases that happen while unfocused never arrive; drop every held key
+  input_ = Input{};
+  QWindow::focusOutEvent(event);
+}
+
 void ViewportWindow::Tick() {
   // Nothing to show until a scene has started a session
   if (!engine_ || !session_) {
@@ -115,6 +237,7 @@ void ViewportWindow::Tick() {
       .height = size.height,
       .dt = dt,
       .time = Seconds(now - start_time_).count(),
+      .input = input_,
   };
 
   // The launcher's play-mode frame, without devtools
@@ -123,6 +246,21 @@ void ViewportWindow::Tick() {
   session_->PostPhysics(*engine_);
   engine_->Render(ctx, {.debug_draw = false});
   engine_->EndFrame();
+  // Events until the next tick belong to the next frame
+  input_.BeginFrame();
+}
+
+void ViewportWindow::RecordKey(QKeyEvent* event, bool down) {
+  const std::optional<Key> key = KeyFromQt(event->key());
+  if (!key) {
+    // Not the engine's: let Qt pass it on, e.g. to shortcuts
+    event->ignore();
+    return;
+  }
+  // A held key repeats; only the first press and the release matter
+  if (!event->isAutoRepeat()) {
+    input_.SetKey(*key, down);
+  }
 }
 
 auto ViewportWindow::Surface() const -> NativeSurface {

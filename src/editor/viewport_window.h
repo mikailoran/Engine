@@ -7,12 +7,16 @@
 #include <optional>
 
 #include "engine/engine.h"
+#include "engine/platform/input.h"
 #include "engine/platform/native_surface.h"
 #include "engine/platform/screen.h"
 #include "game/game_session.h"
 
 class QEvent;
 class QExposeEvent;
+class QFocusEvent;
+class QKeyEvent;
+class QObject;
 
 namespace editor {
 
@@ -41,6 +45,13 @@ class ViewportWindow : public QWindow {
    */
   void LoadScene(const std::filesystem::path& path);
 
+  /**
+   * @brief Takes key and focus events from a widget it is installed on. On
+   * Wayland the keyboard goes to the window container, never to this window.
+   * @return True when the event was the game's and Qt should stop there.
+   */
+  auto eventFilter(QObject* watched, QEvent* event) -> bool override;
+
  signals:
   /**
    * @brief The engine exists; scenes can be loaded. Emitted on the first
@@ -55,11 +66,26 @@ class ViewportWindow : public QWindow {
   /** @brief Destroys the engine before Qt destroys the native surface. */
   auto event(QEvent* e) -> bool override;
 
+  /** @brief Records a key going down; unmapped keys go on to Qt. */
+  void keyPressEvent(QKeyEvent* event) override;
+
+  /** @brief Records a key going up; unmapped keys go on to Qt. */
+  void keyReleaseEvent(QKeyEvent* event) override;
+
+  /** @brief Releases every key and button, so none stays held unfocused. */
+  void focusOutEvent(QFocusEvent* event) override;
+
  private:
   using Clock = std::chrono::steady_clock;
 
   /** @brief Runs one frame of the game: gameplay, physics, then render. */
   void Tick();
+
+  /**
+   * @brief Sets @p event's key in the input, as the keyboard layout names it.
+   * Auto-repeats are dropped, and keys the engine doesn't read are ignored.
+   */
+  void RecordKey(QKeyEvent* event, bool down);
 
   /**
    * @brief The native handles and backbuffer size, for the engine. Valid once
@@ -76,6 +102,9 @@ class ViewportWindow : public QWindow {
   std::optional<engine::Engine> engine_;
   // Empty until the first scene loads
   std::optional<game::GameSession> session_;
+
+  // This frame's keyboard and mouse, filled by Qt's events between ticks
+  engine::Input input_;
 
   // Fires as often as the event loop allows; bgfx's vsync paces the frames
   QTimer frame_timer_;
