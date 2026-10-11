@@ -3,6 +3,7 @@
 #include <QtCore/qnamespace.h>
 
 #include <QAction>
+#include <QFileDialog>
 #include <QKeySequence>
 #include <QMainWindow>
 #include <QMenu>
@@ -13,6 +14,7 @@
 #include <exception>
 #include <filesystem>
 #include <memory>
+#include <string>
 #include <string_view>
 
 #include "editor/viewport_window.h"
@@ -30,9 +32,20 @@ constexpr std::string_view kStartScene = "level02.json";
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
   setWindowTitle(tr("Scene Editor"));
-  resize(400, 400);
+  resize(1280, 720);
 
   QMenu* file_menu = menuBar()->addMenu(tr("&File"));
+  QAction* open = file_menu->addAction(tr("&Open Scene..."));
+  open->setShortcut(QKeySequence::Open);
+  connect(open, &QAction::triggered, this, &MainWindow::ChooseScene);
+
+  reload_ = file_menu->addAction(tr("&Reload Scene"));
+  reload_->setShortcut(QKeySequence::Refresh);
+  reload_->setEnabled(false);
+  connect(reload_, &QAction::triggered, this,
+          [this]() -> void { OpenScene(scene_); });
+
+  file_menu->addSeparator();
   QAction* quit = file_menu->addAction(tr("&Quit"));
   quit->setShortcut(QKeySequence::Quit);
   connect(quit, &QAction::triggered, this, [this]() -> void { close(); });
@@ -58,11 +71,26 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
 }
 
 void MainWindow::OpenScene(const std::filesystem::path& path) {
+  // Remembered before loading, so a broken file can be fixed and reloaded
+  scene_ = path;
+  reload_->setEnabled(true);
+  setWindowTitle(tr("%1 - Scene Editor")
+                     .arg(QString::fromStdString(path.filename().string())));
   try {
     viewport_->LoadScene(path);
   } catch (const std::exception& e) {
     QMessageBox::warning(this, tr("Cannot open scene"),
                          QString::fromStdString(e.what()));
+  }
+}
+
+void MainWindow::ChooseScene() {
+  const QString file = QFileDialog::getOpenFileName(
+      this, tr("Open Scene"), QString::fromStdString(std::string(kSceneDir)),
+      tr("Scenes (*.json)"));
+  // Empty when the dialog was cancelled
+  if (!file.isEmpty()) {
+    OpenScene(file.toStdString());
   }
 }
 
