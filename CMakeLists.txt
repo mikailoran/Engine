@@ -53,7 +53,8 @@ set_target_properties(ecs_core PROPERTIES
 # math_tests can link it without the engine.
 add_library(engine_math STATIC
   src/engine/math/rotation.cpp
-  src/engine/math/rotation.h)
+  src/engine/math/rotation.h
+  src/engine/math/vector.h)
 
 target_include_directories(engine_math PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(engine_math PUBLIC bx)

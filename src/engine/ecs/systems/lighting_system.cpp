@@ -10,18 +10,10 @@
 #include "engine/ecs/components/directional_light.h"
 #include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
+#include "engine/math/vector.h"
 #include "engine/platform/frame_context.h"
 
 namespace engine {
-
-namespace {
-
-/** @brief Packs a Vec3 into a vec4 uniform value with w = 0. */
-auto ToVec4(const bx::Vec3& v) -> std::array<float, 4> {
-  return {v.x, v.y, v.z, 0.0F};
-}
-
-}  // namespace
 
 LightingSystem::LightingSystem()
     : u_light_dir_(bgfx::createUniform("u_lightDir", bgfx::UniformFreq::Frame,

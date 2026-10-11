@@ -3,7 +3,6 @@
 #include <bgfx/bgfx.h>
 #include <bgfx/defines.h>
 #include <bgfx_utils.h>
-#include <bx/math.h>
 
 #include <algorithm>
 #include <array>
@@ -19,6 +18,7 @@
 #include "engine/ecs/components/transform.h"
 #include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
+#include "engine/math/vector.h"
 #include "engine/platform/frame_context.h"
 #include "engine/resource/asset_registry.h"
 #include "engine/resource/cpu_mesh.h"
@@ -135,8 +135,7 @@ void RenderSystem::Update(Ecs& ecs, const AssetRegistry& assets,
     const auto proj = ProjectionMatrix(
         lens, static_cast<float>(ctx.width) / static_cast<float>(ctx.height),
         bgfx::getCaps()->homogeneousDepth);
-    const std::array<float, 4> eye_pos{pose.position.x, pose.position.y,
-                                       pose.position.z, 0.0F};
+    const auto eye_pos = ToVec4(pose.position, 1.0F);
     bgfx::setFrameUniform(u_eye_pos_.Get(), eye_pos.data());
 
     bgfx::setViewTransform(0, view.data(), proj.data());
