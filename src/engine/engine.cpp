@@ -13,6 +13,7 @@
 #include "engine/ecs/components/physics_link.h"
 #include "engine/ecs/components/renderable.h"
 #include "engine/ecs/components/rigid_body.h"
+#include "engine/ecs/components/sky.h"
 #include "engine/ecs/components/transform.h"
 #include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
@@ -30,6 +31,7 @@ Engine::Engine(const NativeSurface& surface) : bgfx_context_(surface) {
   ecs_.RegisterComponent<Camera>();
   ecs_.RegisterComponent<Renderable>();
   ecs_.RegisterComponent<DirectionalLight>();
+  ecs_.RegisterComponent<Sky>();
   ecs_.RegisterComponent<Transform>();
   ecs_.RegisterComponent<RigidBody>();
   ecs_.RegisterComponent<Collider>();

@@ -208,6 +208,7 @@ add_library(engine_runtime STATIC
   src/engine/ecs/components/renderable.h
   src/engine/ecs/components/directional_light.h
   src/engine/ecs/components/rigid_body.h
+  src/engine/ecs/components/sky.h
   src/engine/ecs/components/transform.h
   src/engine/ecs/systems/debug_draw_system.h
   src/engine/ecs/systems/debug_draw_system.cpp
