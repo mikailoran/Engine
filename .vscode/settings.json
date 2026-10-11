@@ -42,6 +42,10 @@
 	"[cpp]": {
 		"editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
 	},
+	// bgfx shaders are GLSL plus macros; borrow the GLSL grammar
+	"files.associations": {
+		"*.sc": "glsl"
+	},
 	"search.exclude": {
 		"build/**": true,
 		"third_party/**": true

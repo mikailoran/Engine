@@ -53,7 +53,8 @@ set_target_properties(ecs_core PROPERTIES
 # math_tests can link it without the engine.
 add_library(engine_math STATIC
   src/engine/math/rotation.cpp
-  src/engine/math/rotation.h)
+  src/engine/math/rotation.h
+  src/engine/math/vector.h)
 
 target_include_directories(engine_math PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(engine_math PUBLIC bx)
@@ -208,6 +209,7 @@ add_library(engine_runtime STATIC
   src/engine/ecs/components/renderable.h
   src/engine/ecs/components/directional_light.h
   src/engine/ecs/components/rigid_body.h
+  src/engine/ecs/components/sky.h
   src/engine/ecs/components/transform.h
   src/engine/ecs/systems/debug_draw_system.h
   src/engine/ecs/systems/debug_draw_system.cpp
@@ -215,6 +217,8 @@ add_library(engine_runtime STATIC
   src/engine/ecs/systems/lighting_system.cpp
   src/engine/ecs/systems/render_system.h
   src/engine/ecs/systems/render_system.cpp
+  src/engine/ecs/systems/sky_system.h
+  src/engine/ecs/systems/sky_system.cpp
   src/engine/resource/gpu_mesh.h
   src/engine/resource/gpu_mesh.cpp
   src/engine/resource/mesh_handle.h
@@ -322,6 +326,7 @@ set(BGFX_SHADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/bgfx.cmake/bgfx/src)
 bgfx_compile_shaders(
   TYPE VERTEX
   SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/vs_mesh.sc
+          ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/vs_sky.sc
   VARYING_DEF ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/varying.def.sc
   OUTPUT_DIR ${ENGINE_RUNTIME_DIR}/shaders
   INCLUDE_DIRS ${BGFX_SHADER_DIR}
@@ -331,6 +336,7 @@ bgfx_compile_shaders(
 bgfx_compile_shaders(
   TYPE FRAGMENT
   SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/fs_mesh.sc
+          ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/fs_sky.sc
   VARYING_DEF ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/varying.def.sc
   OUTPUT_DIR ${ENGINE_RUNTIME_DIR}/shaders
   INCLUDE_DIRS ${BGFX_SHADER_DIR}
