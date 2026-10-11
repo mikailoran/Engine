@@ -16,6 +16,7 @@ these explain why it isn't built some other way.
 | [0008](0008-right-handed-frame.md) | Use a right-handed, +Y up coordinate frame |
 | [0009](0009-kinematic-character.md) | A kinematic character on Jolt's `CharacterVirtual` |
 | [0010](0010-gltf-runtime-format.md) | Load glTF directly at runtime, with no format of our own |
+| [0011](0011-directional-shadow-map.md) | Shadow the sun with one stable, camera-fitted shadow map |
 
 ## Adding one
 

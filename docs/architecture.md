@@ -68,7 +68,7 @@ engine.SetActiveCamera(camera);
 // Host loop
 engine.Resize(window.BackbufferSize());     // cheap when unchanged
 engine.Update(ctx);                         // physics, lighting
-engine.Render(ctx, {.debug_draw = true});   // sky, debug draw, scene, bgfx::frame()
+engine.Render(ctx, {.debug_draw = true});   // shadow map, sky, debug draw, scene, bgfx::frame()
 engine.EndFrame();                          // Ecs::Flush
 ```
 
