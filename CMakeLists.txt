@@ -446,6 +446,9 @@ if(ENGINE_BUILD_EDITOR)
     Qt6::GuiPrivate)
 
   target_compile_options(editor PRIVATE -Wall -Wextra -Wpedantic)
+  # Scenes open from the source tree, so edits show without a rebuild
+  target_compile_definitions(editor PRIVATE
+    EDITOR_SCENE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets/scenes")
   set_target_properties(editor PROPERTIES
     CXX_STANDARD 20
     CXX_STANDARD_REQUIRED ON
