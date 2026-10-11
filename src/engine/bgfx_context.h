@@ -18,7 +18,10 @@ namespace engine {
 class BgfxContext {
  public:
   /** @brief Reset flags the backbuffer is created and resized with. */
-  static constexpr std::uint32_t kResetFlags = BGFX_RESET_VSYNC;
+  static constexpr std::uint32_t kResetFlags =
+      BGFX_RESET_VSYNC | BGFX_RESET_MSAA_X4;
+  // TODO: Add anisotropy when it would make a difference
+  // BGFX_RESET_VSYNC | BGFX_RESET_MSAA_X4 | BGFX_RESET_MAXANISOTROPY;
 
   /** @brief Debug flags bgfx starts with. */
   static constexpr std::uint32_t kDebugFlags = BGFX_DEBUG_STATS;
