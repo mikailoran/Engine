@@ -16,14 +16,12 @@
 #include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
 #include "engine/math/vector.h"
+#include "engine/render_views.h"
 #include "engine/resource/unique_handle.h"
 
 namespace engine {
 
 namespace {
-
-// Shares the scene's view, behind it by depth
-constexpr bgfx::ViewId kSkyView = 0;
 
 // No depth write: depth 1 passes only where the clear value remains
 constexpr std::uint64_t kSkyState =
@@ -81,7 +79,8 @@ void SkySystem::Update(Ecs& ecs) {
 
   bgfx::setVertexBuffer(0, triangle_.Get());
   bgfx::setState(kSkyState);
-  bgfx::submit(kSkyView, program_.Get());
+  // Shares the scene's view, behind it by depth
+  bgfx::submit(kSceneView, program_.Get());
 }
 
 }  // namespace engine

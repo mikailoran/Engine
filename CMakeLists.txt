@@ -49,11 +49,14 @@ set_target_properties(ecs_core PROPERTIES
 )
 
 # --- Math -------------------------------------------------------------------
-# Rotation conventions shared by rendering, scenes and physics. A library so
+# Rotation conventions shared by rendering, scenes and physics, and shadow
+# fitting. A library so
 # math_tests can link it without the engine.
 add_library(engine_math STATIC
   src/engine/math/rotation.cpp
   src/engine/math/rotation.h
+  src/engine/math/shadow_fit.cpp
+  src/engine/math/shadow_fit.h
   src/engine/math/vector.h)
 
 target_include_directories(engine_math PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -217,6 +220,8 @@ add_library(engine_runtime STATIC
   src/engine/ecs/systems/lighting_system.cpp
   src/engine/ecs/systems/render_system.h
   src/engine/ecs/systems/render_system.cpp
+  src/engine/ecs/systems/shadow_system.h
+  src/engine/ecs/systems/shadow_system.cpp
   src/engine/ecs/systems/sky_system.h
   src/engine/ecs/systems/sky_system.cpp
   src/engine/resource/gpu_mesh.h
@@ -327,6 +332,7 @@ bgfx_compile_shaders(
   TYPE VERTEX
   SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/vs_mesh.sc
           ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/vs_sky.sc
+          ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/vs_shadow.sc
   VARYING_DEF ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/varying.def.sc
   OUTPUT_DIR ${ENGINE_RUNTIME_DIR}/shaders
   INCLUDE_DIRS ${BGFX_SHADER_DIR}
@@ -337,6 +343,7 @@ bgfx_compile_shaders(
   TYPE FRAGMENT
   SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/fs_mesh.sc
           ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/fs_sky.sc
+          ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/fs_shadow.sc
   VARYING_DEF ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/varying.def.sc
   OUTPUT_DIR ${ENGINE_RUNTIME_DIR}/shaders
   INCLUDE_DIRS ${BGFX_SHADER_DIR}
@@ -344,6 +351,15 @@ bgfx_compile_shaders(
 )
 
 # add_custom_command outputs are only built when a target depends on them.
+# bgfx_compile_shaders tracks only each source, so add the shadow include
+foreach(SHADER_OUTPUT IN LISTS FS_OUTPUTS)
+  # The first profile's output names each shader's command
+  if(SHADER_OUTPUT MATCHES "/spirv/fs_mesh\\.sc\\.bin$")
+    add_custom_command(OUTPUT ${SHADER_OUTPUT} APPEND
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/shadow.sh)
+  endif()
+endforeach()
+
 add_custom_target(shaders DEPENDS ${VS_OUTPUTS} ${FS_OUTPUTS})
 add_dependencies(game shaders)
 

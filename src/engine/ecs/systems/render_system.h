@@ -16,14 +16,14 @@ struct FrameContext;
 /**
  * @brief Draws every entity carrying {Transform, Renderable}.
  *
- * Owns view 0 and the resources shared across entities (shader program,
+ * Owns kSceneView and the resources shared across entities (shader program,
  * uniforms and the fallback white texture). Releases them on destruction,
  * which must precede bgfx::shutdown.
  */
 class RenderSystem {
  public:
   /**
-   * @brief Creates the shared GPU resources and sets view 0's clear.
+   * @brief Creates the shared GPU resources and sets kSceneView's clear.
    *
    * Requires bgfx::init to have completed, and the asset root to be set via
    * SetAssetRoot, since loadProgram resolves its paths against it.
@@ -38,8 +38,10 @@ class RenderSystem {
    * @param ecs World to read Transform and Renderable from.
    * @param assets Registry to resolve mesh handles through.
    * @param ctx Per-frame inputs.
+   * @param shadow_map The sun's depth map, from ShadowSystem::Map.
    */
-  void Update(Ecs& ecs, const AssetRegistry& assets, const FrameContext& ctx);
+  void Update(Ecs& ecs, const AssetRegistry& assets, const FrameContext& ctx,
+              bgfx::TextureHandle shadow_map);
 
   /**
    * @brief Nominates the entity supplying view and projection.
@@ -66,6 +68,9 @@ class RenderSystem {
 
   // Base color sampler, stage 0.
   UniqueHandle<bgfx::UniformHandle> s_albedo_;
+
+  // Shadow map sampler, stage 1.
+  UniqueHandle<bgfx::UniformHandle> s_shadow_map_;
 
   // 1x1 white, bound for untextured submeshes so they keep their plain color.
   UniqueHandle<bgfx::TextureHandle> default_texture_;

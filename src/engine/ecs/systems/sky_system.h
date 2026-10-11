@@ -9,7 +9,7 @@ namespace engine {
 class Ecs;
 
 /**
- * @brief Draws the scene's Sky behind all geometry in view 0.
+ * @brief Draws the scene's Sky behind all geometry in kSceneView.
  *
  * One fullscreen triangle at the far plane, depth-tested so only pixels no
  * geometry covers show it. The sun is placed by LightingSystem's frame
@@ -29,7 +29,7 @@ class SkySystem {
   SkySystem();
 
   /**
-   * @brief Submits this frame's sky to view 0.
+   * @brief Submits this frame's sky to kSceneView.
    *
    * Draws a default-constructed Sky when no entity has one.
    */
