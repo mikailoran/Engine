@@ -51,6 +51,8 @@ void Engine::Update(const FrameContext& ctx) {
 }
 
 void Engine::Render(const FrameContext& ctx, RenderOptions options) {
+  // Submits to view 0; must precede the renderer's bgfx::frame()
+  sky_.Update(ecs_);
   // Submits to view 1; must precede the renderer's bgfx::frame()
   if (options.debug_draw) {
     debug_draw_.Update(ecs_, assets_, ctx);

@@ -12,6 +12,7 @@
 #include "engine/ecs/systems/lighting_system.h"
 #include "engine/ecs/systems/physics_system.h"
 #include "engine/ecs/systems/render_system.h"
+#include "engine/ecs/systems/sky_system.h"
 #include "engine/physics/jolt_runtime.h"
 #include "engine/physics/physics_world.h"
 #include "engine/platform/native_surface.h"
@@ -113,6 +114,7 @@ class Engine {
 
   PhysicsSystem physics_system_;
   LightingSystem lighting_;
+  SkySystem sky_;
   DebugDrawSystem debug_draw_;
   RenderSystem render_;
 

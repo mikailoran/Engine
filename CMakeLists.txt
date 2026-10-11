@@ -217,6 +217,8 @@ add_library(engine_runtime STATIC
   src/engine/ecs/systems/lighting_system.cpp
   src/engine/ecs/systems/render_system.h
   src/engine/ecs/systems/render_system.cpp
+  src/engine/ecs/systems/sky_system.h
+  src/engine/ecs/systems/sky_system.cpp
   src/engine/resource/gpu_mesh.h
   src/engine/resource/gpu_mesh.cpp
   src/engine/resource/mesh_handle.h
