@@ -6,11 +6,11 @@ it is today. The goals and milestones behind it are in
 [objectives.md](objectives.md).
 
 **Built so far (M1, M2, M3a, M3b):** the engine is a library (`Engine`, in
-`src/engine/engine.h`) driven by the SDL `game` host, with the ImGui tools in
+`src/engine/engine.h`) driven by the SDL host (`launcher`), with the ImGui tools in
 `src/devtools/`. Meshes and levels load from glTF at runtime with their base
 color materials and textures, and a level shell collides through a
 triangle-mesh collider (the first version of the static shell below). The
-game-logic library (`src/game/logic/`) holds the first gameplay: a
+game library (`src/game/`) holds the first gameplay: a
 first-person `Player` on a kinematic character (`CharacterBody`), walking a
 level built in Blender from Kenney's CC0 Prototype Kit. The game starts in play mode; F1 switches to
 the devtools. The editor doesn't exist yet.
@@ -20,23 +20,23 @@ the devtools. The editor doesn't exist yet.
 ## Layers
 
 ```
-editor (Qt exe) ──┐
-                  ├──► game logic (lib) ──► engine (lib) ──► ecs_core
-game (SDL exe) ───┘                           ▲
-     └──► devtools (ImGui) ───────────────────┘
+editor (Qt exe) ───┐
+                   ├──► game (lib) ──► engine (lib) ──► ecs_core
+launcher (SDL exe) ┘                     ▲
+     └──► devtools (ImGui) ──────────────┘
 ```
 
 | Layer | Directory | May include | Must never include |
 |---|---|---|---|
 | **Engine** | `src/engine/` | bgfx, bx, bimg, Jolt (only inside `physics/`), cgltf (only in the glTF reader), nlohmann/json | Qt, SDL, ImGui, game logic, editor |
-| **Game logic** | `src/game/logic/` (library `game_logic`) | Engine | Qt, SDL, ImGui, devtools, editor |
-| **Game host** | `src/game/` | Engine, game logic, devtools, SDL3 | Qt |
+| **Game** | `src/game/` (library `game_logic`) | Engine | Qt, SDL, ImGui, devtools, editor |
+| **Launcher** | `src/launcher/` (executable `launcher`) | Engine, game, devtools, SDL3 | Qt |
 | **Devtools** | `src/devtools/` | Engine, ImGui | Qt, SDL |
 | **Editor** | `src/editor/` | Engine, game logic, Qt | bgfx or Jolt directly |
 
 Includes stay `src/`-rooted: `"engine/ecs/core/types.h"`. Namespaces follow
 the same split: `engine` (with `engine::physics` for the Jolt facade),
-`devtools`, `game`, and later `editor`.
+`devtools`, `game`, `launcher` and `editor`.
 
 The editor links the game's logic rather than excluding it. Playing in the
 editor runs the real gameplay systems, and the inspector has to show gameplay
@@ -46,7 +46,7 @@ anything from the editor.
 ## Hosts drive the engine
 
 The engine is a library. It does not own the process, the OS window, the
-event loop or the clock. A **host** does: the SDL `game` executable, or the Qt
+event loop or the clock. A **host** does: the SDL `launcher` executable, or the Qt
 editor. Each frame, the host:
 
 1. turns its own events (SDL or Qt) into the engine's `Input`, in backbuffer
@@ -131,9 +131,15 @@ never heard of.
 ## Playing in the editor vs the game
 
 Both run the same engine and the same gameplay systems on the same scene, so
-a body falls identically in either. What differs:
+a body falls identically in either. The gameplay is one class, `GameSession`
+(`src/game/`): a run of the game, with its systems and the player's camera,
+on an engine the host owns. Each frame the host calls its `PrePhysics`, then
+`Engine::Update`, then its `PostPhysics`. New gameplay goes inside those two
+phases, so neither host changes. The session's lifetime is one run: the
+launcher keeps one for the whole process, and the editor starts a new one on
+every load, and later on every Play. What differs:
 
-| | Play in the editor | `game` executable |
+| | Play in the editor | `launcher` executable |
 |---|---|---|
 | Starting state | The editor's in-memory scene, **unsaved edits included** | The scene file on disk |
 | Flow | Starts in the open level | Full flow: boot, level, and later menus |
@@ -143,7 +149,7 @@ a body falls identically in either. What differs:
 
 The standalone run catches what playing in the editor can't: fields that were
 never saved, and host-specific input bugs. The editor's "launch game" button
-saves, then starts `game --scene <path>`.
+saves, then starts `launcher --scene <path>`.
 
 ## Content pipeline
 

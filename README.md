@@ -43,7 +43,7 @@ Requires CMake 3.25+, a C++20 compiler and SDL3 development files (Fedora:
 git clone --recurse-submodules <url>
 cmake -S . -B build/Debug -DCMAKE_BUILD_TYPE=Debug
 cmake --build build/Debug
-./build/Debug/game
+./build/Debug/launcher
 ```
 
 The configure step needs network access because it fetches Jolt Physics,
