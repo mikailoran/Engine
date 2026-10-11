@@ -6,6 +6,9 @@
 #include <QMenu>
 #include <QMenuBar>
 #include <QWidget>
+#include <memory>
+
+#include "editor/viewport_window.h"
 
 namespace editor {
 
@@ -17,6 +20,10 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
   QAction* quit = file_menu->addAction(tr("&Quit"));
   quit->setShortcut(QKeySequence::Quit);
   connect(quit, &QAction::triggered, this, [this]() -> void { close(); });
+
+  // The container takes ownership of the viewport and lays it out like a widget
+  auto viewport = std::make_unique<ViewportWindow>();
+  setCentralWidget(QWidget::createWindowContainer(viewport.release(), this));
 }
 
 }  // namespace editor
