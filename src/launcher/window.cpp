@@ -1,4 +1,4 @@
-#include "game/window.h"
+#include "launcher/window.h"
 
 #include <SDL3/SDL_error.h>
 #include <SDL3/SDL_events.h>
@@ -32,7 +32,7 @@ using engine::NativeSurface;
 using engine::PixelSize;
 using engine::SurfaceKind;
 
-namespace game {
+namespace launcher {
 
 namespace {
 
@@ -240,4 +240,4 @@ auto Window::PumpEvents(Input& input) -> bool {
   return quit;
 }
 
-}  // namespace game
+}  // namespace launcher

@@ -1,4 +1,4 @@
-#include "game/logic/game_session.h"
+#include "game/game_session.h"
 
 #include "engine/ecs/components/camera.h"
 #include "engine/ecs/components/transform.h"

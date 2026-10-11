@@ -3,7 +3,7 @@
 
 #include "engine/platform/asset_root.h"
 #include "engine/platform/bgfx_file_access.h"
-#include "game/standalone_host.h"
+#include "launcher/standalone_host.h"
 
 using engine::AssetRoot;
 using engine::SetAssetRoot;
@@ -14,7 +14,7 @@ auto main() -> int {
   SetAssetRoot(AssetRoot());
 
   try {
-    game::StandaloneHost host;
+    launcher::StandaloneHost host;
     return host.Run();
   } catch (const std::exception& e) {
     std::cerr << "fatal: " << e.what() << '\n';

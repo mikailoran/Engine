@@ -263,13 +263,13 @@ set_target_properties(engine_runtime PROPERTIES
 # Gameplay components and systems, shared by the game and later the editor.
 # Never SDL, ImGui or devtools.
 add_library(game_logic STATIC
-  src/game/logic/game_logic.h
-  src/game/logic/game_logic.cpp
-  src/game/logic/game_session.h
-  src/game/logic/game_session.cpp
-  src/game/logic/player.h
-  src/game/logic/player_system.h
-  src/game/logic/player_system.cpp)
+  src/game/game_logic.h
+  src/game/game_logic.cpp
+  src/game/game_session.h
+  src/game/game_session.cpp
+  src/game/player.h
+  src/game/player_system.h
+  src/game/player_system.cpp)
 
 target_link_libraries(game_logic PUBLIC engine_runtime)
 
@@ -283,11 +283,11 @@ set_target_properties(game_logic PROPERTIES
 
 # --- Launcher ---------------------------------------------------------------
 # The host: window, input, devtools and the frame loop around Engine.
-add_executable(launcher src/game/main.cpp
-  src/game/standalone_host.h
-  src/game/standalone_host.cpp
-  src/game/window.h
-  src/game/window.cpp
+add_executable(launcher src/launcher/main.cpp
+  src/launcher/standalone_host.h
+  src/launcher/standalone_host.cpp
+  src/launcher/window.h
+  src/launcher/window.cpp
   src/devtools/selected.h
   src/devtools/fly_camera_system.cpp
   src/devtools/fly_camera_system.h

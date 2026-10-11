@@ -1,4 +1,4 @@
-#include "game/standalone_host.h"
+#include "launcher/standalone_host.h"
 
 #include <chrono>
 
@@ -12,7 +12,7 @@
 #include "engine/platform/frame_context.h"
 #include "engine/platform/input.h"
 #include "engine/platform/screen.h"
-#include "game/logic/game_logic.h"
+#include "game/game_logic.h"
 
 using devtools::Selected;
 using devtools::UpdateSelection;
@@ -24,8 +24,9 @@ using engine::Key;
 using engine::PixelSize;
 using engine::RenderOptions;
 using engine::Transform;
+using game::RegisterGameLogic;
 
-namespace game {
+namespace launcher {
 
 StandaloneHost::StandaloneHost() {
   Ecs& ecs = engine_.World();
@@ -117,4 +118,4 @@ auto StandaloneHost::Run() -> int {
   return 0;
 }
 
-}  // namespace game
+}  // namespace launcher

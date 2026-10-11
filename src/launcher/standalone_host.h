@@ -8,10 +8,10 @@
 #include "engine/engine.h"
 #include "engine/platform/input.h"
 #include "engine/platform/screen.h"
-#include "game/logic/game_session.h"
-#include "game/window.h"
+#include "game/game_session.h"
+#include "launcher/window.h"
 
-namespace game {
+namespace launcher {
 
 /**
  * @brief The standalone host: the SDL window and input, the frame loop, the
@@ -50,7 +50,7 @@ class StandaloneHost {
   engine::Input input_;
 
   engine::Engine engine_{window_.Surface()};
-  GameSession session_{engine_};
+  game::GameSession session_{engine_};
 
   // After the engine: UiSystem's GPU resources must go before bgfx does
   devtools::FlyCameraSystem fly_camera_;
@@ -60,4 +60,4 @@ class StandaloneHost {
   Mode mode_{Mode::kPlay};
 };
 
-}  // namespace game
+}  // namespace launcher

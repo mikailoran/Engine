@@ -1,7 +1,7 @@
 #pragma once
 
 #include "engine/ecs/core/types.h"
-#include "game/logic/player_system.h"
+#include "game/player_system.h"
 
 namespace engine {
 class Engine;
