@@ -220,6 +220,8 @@ add_library(engine_runtime STATIC
   src/engine/ecs/systems/lighting_system.cpp
   src/engine/ecs/systems/render_system.h
   src/engine/ecs/systems/render_system.cpp
+  src/engine/ecs/systems/shadow_system.h
+  src/engine/ecs/systems/shadow_system.cpp
   src/engine/ecs/systems/sky_system.h
   src/engine/ecs/systems/sky_system.cpp
   src/engine/resource/gpu_mesh.h
@@ -330,6 +332,7 @@ bgfx_compile_shaders(
   TYPE VERTEX
   SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/vs_mesh.sc
           ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/vs_sky.sc
+          ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/vs_shadow.sc
   VARYING_DEF ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/varying.def.sc
   OUTPUT_DIR ${ENGINE_RUNTIME_DIR}/shaders
   INCLUDE_DIRS ${BGFX_SHADER_DIR}
@@ -340,6 +343,7 @@ bgfx_compile_shaders(
   TYPE FRAGMENT
   SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/fs_mesh.sc
           ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/fs_sky.sc
+          ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/fs_shadow.sc
   VARYING_DEF ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/varying.def.sc
   OUTPUT_DIR ${ENGINE_RUNTIME_DIR}/shaders
   INCLUDE_DIRS ${BGFX_SHADER_DIR}

@@ -51,6 +51,8 @@ void Engine::Update(const FrameContext& ctx) {
 }
 
 void Engine::Render(const FrameContext& ctx, RenderOptions options) {
+  // Submits to kShadowView; must precede the renderer's bgfx::frame()
+  shadow_.Update(ecs_, assets_, ctx);
   // Submits to kSceneView; must precede the renderer's bgfx::frame()
   sky_.Update(ecs_);
   // Submits to kDebugView; must precede the renderer's bgfx::frame()
@@ -73,6 +75,7 @@ void Engine::RegisterSceneLoader(std::string key, ComponentLoader loader) {
 void Engine::SetActiveCamera(Entity camera) {
   active_camera_ = camera;
   render_.SetActiveCamera(camera);
+  shadow_.SetActiveCamera(camera);
   debug_draw_.SetActiveCamera(camera);
 }
 
