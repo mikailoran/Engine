@@ -265,6 +265,8 @@ set_target_properties(engine_runtime PROPERTIES
 add_library(game_logic STATIC
   src/game/logic/game_logic.h
   src/game/logic/game_logic.cpp
+  src/game/logic/game_session.h
+  src/game/logic/game_session.cpp
   src/game/logic/player.h
   src/game/logic/player_system.h
   src/game/logic/player_system.cpp)
@@ -279,9 +281,11 @@ set_target_properties(game_logic PROPERTIES
   CXX_EXTENSIONS OFF
 )
 
-# --- Game -------------------------------------------------------------------
+# --- Launcher ---------------------------------------------------------------
 # The host: window, input, devtools and the frame loop around Engine.
-add_executable(game src/game/main.cpp
+add_executable(launcher src/game/main.cpp
+  src/game/standalone_host.h
+  src/game/standalone_host.cpp
   src/game/window.h
   src/game/window.cpp
   src/devtools/selected.h
@@ -293,10 +297,10 @@ add_executable(game src/game/main.cpp
   src/devtools/ui.cpp)
 
 find_package(SDL3 CONFIG REQUIRED)
-target_link_libraries(game PRIVATE game_logic engine_runtime bgfx_imgui
+target_link_libraries(launcher PRIVATE game_logic engine_runtime bgfx_imgui
   SDL3::SDL3)
 
-target_compile_options(game PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_options(launcher PRIVATE -Wall -Wextra -Wpedantic)
 
 # Set as target properties rather than directory-level CMAKE_CXX_* variables, so
 # the choice cannot reach anything add_subdirectory() pulls in. bgfx.cmake sets
@@ -306,7 +310,7 @@ target_compile_options(game PRIVATE -Wall -Wextra -Wpedantic)
 # GCC 16 already defaults to C++20, so CMake emitted no -std flag at all and
 # CXX_EXTENSIONS OFF was silently ignored. CXX_STANDARD with STANDARD_REQUIRED
 # emits the flag unconditionally, which is what turns extensions off.
-set_target_properties(game PROPERTIES
+set_target_properties(launcher PROPERTIES
   CXX_STANDARD 20
   CXX_STANDARD_REQUIRED ON
   CXX_EXTENSIONS OFF
@@ -361,7 +365,7 @@ foreach(SHADER_OUTPUT IN LISTS FS_OUTPUTS)
 endforeach()
 
 add_custom_target(shaders DEPENDS ${VS_OUTPUTS} ${FS_OUTPUTS})
-add_dependencies(game shaders)
+add_dependencies(launcher shaders)
 
 # --- Meshes and levels ------------------------------------------------------
 # glTF loads as authored (ADR 0010), so the files are only copied beside the
@@ -394,7 +398,7 @@ foreach(asset IN LISTS ENGINE_GLTF_ASSETS)
   list(APPEND ENGINE_GLTF_OUTPUTS ${asset_out})
 endforeach()
 add_custom_target(meshes DEPENDS ${ENGINE_GLTF_OUTPUTS})
-add_dependencies(game meshes)
+add_dependencies(launcher meshes)
 
 # --- Scenes -----------------------------------------------------------------
 # Scene files are copied beside the executable; edits recopy on build.
@@ -421,7 +425,7 @@ foreach(scene IN LISTS ENGINE_SCENES)
   list(APPEND ENGINE_SCENE_OUTPUTS ${scene_out})
 endforeach()
 add_custom_target(scenes DEPENDS ${ENGINE_SCENE_OUTPUTS})
-add_dependencies(game scenes)
+add_dependencies(launcher scenes)
 
 # --- Qt Editor --------------------------------------------------------------
 option(ENGINE_BUILD_EDITOR "Build the Qt scene editor" ON)
