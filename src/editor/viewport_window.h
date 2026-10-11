@@ -16,7 +16,10 @@ class QEvent;
 class QExposeEvent;
 class QFocusEvent;
 class QKeyEvent;
+class QMouseEvent;
 class QObject;
+class QPointF;
+class QWheelEvent;
 
 namespace editor {
 
@@ -75,6 +78,18 @@ class ViewportWindow : public QWindow {
   /** @brief Releases every key and button, so none stays held unfocused. */
   void focusOutEvent(QFocusEvent* event) override;
 
+  /** @brief Records a button going down; the right one starts looking. */
+  void mousePressEvent(QMouseEvent* event) override;
+
+  /** @brief Records a button going up; the right one stops looking. */
+  void mouseReleaseEvent(QMouseEvent* event) override;
+
+  /** @brief Records the cursor, and while looking, how far it moved. */
+  void mouseMoveEvent(QMouseEvent* event) override;
+
+  /** @brief Adds wheel notches; positive is away from you. */
+  void wheelEvent(QWheelEvent* event) override;
+
  private:
   using Clock = std::chrono::steady_clock;
 
@@ -86,6 +101,19 @@ class ViewportWindow : public QWindow {
    * Auto-repeats are dropped, and keys the engine doesn't read are ignored.
    */
   void RecordKey(QKeyEvent* event, bool down);
+
+  /**
+   * @brief Sets @p event's button in the input. Holding the right button looks
+   * around: the cursor hides and its movement becomes mouse motion.
+   */
+  void RecordButton(QMouseEvent* event, bool down);
+
+  /** @brief Releases every key and button and stops looking. */
+  void ReleaseInput();
+
+  /** @brief @p position, in Qt's logical pixels, in backbuffer pixels. */
+  [[nodiscard]] auto ToBackbuffer(const QPointF& position) const
+      -> engine::ScreenPosition;
 
   /**
    * @brief The native handles and backbuffer size, for the engine. Valid once
@@ -105,6 +133,8 @@ class ViewportWindow : public QWindow {
 
   // This frame's keyboard and mouse, filled by Qt's events between ticks
   engine::Input input_;
+  // Cursor at the last look step; empty unless the right button is held
+  std::optional<engine::ScreenPosition> look_from_;
 
   // Fires as often as the event loop allows; bgfx's vsync paces the frames
   QTimer frame_timer_;

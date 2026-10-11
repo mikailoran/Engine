@@ -12,10 +12,13 @@
 #include <QFocusEvent>
 #include <QGuiApplication>
 #include <QKeyEvent>
+#include <QMouseEvent>
 #include <QObject>
 #include <QPlatformSurfaceEvent>
+#include <QPointF>
 #include <QSurface>
 #include <QTimer>
+#include <QWheelEvent>
 #include <QWindow>
 #include <QtLogging>
 #include <algorithm>
@@ -44,8 +47,10 @@ using engine::Engine;
 using engine::FrameContext;
 using engine::Input;
 using engine::Key;
+using engine::MouseButton;
 using engine::NativeSurface;
 using engine::PixelSize;
+using engine::ScreenPosition;
 using engine::SurfaceKind;
 
 namespace editor {
@@ -129,6 +134,23 @@ auto KeyFromQt(int qt_key) -> std::optional<Key> {
   return binding->key;
 }
 
+/** @brief The engine's button for a Qt button, if the engine reads it. */
+auto ButtonFromQt(Qt::MouseButton button) -> std::optional<MouseButton> {
+  switch (button) {
+    case Qt::LeftButton:
+      return MouseButton::kLeft;
+    case Qt::RightButton:
+      return MouseButton::kRight;
+    case Qt::MiddleButton:
+      return MouseButton::kMiddle;
+    default:
+      return std::nullopt;
+  }
+}
+
+// Qt reports the wheel in eighths of a degree; one notch is 15 degrees
+constexpr float kWheelUnitsPerNotch = 120.0F;
+
 }  // namespace
 
 ViewportWindow::ViewportWindow(QWindow* parent) : QWindow(parent) {
@@ -196,7 +218,7 @@ auto ViewportWindow::eventFilter(QObject* watched, QEvent* event) -> bool {
       // RecordKey ignores the keys the engine doesn't read
       return event->isAccepted();
     case QEvent::FocusOut:
-      input_ = Input{};
+      ReleaseInput();
       break;
     default:
       break;
@@ -211,9 +233,33 @@ void ViewportWindow::keyReleaseEvent(QKeyEvent* event) {
 }
 
 void ViewportWindow::focusOutEvent(QFocusEvent* event) {
-  // Releases that happen while unfocused never arrive; drop every held key
-  input_ = Input{};
+  ReleaseInput();
   QWindow::focusOutEvent(event);
+}
+
+void ViewportWindow::mousePressEvent(QMouseEvent* event) {
+  RecordButton(event, true);
+}
+
+void ViewportWindow::mouseReleaseEvent(QMouseEvent* event) {
+  RecordButton(event, false);
+}
+
+void ViewportWindow::mouseMoveEvent(QMouseEvent* event) {
+  const ScreenPosition position = ToBackbuffer(event->position());
+  input_.SetMouse(position);
+  if (look_from_) {
+    input_.AddMouseMotion(
+        {.x = position.x - look_from_->x, .y = position.y - look_from_->y});
+    look_from_ = position;
+  }
+}
+
+void ViewportWindow::wheelEvent(QWheelEvent* event) {
+  const float notches =
+      static_cast<float>(event->angleDelta().y()) / kWheelUnitsPerNotch;
+  // Natural scrolling flips the sign; undo it so positive is away
+  input_.AddWheel(event->inverted() ? -notches : notches);
 }
 
 void ViewportWindow::Tick() {
@@ -248,6 +294,39 @@ void ViewportWindow::Tick() {
   engine_->EndFrame();
   // Events until the next tick belong to the next frame
   input_.BeginFrame();
+}
+
+void ViewportWindow::RecordButton(QMouseEvent* event, bool down) {
+  const std::optional<MouseButton> button = ButtonFromQt(event->button());
+  if (!button) {
+    event->ignore();
+    return;
+  }
+  input_.SetButton(*button, down);
+  if (*button != MouseButton::kRight) {
+    return;
+  }
+  if (down) {
+    look_from_ = ToBackbuffer(event->position());
+    setCursor(Qt::BlankCursor);
+  } else {
+    look_from_.reset();
+    unsetCursor();
+  }
+}
+
+void ViewportWindow::ReleaseInput() {
+  // Releases that happen while unfocused never arrive; drop everything held
+  input_ = Input{};
+  look_from_.reset();
+  unsetCursor();
+}
+
+auto ViewportWindow::ToBackbuffer(const QPointF& position) const
+    -> ScreenPosition {
+  const double scale = devicePixelRatio();
+  return {.x = static_cast<float>(position.x() * scale),
+          .y = static_cast<float>(position.y() * scale)};
 }
 
 void ViewportWindow::RecordKey(QKeyEvent* event, bool down) {
