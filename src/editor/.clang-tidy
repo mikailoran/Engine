@@ -1,4 +1,11 @@
 ---
+# The root's checks, minus those that fight Qt's own idioms.
 InheritParentConfig: true
 Checks: >
-  -cppcoreguidelines-owning-memory
+  -cppcoreguidelines-owning-memory,
+  -cppcoreguidelines-pro-type-static-cast-downcast,
+  -readability-redundant-access-specifiers
+
+CheckOptions:
+  # signals, slots and emit have no public header to include.
+  misc-include-cleaner.IgnoreHeaders: 'QtCore/qtmetamacros\.h'

@@ -132,7 +132,6 @@ void ViewportWindow::exposeEvent(QExposeEvent* /*event*/) {
 
 auto ViewportWindow::event(QEvent* e) -> bool {
   if (e->type() == QEvent::PlatformSurface) {
-    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
     const auto* surface_event = static_cast<QPlatformSurfaceEvent*>(e);
     if (surface_event->surfaceEventType() ==
         QPlatformSurfaceEvent::SurfaceAboutToBeDestroyed) {

@@ -13,7 +13,6 @@
 #include <QWidget>
 #include <exception>
 #include <filesystem>
-#include <memory>
 #include <string>
 #include <string_view>
 
@@ -30,7 +29,8 @@ constexpr std::string_view kStartScene = "level02.json";
 
 }  // namespace
 
-MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
+MainWindow::MainWindow(QWidget* parent)
+    : QMainWindow(parent), viewport_(new ViewportWindow) {
   setWindowTitle(tr("Scene Editor"));
   resize(1280, 720);
 
@@ -51,9 +51,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
   connect(quit, &QAction::triggered, this, [this]() -> void { close(); });
 
   // The container takes ownership of the viewport and lays it out like a widget
-  auto viewport = std::make_unique<ViewportWindow>();
-  viewport_ = viewport.get();
-  QWidget* container = QWidget::createWindowContainer(viewport.release(), this);
+  QWidget* container = QWidget::createWindowContainer(viewport_, this);
   // Clicking or tabbing to the viewport gives the game the keyboard
   container->setFocusPolicy(Qt::StrongFocus);
   setCentralWidget(container);
