@@ -121,6 +121,12 @@ up to the host.
 engine or gameplay data. If saving it would be a bug, it is runtime or editor
 state.
 
+`Name` is the one engine component without a component block: a scene
+entity's `"name"`, beside its `"components"`, becomes its `Name`. It is a
+label for tools, not an identifier, so names need not be unique. Entities
+the hosts spawn at runtime (their cameras) have none, and the editor's
+entity list shows only named entities.
+
 The editor shouldn't hard-code the game's components. Game logic registers
 each component with the engine (its scene loader and saver, and a description
 of its fields). Loaders are there today: `RegisterGameLogic` registers

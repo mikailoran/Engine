@@ -208,6 +208,7 @@ add_library(engine_runtime STATIC
   src/engine/ecs/components/character_body.h
   src/engine/ecs/components/character_link.h
   src/engine/ecs/components/collider.h
+  src/engine/ecs/components/name.h
   src/engine/ecs/components/physics_link.h
   src/engine/ecs/components/renderable.h
   src/engine/ecs/components/directional_light.h
@@ -438,7 +439,9 @@ if(ENGINE_BUILD_EDITOR)
     src/editor/main_window.h
     src/editor/main_window.cpp
     src/editor/viewport_window.h
-    src/editor/viewport_window.cpp)
+    src/editor/viewport_window.cpp
+    src/editor/entity_list_model.h
+    src/editor/entity_list_model.cpp)
   target_link_libraries(editor PRIVATE game_logic engine_runtime Qt6::Widgets)
 
   target_compile_options(editor PRIVATE -Wall -Wextra -Wpedantic)
