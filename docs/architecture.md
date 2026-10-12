@@ -51,10 +51,10 @@ editor. Each frame, the host:
 
 1. turns its own events (SDL or Qt) into the engine's `Input`, in backbuffer
    pixels;
-2. runs its own tools that must come before simulation (free camera, click
-   selection);
+2. runs its own tools that must come before simulation (the editor's camera
+   and click selection);
 3. **ticks the engine**: advance the world one frame, then render it;
-4. runs its tools that draw after the frame (the ImGui overlay);
+4. runs its tools that draw after the frame (the devtools console);
 5. ends the frame (deferred entity destruction).
 
 "Tick" is the unit of work: everything the engine does for one frame. The API
@@ -115,7 +115,7 @@ up to the host.
 | Engine | `Transform`, `Renderable`, `Collider`, `RigidBody`, `Camera`, `DirectionalLight`, `Name` | Yes | Engine |
 | Gameplay | Character tuning, interactables, spawn points | Yes | Game logic |
 | Runtime only | `PhysicsLink`, per-play counters | No | The system that owns it |
-| Editor state | Selection, gizmo drags, editor camera, undo stack | No; preferably not components | Editor or devtools |
+| Editor state | Selection, gizmo drags, editor camera, undo stack | No; preferably not components | Editor (devtools until it replaces them) |
 
 **Saving is the test.** If a component belongs in the level file, it is
 engine or gameplay data. If saving it would be a bug, it is runtime or editor
@@ -144,7 +144,7 @@ every load, and later on every Play. What differs:
 | Starting state | The editor's in-memory scene, **unsaved edits included** | The scene file on disk |
 | Flow | Starts in the open level | Full flow: boot, level, and later menus |
 | Input | Qt events; the viewport needs focus, editor shortcuts can steal keys | SDL events, mouse capture |
-| Overlays | Gizmos, selection, trigger volumes; pause, step, inspect | None (devtools in dev builds) |
+| Overlays | Gizmos, selection, trigger volumes; pause, step, inspect | None (the devtools console in dev builds) |
 | On exit | Restores the pre-play scene | Process exits |
 
 The standalone run catches what playing in the editor can't: fields that were
