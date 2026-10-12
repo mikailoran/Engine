@@ -1,3 +1,6 @@
 #!/usr/bin/env bash
-# Run the unit tests before this operation; see .githooks/run-tests.
+# Lint what is being pushed, then run the unit tests; see .githooks/run-lint
+# and .githooks/run-tests.
+set -o errexit -o nounset -o pipefail
+"$(dirname "$0")/run-lint" pre-push "$1"
 exec "$(dirname "$0")/run-tests" pre-push
