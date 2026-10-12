@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <optional>
 
+#include "editor/entity_list_model.h"
 #include "engine/engine.h"
 #include "game/game_session.h"
 
@@ -79,6 +80,8 @@ class MainWindow : public QMainWindow {
 
   // Owned by the central widget's window container.
   ViewportWindow* viewport_{nullptr};
+
+  EntityListModel* entities_{nullptr};
 
   // Owned by the File menu; disabled until a scene has been opened.
   QAction* reload_{nullptr};

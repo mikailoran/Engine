@@ -2,11 +2,14 @@
 
 #include <QtCore/qnamespace.h>
 
+#include <QAbstractItemView>
 #include <QAction>
 #include <QCoreApplication>
 #include <QDebug>
+#include <QDockWidget>
 #include <QFileDialog>
 #include <QKeySequence>
+#include <QListView>
 #include <QMainWindow>
 #include <QMenu>
 #include <QMenuBar>
@@ -23,6 +26,7 @@
 #include <string>
 #include <string_view>
 
+#include "editor/entity_list_model.h"
 #include "editor/viewport_window.h"
 #include "engine/engine.h"
 #include "engine/platform/frame_context.h"
@@ -45,7 +49,9 @@ constexpr std::string_view kStartScene = "level02.json";
 }  // namespace
 
 MainWindow::MainWindow(QWidget* parent)
-    : QMainWindow(parent), viewport_(new ViewportWindow) {
+    : QMainWindow(parent),
+      viewport_(new ViewportWindow),
+      entities_(new EntityListModel) {
   setWindowTitle(tr("Scene Editor"));
   resize(1280, 720);
 
@@ -64,6 +70,14 @@ MainWindow::MainWindow(QWidget* parent)
   QAction* quit = file_menu->addAction(tr("&Quit"));
   quit->setShortcut(QKeySequence::Quit);
   connect(quit, &QAction::triggered, this, &MainWindow::close);
+
+  auto* entity_list_view = new QListView;
+  entity_list_view->setModel(entities_);
+  entity_list_view->setEditTriggers(QAbstractItemView::NoEditTriggers);
+  // entity_list_view->setUniformItemSizes(true);
+  auto* dock = new QDockWidget(tr("Entities"), this);
+  dock->setWidget(entity_list_view);
+  addDockWidget(Qt::LeftDockWidgetArea, dock);
 
   // The container takes ownership of the viewport and lays it out like a widget
   QWidget* container = QWidget::createWindowContainer(viewport_, this);
@@ -174,6 +188,9 @@ void MainWindow::OpenScene(const std::filesystem::path& path) {
   } catch (const std::exception& e) {
     QMessageBox::warning(this, tr("Cannot open scene"),
                          QString::fromStdString(e.what()));
+  }
+  if (engine_) {
+    entities_->Refresh(engine_.value().World());
   }
 }
 
