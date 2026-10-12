@@ -48,7 +48,7 @@ MainWindow::MainWindow(QWidget* parent)
   file_menu->addSeparator();
   QAction* quit = file_menu->addAction(tr("&Quit"));
   quit->setShortcut(QKeySequence::Quit);
-  connect(quit, &QAction::triggered, this, [this]() -> void { close(); });
+  connect(quit, &QAction::triggered, this, &MainWindow::close);
 
   // The container takes ownership of the viewport and lays it out like a widget
   QWidget* container = QWidget::createWindowContainer(viewport_, this);

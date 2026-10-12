@@ -6,6 +6,10 @@
 #include "engine/platform/asset_root.h"
 #include "engine/platform/bgfx_file_access.h"
 
+/**
+ * @brief Sets the asset root, forces Qt onto X11, then runs the editor until
+ * its window closes.
+ */
 auto main(int argc, char* argv[]) -> int {
   engine::SetAssetRoot(engine::AssetRoot());
 

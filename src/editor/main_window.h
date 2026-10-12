@@ -9,10 +9,20 @@ namespace editor {
 
 class ViewportWindow;
 
+/**
+ * @brief The editor's top-level window.
+ *
+ * Opens the launcher's start scene once the viewport's engine is Ready. Scenes
+ * are opened from the source tree's `assets/scenes/`.
+ */
 class MainWindow : public QMainWindow {
   Q_OBJECT
 
  public:
+  /**
+   * @brief Builds the menus and embeds a new viewport as the central widget.
+   * Requires a QApplication. The engine waits for the viewport's first expose.
+   */
   explicit MainWindow(QWidget* parent = nullptr);
 
  private:
