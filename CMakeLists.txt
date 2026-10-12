@@ -263,11 +263,13 @@ set_target_properties(engine_runtime PROPERTIES
 # Gameplay components and systems, shared by the game and later the editor.
 # Never SDL, ImGui or devtools.
 add_library(game_logic STATIC
-  src/game/logic/game_logic.h
-  src/game/logic/game_logic.cpp
-  src/game/logic/player.h
-  src/game/logic/player_system.h
-  src/game/logic/player_system.cpp)
+  src/game/game_logic.h
+  src/game/game_logic.cpp
+  src/game/game_session.h
+  src/game/game_session.cpp
+  src/game/player.h
+  src/game/player_system.h
+  src/game/player_system.cpp)
 
 target_link_libraries(game_logic PUBLIC engine_runtime)
 
@@ -279,11 +281,13 @@ set_target_properties(game_logic PROPERTIES
   CXX_EXTENSIONS OFF
 )
 
-# --- Game -------------------------------------------------------------------
+# --- Launcher ---------------------------------------------------------------
 # The host: window, input, devtools and the frame loop around Engine.
-add_executable(game src/game/main.cpp
-  src/game/window.h
-  src/game/window.cpp
+add_executable(launcher src/launcher/main.cpp
+  src/launcher/standalone_host.h
+  src/launcher/standalone_host.cpp
+  src/launcher/window.h
+  src/launcher/window.cpp
   src/devtools/selected.h
   src/devtools/fly_camera_system.cpp
   src/devtools/fly_camera_system.h
@@ -293,10 +297,10 @@ add_executable(game src/game/main.cpp
   src/devtools/ui.cpp)
 
 find_package(SDL3 CONFIG REQUIRED)
-target_link_libraries(game PRIVATE game_logic engine_runtime bgfx_imgui
+target_link_libraries(launcher PRIVATE game_logic engine_runtime bgfx_imgui
   SDL3::SDL3)
 
-target_compile_options(game PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_options(launcher PRIVATE -Wall -Wextra -Wpedantic)
 
 # Set as target properties rather than directory-level CMAKE_CXX_* variables, so
 # the choice cannot reach anything add_subdirectory() pulls in. bgfx.cmake sets
@@ -306,7 +310,7 @@ target_compile_options(game PRIVATE -Wall -Wextra -Wpedantic)
 # GCC 16 already defaults to C++20, so CMake emitted no -std flag at all and
 # CXX_EXTENSIONS OFF was silently ignored. CXX_STANDARD with STANDARD_REQUIRED
 # emits the flag unconditionally, which is what turns extensions off.
-set_target_properties(game PROPERTIES
+set_target_properties(launcher PROPERTIES
   CXX_STANDARD 20
   CXX_STANDARD_REQUIRED ON
   CXX_EXTENSIONS OFF
@@ -331,8 +335,8 @@ set(BGFX_SHADER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/bgfx.cmake/bgfx/src)
 bgfx_compile_shaders(
   TYPE VERTEX
   SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/vs_mesh.sc
-          ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/vs_sky.sc
-          ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/vs_shadow.sc
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/vs_sky.sc
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/vs_shadow.sc
   VARYING_DEF ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/varying.def.sc
   OUTPUT_DIR ${ENGINE_RUNTIME_DIR}/shaders
   INCLUDE_DIRS ${BGFX_SHADER_DIR}
@@ -342,8 +346,8 @@ bgfx_compile_shaders(
 bgfx_compile_shaders(
   TYPE FRAGMENT
   SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/fs_mesh.sc
-          ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/fs_sky.sc
-          ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/fs_shadow.sc
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/fs_sky.sc
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/fs_shadow.sc
   VARYING_DEF ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/varying.def.sc
   OUTPUT_DIR ${ENGINE_RUNTIME_DIR}/shaders
   INCLUDE_DIRS ${BGFX_SHADER_DIR}
@@ -361,7 +365,7 @@ foreach(SHADER_OUTPUT IN LISTS FS_OUTPUTS)
 endforeach()
 
 add_custom_target(shaders DEPENDS ${VS_OUTPUTS} ${FS_OUTPUTS})
-add_dependencies(game shaders)
+add_dependencies(launcher shaders)
 
 # --- Meshes and levels ------------------------------------------------------
 # glTF loads as authored (ADR 0010), so the files are only copied beside the
@@ -394,7 +398,7 @@ foreach(asset IN LISTS ENGINE_GLTF_ASSETS)
   list(APPEND ENGINE_GLTF_OUTPUTS ${asset_out})
 endforeach()
 add_custom_target(meshes DEPENDS ${ENGINE_GLTF_OUTPUTS})
-add_dependencies(game meshes)
+add_dependencies(launcher meshes)
 
 # --- Scenes -----------------------------------------------------------------
 # Scene files are copied beside the executable; edits recopy on build.
@@ -421,7 +425,35 @@ foreach(scene IN LISTS ENGINE_SCENES)
   list(APPEND ENGINE_SCENE_OUTPUTS ${scene_out})
 endforeach()
 add_custom_target(scenes DEPENDS ${ENGINE_SCENE_OUTPUTS})
-add_dependencies(game scenes)
+add_dependencies(launcher scenes)
+
+# --- Qt Editor --------------------------------------------------------------
+option(ENGINE_BUILD_EDITOR "Build the Qt scene editor" ON)
+if(ENGINE_BUILD_EDITOR)
+  # Widgets brings in Core and Gui
+  find_package(Qt6 6.9 REQUIRED COMPONENTS Widgets)
+
+  add_executable(editor
+    src/editor/main.cpp
+    src/editor/main_window.h
+    src/editor/main_window.cpp
+    src/editor/viewport_window.h
+    src/editor/viewport_window.cpp)
+  target_link_libraries(editor PRIVATE game_logic engine_runtime Qt6::Widgets)
+
+  target_compile_options(editor PRIVATE -Wall -Wextra -Wpedantic)
+  # Scenes open from the source tree, so edits show without a rebuild
+  target_compile_definitions(editor PRIVATE
+    EDITOR_SCENE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets/scenes")
+  set_target_properties(editor PROPERTIES
+    CXX_STANDARD 20
+    CXX_STANDARD_REQUIRED ON
+    CXX_EXTENSIONS OFF
+    AUTOMOC ON
+    RUNTIME_OUTPUT_DIRECTORY ${ENGINE_RUNTIME_DIR}
+  )
+  add_dependencies(editor shaders meshes scenes)
+endif()
 
 # --- Tests ------------------------------------------------------------------
 # Off-switch so a plain game build never triggers googletest's network fetch.

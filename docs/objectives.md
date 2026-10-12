@@ -20,14 +20,19 @@ The editor is also where the project builds real Qt experience: model/view,
 widgets, undo, embedding a native viewport. When choosing between editor
 features, prefer the ones that exercise Qt properly over plumbing.
 
+The editor is more than the in-game devtools redone in Qt. Porting their
+tools is where it starts. Undo, constraints, surfaces and live simulation
+are what make it worth building
+([ADR 0013](adr/0013-devtools-console.md)).
+
 ## The products
 
 | Product | What it is | Owns |
 |---|---|---|
 | **Engine** | A library. Knows nothing about Qt, SDL, gameplay or the editor | Rendering, ECS, physics, assets, scene loading and saving, picking |
 | **Game** | A kinematic first-person character exploring a map full of physics objects, hosted in an SDL3 window | The main loop, input mapping, character and camera behaviour |
-| **Editor** | A Qt application: a **physics lab**, not a map creator | Arranging and tuning physical objects, constraints and surfaces |
-| **Devtools** | The ImGui overlay inside the game (inspector, free camera, click-select) | Runtime debugging; authoring moves to the editor once it exists |
+| **Editor** | A Qt Widgets application ([ADR 0012](adr/0012-qt-widgets-editor.md)): a **physics lab**, not a map creator | Arranging and tuning physical objects, constraints and surfaces |
+| **Devtools** | An in-game developer console, like Fallout's `` ` `` menu: typed commands such as spawning items. Today an ImGui overlay (inspector, free camera, click-select) | Commands on the running game. Its inspector, free camera and selection move to the editor ([ADR 0013](adr/0013-devtools-console.md)) |
 
 The gameplay direction stops at "first-person exploration of a physical
 world" on purpose. It is generic enough to grow into a specific game later,
@@ -112,14 +117,13 @@ library (M5) are their first users.
 
 ## Open questions
 
-- **Qt Widgets or QML?** Widgets is the usual choice for editors and tools;
-  QML is the usual choice for embedded and HMI work. Decide before M4a, based
-  on which skills matter more.
+Settled questions move to an ADR: Qt Widgets over QML
+([0012](adr/0012-qt-widgets-editor.md)), and the devtools after M4
+([0013](adr/0013-devtools-console.md)).
+
 - **A specific game.** Deferred until exploration (M2) works.
 - **Physics surfaces on parts of the static shell.** The editor picks
   surfaces, and Blender owns only visuals. One surface for the whole shell is
   easy. An ice patch on one floor needs a way to address part of the shell:
   per-node entities, or glTF node names. Decide when per-node entities
   arrive.
-- **The devtools after M4.** Keep the ImGui overlay as a runtime debugger, or
-  retire the parts the editor replaces.

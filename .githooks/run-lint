@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+#
+# pre-push gate: lint what is being pushed with tools/lint.sh. Lints only the
+# lines changed since the remote last had them, or the whole project when lint
+# config (.clang-tidy, tools/lint.sh, CMakeLists.txt) changed in the push.
+# Reads git's pre-push ref lines on stdin; exits non-zero to abort the push.
+#
+# tools/lint.sh lints the working tree, so a pushed branch that isn't checked
+# out is skipped, and uncommitted edits are linted along with the push.
+# Build directory as in run-tests: ENGINE_HOOK_BUILD_DIR, default build/Debug.
+
+set -o errexit -o nounset -o pipefail
+
+readonly HOOK_NAME="${1:-hook}"
+readonly REMOTE="${2:?usage: run-lint HOOK_NAME REMOTE}"
+readonly BUILD_DIR="${ENGINE_HOOK_BUILD_DIR:-build/Debug}"
+head_sha="$(git rev-parse HEAD)"
+readonly HEAD_SHA="${head_sha}"
+status=0
+
+while read -r local_ref local_sha _remote_ref _remote_sha; do
+    # Deleting a remote branch pushes nothing
+    if [[ "${local_sha}" =~ ^0+$ ]]; then
+        continue
+    fi
+    if [[ "${local_sha}" != "${HEAD_SHA}" ]]; then
+        echo "[${HOOK_NAME}] ${local_ref} isn't checked out -- not linted."
+        continue
+    fi
+
+    # Oldest commit the remote doesn't have; none means nothing new to lint
+    first="$(git rev-list --topo-order "${local_sha}" --not --remotes="${REMOTE}" |
+        tail -n 1)"
+    if [[ -z "${first}" ]]; then
+        continue
+    fi
+
+    if ! base="$(git rev-parse --verify --quiet "${first}^")"; then
+        mode=(full)
+    elif ! git diff --quiet "${base}" "${local_sha}" -- \
+        ':(glob)**/.clang-tidy' tools/lint.sh CMakeLists.txt; then
+        mode=(full)
+    else
+        mode=(diff "${base}")
+    fi
+
+    echo "[${HOOK_NAME}] Linting ${local_ref} (${mode[0]})..."
+    tools/lint.sh -p "${BUILD_DIR}" "${mode[@]}" </dev/null || status=1
+done
+
+exit "${status}"

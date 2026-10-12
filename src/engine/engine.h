@@ -65,10 +65,21 @@ class Engine {
 
   /**
    * @brief Loads a scene file's entities into the world.
-   * @param path Relative to the asset root, e.g. "assets/scenes/debug.json".
+   * @param path Relative to the asset root, e.g. "assets/scenes/debug.json",
+   *        or absolute.
    * @throws std::runtime_error If the scene or an asset it names won't load.
    */
   void LoadScene(const std::filesystem::path& path);
+
+  /**
+   * @brief Destroys every entity now, the host's included, so a scene can be
+   * loaded fresh.
+   *
+   * Call between frames, never during one. Loaded assets and collision meshes
+   * stay cached; physics drops the old bodies on the next Update. Nominate a
+   * camera again before the next Render.
+   */
+  void ClearWorld();
 
   /**
    * @brief Registers how scenes load a host's own component, under @p key.

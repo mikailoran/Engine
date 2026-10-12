@@ -13,7 +13,7 @@ namespace engine {
 /** @brief Mouse buttons the engine reads. */
 enum class MouseButton : std::uint8_t { kLeft, kRight, kMiddle };
 
-/** @brief Keyboard keys the engine reads, by physical position. */
+/** @brief Keyboard keys the engine reads, as the keyboard layout names them. */
 enum class Key : std::uint8_t {
   // Letters: fly-camera movement and text-field shortcuts
   kW,

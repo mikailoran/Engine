@@ -1,4 +1,4 @@
-#include "game/logic/player_system.h"
+#include "game/player_system.h"
 
 #include <bx/math.h>
 
@@ -12,7 +12,7 @@
 #include "engine/math/rotation.h"
 #include "engine/platform/frame_context.h"
 #include "engine/platform/input.h"
-#include "game/logic/player.h"
+#include "game/player.h"
 
 using engine::CharacterBody;
 using engine::CharacterLink;

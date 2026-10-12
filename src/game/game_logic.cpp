@@ -1,4 +1,4 @@
-#include "game/logic/game_logic.h"
+#include "game/game_logic.h"
 
 #include <nlohmann/json_fwd.hpp>
 
@@ -8,7 +8,7 @@
 #include "engine/physics/physics_world.h"
 #include "engine/resource/asset_registry.h"
 #include "engine/scene/json_read.h"
-#include "game/logic/player.h"
+#include "game/player.h"
 
 namespace game {
 

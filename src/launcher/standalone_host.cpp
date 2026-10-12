@@ -1,100 +1,37 @@
-#include <chrono>
-#include <cstdint>
-#include <exception>
-#include <iostream>
+#include "launcher/standalone_host.h"
 
-#include "devtools/fly_camera_system.h"
+#include <chrono>
+
 #include "devtools/selected.h"
 #include "devtools/selection_system.h"
-#include "devtools/ui.h"
 #include "engine/ecs/components/camera.h"
 #include "engine/ecs/components/transform.h"
 #include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
 #include "engine/engine.h"
-#include "engine/platform/asset_root.h"
-#include "engine/platform/bgfx_file_access.h"
 #include "engine/platform/frame_context.h"
 #include "engine/platform/input.h"
 #include "engine/platform/screen.h"
-#include "game/logic/game_logic.h"
-#include "game/logic/player_system.h"
-#include "game/window.h"
+#include "game/game_logic.h"
 
-using devtools::FlyCameraSystem;
 using devtools::Selected;
-using devtools::UiSystem;
 using devtools::UpdateSelection;
-using engine::AssetRoot;
 using engine::Camera;
 using engine::Ecs;
-using engine::Engine;
 using engine::Entity;
 using engine::FrameContext;
-using engine::Input;
 using engine::Key;
 using engine::PixelSize;
 using engine::RenderOptions;
-using engine::SetAssetRoot;
 using engine::Transform;
+using game::RegisterGameLogic;
 
-namespace game {
+namespace launcher {
 
-namespace {
-
-// Window size in screen points at startup
-constexpr PixelSize kStartSize{.width = 1280, .height = 720};
-
-/** @brief Who has the mouse and keyboard: the player, or the debug tools. */
-enum class Mode : std::uint8_t { kPlay, kDebug };
-
-/**
- * @brief The game host: the SDL window and input, the engine, and devtools.
- *
- * Member order is the bring-up order; destruction runs in reverse. The asset
- * root must be set before construction.
- */
-class Game {
- public:
-  /** @brief Opens the window, then brings up the engine and devtools. */
-  Game();
-
-  /**
-   * @brief Runs the frame loop until the window closes.
-   * @return Process exit code.
-   */
-  auto Run() -> int;
-
- private:
-  /** @brief Switches to @p mode: captures or frees the mouse, picks a camera.
-   */
-  void EnterMode(Mode mode);
-
-  Window window_{kStartSize};
-  Input input_;
-
-  Engine engine_{window_.Surface()};
-  PlayerSystem player_;
-
-  // After the engine: UiSystem's GPU resources must go before bgfx does
-  FlyCameraSystem fly_camera_;
-  UiSystem ui_;
-
-  Entity player_camera_{};
-  Entity fly_camera_entity_{};
-  Mode mode_{Mode::kPlay};
-};
-
-Game::Game() {
+StandaloneHost::StandaloneHost() {
   Ecs& ecs = engine_.World();
   ecs.RegisterComponent<Selected>();
   RegisterGameLogic(engine_);
-
-  // PlayerSystem moves this one to the player's eyes
-  player_camera_ = ecs.CreateEntity();
-  ecs.AddComponent(player_camera_, Transform{});
-  ecs.AddComponent(player_camera_, Camera{});
-  player_.SetViewCamera(player_camera_);
 
   fly_camera_entity_ = ecs.CreateEntity();
   ecs.AddComponent(fly_camera_entity_,
@@ -107,14 +44,14 @@ Game::Game() {
   EnterMode(Mode::kPlay);
 }
 
-void Game::EnterMode(Mode mode) {
+void StandaloneHost::EnterMode(Mode mode) {
   mode_ = mode;
   const bool play = mode == Mode::kPlay;
   window_.SetRelativeMouse(play);
-  engine_.SetActiveCamera(play ? player_camera_ : fly_camera_entity_);
+  engine_.SetActiveCamera(play ? session_.ViewCamera() : fly_camera_entity_);
 }
 
-auto Game::Run() -> int {
+auto StandaloneHost::Run() -> int {
   using Clock = std::chrono::steady_clock;
   using Seconds = std::chrono::duration<float>;
   const auto start_time = Clock::now();
@@ -144,7 +81,7 @@ auto Game::Run() -> int {
     };
 
     // Input moves the player before physics; the debug tools only in debug
-    player_.Control(engine_.World(), ctx, play);
+    session_.PrePhysics(engine_, ctx, play);
     if (!play) {
       // The camera pose must settle before the engine reads it.
       fly_camera_.Update(engine_.World(), ctx, ui_.WantsMouse(),
@@ -156,7 +93,7 @@ auto Game::Run() -> int {
       engine_.Update(ctx);
     }
     // After physics, so the view doesn't trail the player by a frame
-    player_.PlaceCamera(engine_.World());
+    session_.PostPhysics(engine_);
 
     // Playing shows the game alone, without wireframes or the inspector
     const RenderOptions render_options{.debug_draw =
@@ -181,20 +118,4 @@ auto Game::Run() -> int {
   return 0;
 }
 
-}  // namespace
-
-}  // namespace game
-
-/** @brief Sets the asset root, then runs the game until its window closes. */
-auto main() -> int {
-  // bgfx_utils prepends this to every asset path; must precede any load
-  SetAssetRoot(AssetRoot());
-
-  try {
-    game::Game game;
-    return game.Run();
-  } catch (const std::exception& e) {
-    std::cerr << "fatal: " << e.what() << '\n';
-    return 1;
-  }
-}
+}  // namespace launcher

@@ -68,6 +68,14 @@ void Engine::LoadScene(const std::filesystem::path& path) {
   scene_loader_.Load(path, ecs_, assets_, physics_world_);
 }
 
+void Engine::ClearWorld() {
+  // Dead ids are ignored, so every possible id can be queued
+  for (Entity entity = 0; entity < kMaxEntities; ++entity) {
+    ecs_.DestroyEntity(entity);
+  }
+  ecs_.Flush();
+}
+
 void Engine::RegisterSceneLoader(std::string key, ComponentLoader loader) {
   scene_loader_.Register(std::move(key), std::move(loader));
 }

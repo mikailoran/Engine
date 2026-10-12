@@ -1,12 +1,12 @@
-#include "game/window.h"
+#include "launcher/window.h"
 
 #include <SDL3/SDL_error.h>
 #include <SDL3/SDL_events.h>
 #include <SDL3/SDL_init.h>
 #include <SDL3/SDL_keyboard.h>
+#include <SDL3/SDL_keycode.h>
 #include <SDL3/SDL_mouse.h>
 #include <SDL3/SDL_properties.h>
-#include <SDL3/SDL_scancode.h>
 #include <SDL3/SDL_video.h>
 
 #include <algorithm>
@@ -32,51 +32,51 @@ using engine::NativeSurface;
 using engine::PixelSize;
 using engine::SurfaceKind;
 
-namespace game {
+namespace launcher {
 
 namespace {
 
-/** @brief An engine key and the physical key that drives it. */
+/** @brief An engine key and the SDL key that drives it. */
 struct KeyBinding {
   Key key;
-  SDL_Scancode scancode;
+  SDL_Keycode keycode;
 };
 
-// Scancodes are physical positions, so WASD stays put on any layout
+// Keycodes follow the keyboard layout, like Qt's keys in the editor
 constexpr auto kKeyBindings = std::to_array<KeyBinding>({
     // clang-format off
-    {.key = Key::kW,          .scancode = SDL_SCANCODE_W},
-    {.key = Key::kA,          .scancode = SDL_SCANCODE_A},
-    {.key = Key::kS,          .scancode = SDL_SCANCODE_S},
-    {.key = Key::kD,          .scancode = SDL_SCANCODE_D},
-    {.key = Key::kQ,          .scancode = SDL_SCANCODE_Q},
-    {.key = Key::kE,          .scancode = SDL_SCANCODE_E},
-    {.key = Key::kC,          .scancode = SDL_SCANCODE_C},
-    {.key = Key::kV,          .scancode = SDL_SCANCODE_V},
-    {.key = Key::kX,          .scancode = SDL_SCANCODE_X},
-    {.key = Key::kY,          .scancode = SDL_SCANCODE_Y},
-    {.key = Key::kZ,          .scancode = SDL_SCANCODE_Z},
-    {.key = Key::kTab,        .scancode = SDL_SCANCODE_TAB},
-    {.key = Key::kLeft,       .scancode = SDL_SCANCODE_LEFT},
-    {.key = Key::kRight,      .scancode = SDL_SCANCODE_RIGHT},
-    {.key = Key::kUp,         .scancode = SDL_SCANCODE_UP},
-    {.key = Key::kDown,       .scancode = SDL_SCANCODE_DOWN},
-    {.key = Key::kPageUp,     .scancode = SDL_SCANCODE_PAGEUP},
-    {.key = Key::kPageDown,   .scancode = SDL_SCANCODE_PAGEDOWN},
-    {.key = Key::kHome,       .scancode = SDL_SCANCODE_HOME},
-    {.key = Key::kEnd,        .scancode = SDL_SCANCODE_END},
-    {.key = Key::kDelete,     .scancode = SDL_SCANCODE_DELETE},
-    {.key = Key::kBackspace,  .scancode = SDL_SCANCODE_BACKSPACE},
-    {.key = Key::kEnter,      .scancode = SDL_SCANCODE_RETURN},
-    {.key = Key::kEscape,     .scancode = SDL_SCANCODE_ESCAPE},
-    {.key = Key::kLeftCtrl,   .scancode = SDL_SCANCODE_LCTRL},
-    {.key = Key::kRightCtrl,  .scancode = SDL_SCANCODE_RCTRL},
-    {.key = Key::kLeftShift,  .scancode = SDL_SCANCODE_LSHIFT},
-    {.key = Key::kRightShift, .scancode = SDL_SCANCODE_RSHIFT},
-    {.key = Key::kLeftAlt,    .scancode = SDL_SCANCODE_LALT},
-    {.key = Key::kRightAlt,   .scancode = SDL_SCANCODE_RALT},
-    {.key = Key::kSpace,      .scancode = SDL_SCANCODE_SPACE},
-    {.key = Key::kF1,         .scancode = SDL_SCANCODE_F1},
+    {.key = Key::kW,          .keycode = SDLK_W},
+    {.key = Key::kA,          .keycode = SDLK_A},
+    {.key = Key::kS,          .keycode = SDLK_S},
+    {.key = Key::kD,          .keycode = SDLK_D},
+    {.key = Key::kQ,          .keycode = SDLK_Q},
+    {.key = Key::kE,          .keycode = SDLK_E},
+    {.key = Key::kC,          .keycode = SDLK_C},
+    {.key = Key::kV,          .keycode = SDLK_V},
+    {.key = Key::kX,          .keycode = SDLK_X},
+    {.key = Key::kY,          .keycode = SDLK_Y},
+    {.key = Key::kZ,          .keycode = SDLK_Z},
+    {.key = Key::kTab,        .keycode = SDLK_TAB},
+    {.key = Key::kLeft,       .keycode = SDLK_LEFT},
+    {.key = Key::kRight,      .keycode = SDLK_RIGHT},
+    {.key = Key::kUp,         .keycode = SDLK_UP},
+    {.key = Key::kDown,       .keycode = SDLK_DOWN},
+    {.key = Key::kPageUp,     .keycode = SDLK_PAGEUP},
+    {.key = Key::kPageDown,   .keycode = SDLK_PAGEDOWN},
+    {.key = Key::kHome,       .keycode = SDLK_HOME},
+    {.key = Key::kEnd,        .keycode = SDLK_END},
+    {.key = Key::kDelete,     .keycode = SDLK_DELETE},
+    {.key = Key::kBackspace,  .keycode = SDLK_BACKSPACE},
+    {.key = Key::kEnter,      .keycode = SDLK_RETURN},
+    {.key = Key::kEscape,     .keycode = SDLK_ESCAPE},
+    {.key = Key::kLeftCtrl,   .keycode = SDLK_LCTRL},
+    {.key = Key::kRightCtrl,  .keycode = SDLK_RCTRL},
+    {.key = Key::kLeftShift,  .keycode = SDLK_LSHIFT},
+    {.key = Key::kRightShift, .keycode = SDLK_RSHIFT},
+    {.key = Key::kLeftAlt,    .keycode = SDLK_LALT},
+    {.key = Key::kRightAlt,   .keycode = SDLK_RALT},
+    {.key = Key::kSpace,      .keycode = SDLK_SPACE},
+    {.key = Key::kF1,         .keycode = SDLK_F1},
     // clang-format on
 });
 
@@ -91,13 +91,6 @@ constexpr auto BindsEveryKeyOnce() -> bool {
 }
 
 static_assert(BindsEveryKeyOnce(), "every Key needs exactly one binding");
-
-static_assert(std::ranges::all_of(kKeyBindings,
-                                  [](const KeyBinding& binding) -> bool {
-                                    return binding.scancode <
-                                           SDL_SCANCODE_COUNT;
-                                  }),
-              "key binding outside SDL's keyboard state");
 
 /** @brief The name of SDL's video driver, or empty if none is running. */
 auto VideoDriver() -> std::string_view {
@@ -232,12 +225,15 @@ auto Window::PumpEvents(Input& input) -> bool {
   const std::span<const bool> keys(key_state,
                                    static_cast<std::size_t>(key_count));
   for (const KeyBinding& binding : kKeyBindings) {
-    // In bounds: see the static_assert on kKeyBindings
+    // The held state is per position; the current layout says where the key is
+    const auto scancode = static_cast<std::size_t>(
+        SDL_GetScancodeFromKey(binding.keycode, nullptr));
+    // In bounds: checked first
     // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
-    input.SetKey(binding.key, keys[static_cast<std::size_t>(binding.scancode)]);
+    input.SetKey(binding.key, scancode < keys.size() && keys[scancode]);
   }
 
   return quit;
 }
 
-}  // namespace game
+}  // namespace launcher

@@ -17,6 +17,8 @@ these explain why it isn't built some other way.
 | [0009](0009-kinematic-character.md) | A kinematic character on Jolt's `CharacterVirtual` |
 | [0010](0010-gltf-runtime-format.md) | Load glTF directly at runtime, with no format of our own |
 | [0011](0011-directional-shadow-map.md) | Shadow the sun with one stable, camera-fitted shadow map |
+| [0012](0012-qt-widgets-editor.md) | Build the editor with Qt Widgets |
+| [0013](0013-devtools-console.md) | The editor takes over the devtools' tools; the devtools become a console |
 
 ## Adding one
 
