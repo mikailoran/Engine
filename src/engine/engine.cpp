@@ -10,6 +10,7 @@
 #include "engine/ecs/components/character_link.h"
 #include "engine/ecs/components/collider.h"
 #include "engine/ecs/components/directional_light.h"
+#include "engine/ecs/components/name.h"
 #include "engine/ecs/components/physics_link.h"
 #include "engine/ecs/components/renderable.h"
 #include "engine/ecs/components/rigid_body.h"
@@ -28,6 +29,7 @@
 namespace engine {
 
 Engine::Engine(const NativeSurface& surface) : bgfx_context_(surface) {
+  ecs_.RegisterComponent<Name>();
   ecs_.RegisterComponent<Camera>();
   ecs_.RegisterComponent<Renderable>();
   ecs_.RegisterComponent<DirectionalLight>();

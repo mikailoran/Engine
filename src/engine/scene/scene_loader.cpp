@@ -9,6 +9,7 @@
 #include <string>
 #include <utility>
 
+#include "engine/ecs/components/name.h"
 #include "engine/ecs/core/ecs.h"
 #include "engine/platform/asset_root.h"
 
@@ -44,7 +45,9 @@ void SceneLoader::LoadEntities(const nlohmann::json& scene, Ecs& ecs,
   // One entity per entry, then one loader call per component block
   for (const auto& entry : scene.at("entities")) {
     const auto name = entry.value("name", std::string{"<unnamed>"});
+    // TODO: handle case where name is empty string
     const auto entity = ecs.CreateEntity();
+    ecs.AddComponent(entity, Name{.value = name});
 
     for (const auto& component : entry.at("components").items()) {
       const std::string where =
