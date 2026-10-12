@@ -70,7 +70,6 @@ ShadowSystem::ShadowSystem()
     throw std::runtime_error("renderer cannot sample shadow maps (no compare)");
   }
 
-  bgfx::setViewFrameBuffer(kShadowView, framebuffer_.Get());
   bgfx::setViewRect(kShadowView, 0, 0, kResolution, kResolution);
   bgfx::setViewClear(kShadowView, BGFX_CLEAR_DEPTH, 0, 1.0F, 0);
 }
@@ -117,6 +116,8 @@ void ShadowSystem::Update(Ecs& ecs, const AssetRegistry& assets,
   bgfx::setFrameUniform(u_shadow_mtx_.Get(), shadow_mtx.data());
   bgfx::setFrameUniform(u_shadow_params_.Get(), params.data());
 
+  // bgfx::reset unbinds every view's framebuffer
+  bgfx::setViewFrameBuffer(kShadowView, framebuffer_.Get());
   bgfx::setViewTransform(kShadowView, fit.view.data(), fit.proj.data());
   // Clears the map even when nothing casts
   bgfx::touch(kShadowView);
