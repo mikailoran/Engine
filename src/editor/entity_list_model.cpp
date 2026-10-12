@@ -1,6 +1,14 @@
 #include "editor/entity_list_model.h"
 
+#include <QAbstractListModel>
+#include <QModelIndex>
+#include <QObject>
+#include <QVariant>
+#include <Qt>
+#include <cstddef>
+
 #include "engine/ecs/components/name.h"
+#include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
 
 using engine::Ecs;
@@ -11,13 +19,17 @@ namespace editor {
 EntityListModel::EntityListModel(QObject* parent)
     : QAbstractListModel(parent) {}
 
-auto EntityListModel::rowCount(const QModelIndex& /*parent*/) const -> int {
+auto EntityListModel::rowCount(const QModelIndex& parent) const -> int {
+  // TODO: Understand this. Why a parent being valid warrants returning 0 ??
+  if (parent.isValid()) {
+    return 0;
+  }
   return static_cast<int>(rows_.size());
 }
 
 auto EntityListModel::data(const QModelIndex& index, int role) const
     -> QVariant {
-  if (!index.isValid() &&
+  if (!index.isValid() ||
       static_cast<std::size_t>(index.row()) >= rows_.size()) {
     return {};
   }

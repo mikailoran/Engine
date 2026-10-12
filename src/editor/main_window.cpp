@@ -51,7 +51,7 @@ constexpr std::string_view kStartScene = "level02.json";
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent),
       viewport_(new ViewportWindow),
-      entities_(new EntityListModel) {
+      entities_(new EntityListModel(this)) {
   setWindowTitle(tr("Scene Editor"));
   resize(1280, 720);
 

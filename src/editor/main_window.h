@@ -81,6 +81,7 @@ class MainWindow : public QMainWindow {
   // Owned by the central widget's window container.
   ViewportWindow* viewport_{nullptr};
 
+  // Owned by this window as its Qt child; the Entities dock's list shows it.
   EntityListModel* entities_{nullptr};
 
   // Owned by the File menu; disabled until a scene has been opened.
