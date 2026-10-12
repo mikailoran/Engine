@@ -439,7 +439,9 @@ if(ENGINE_BUILD_EDITOR)
     src/editor/main_window.h
     src/editor/main_window.cpp
     src/editor/viewport_window.h
-    src/editor/viewport_window.cpp)
+    src/editor/viewport_window.cpp
+    src/editor/entity_list_model.h
+    src/editor/entity_list_model.cpp)
   target_link_libraries(editor PRIVATE game_logic engine_runtime Qt6::Widgets)
 
   target_compile_options(editor PRIVATE -Wall -Wextra -Wpedantic)
