@@ -100,7 +100,7 @@ class ViewportWindow : public QWindow {
   void ReleaseInput();
 
   /** @brief @p position, in Qt's logical pixels, in backbuffer pixels. */
-  [[nodiscard]] auto ToBackbuffer(const QPointF& position) const
+  [[nodiscard]] auto ToBackbuffer(QPointF position) const
       -> engine::ScreenPosition;
 
   /**

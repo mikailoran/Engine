@@ -233,8 +233,7 @@ void ViewportWindow::ReleaseInput() {
   unsetCursor();
 }
 
-auto ViewportWindow::ToBackbuffer(const QPointF& position) const
-    -> ScreenPosition {
+auto ViewportWindow::ToBackbuffer(QPointF position) const -> ScreenPosition {
   const double scale = devicePixelRatio();
   return {.x = static_cast<float>(position.x() * scale),
           .y = static_cast<float>(position.y() * scale)};
