@@ -18,7 +18,6 @@ class QFocusEvent;
 class QKeyEvent;
 class QMouseEvent;
 class QPointF;
-class QWheelEvent;
 
 namespace editor {
 
@@ -78,9 +77,6 @@ class ViewportWindow : public QWindow {
 
   /** @brief Records the cursor, and while looking, how far it moved. */
   void mouseMoveEvent(QMouseEvent* event) override;
-
-  /** @brief Adds wheel notches; positive is away from you. */
-  void wheelEvent(QWheelEvent* event) override;
 
  private:
   using Clock = std::chrono::steady_clock;

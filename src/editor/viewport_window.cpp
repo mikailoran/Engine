@@ -17,7 +17,6 @@
 #include <QPointF>
 #include <QSurface>
 #include <QTimer>
-#include <QWheelEvent>
 #include <QWindow>
 #include <QtLogging>
 #include <bit>
@@ -88,9 +87,6 @@ auto ButtonFromQt(Qt::MouseButton button) -> std::optional<MouseButton> {
       return std::nullopt;
   }
 }
-
-// Qt reports the wheel in eighths of a degree; one notch is 15 degrees
-constexpr float kWheelUnitsPerNotch = 120.0F;
 
 }  // namespace
 
@@ -176,13 +172,6 @@ void ViewportWindow::mouseMoveEvent(QMouseEvent* event) {
         {.x = position.x - look_from_->x, .y = position.y - look_from_->y});
     look_from_ = position;
   }
-}
-
-void ViewportWindow::wheelEvent(QWheelEvent* event) {
-  const float notches =
-      static_cast<float>(event->angleDelta().y()) / kWheelUnitsPerNotch;
-  // Natural scrolling flips the sign; undo it so positive is away
-  input_.AddWheel(event->inverted() ? -notches : notches);
 }
 
 void ViewportWindow::Tick() {
