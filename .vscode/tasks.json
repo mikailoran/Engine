@@ -3,10 +3,30 @@
 	"tasks": [
 		{
 			// clangd only lints open files; this lints all of src/ and tests/.
-			"label": "clang-tidy: project",
+			"label": "lint: project",
 			"type": "shell",
-			// Keep diagnostic lines, collapse "/x/../" and drop per-TU duplicates.
-			"command": "run-clang-tidy -p build -quiet '^${workspaceFolder}/(src|tests)/.*\\.cpp$' 2>/dev/null | grep --line-buffered -E '^/.+:[0-9]+:[0-9]+: (warning|error):' | sed -u -E ':a; s#/[^/]+/\\.\\./#/#; ta' | awk '!seen[$0]++ { print; fflush() }'",
+			"command": "\"${workspaceFolder}/tools/lint.sh\" -p \"${command:cmake.buildDirectory}\" full",
+			"problemMatcher": {
+				"owner": "clang-tidy",
+				"source": "clang-tidy",
+				"fileLocation": "absolute",
+				"pattern": {
+					"regexp": "^(.+):(\\d+):(\\d+): (warning|error): (.*?)(?: \\[([^\\]]+)\\])?$",
+					"file": 1,
+					"line": 2,
+					"column": 3,
+					"severity": 4,
+					"message": 5,
+					"code": 6
+				}
+			}
+		},
+		{
+			// Only lines changed since the branch left main, committed or not.
+			// Shares the owner above, so each run replaces the other's results.
+			"label": "lint: changes",
+			"type": "shell",
+			"command": "\"${workspaceFolder}/tools/lint.sh\" -p \"${command:cmake.buildDirectory}\" diff",
 			"problemMatcher": {
 				"owner": "clang-tidy",
 				"source": "clang-tidy",
