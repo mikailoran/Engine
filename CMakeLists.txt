@@ -430,11 +430,8 @@ add_dependencies(launcher scenes)
 # --- Qt Editor --------------------------------------------------------------
 option(ENGINE_BUILD_EDITOR "Build the Qt scene editor" ON)
 if(ENGINE_BUILD_EDITOR)
-  # Widgets brings in Core and Gui. GuiPrivate: a QWindow's wl_surface is only
-  # reachable through Qt's private API (qt6-qtbase-private-devel)
-  # Accepted in ADR 0012; silences the reminder on every configure
-  set(QT_NO_PRIVATE_MODULE_WARNING ON)
-  find_package(Qt6 6.9 REQUIRED COMPONENTS Widgets GuiPrivate)
+  # Widgets brings in Core and Gui
+  find_package(Qt6 6.9 REQUIRED COMPONENTS Widgets)
 
   add_executable(editor
     src/editor/main.cpp
@@ -442,8 +439,7 @@ if(ENGINE_BUILD_EDITOR)
     src/editor/main_window.cpp
     src/editor/viewport_window.h
     src/editor/viewport_window.cpp)
-  target_link_libraries(editor PRIVATE game_logic engine_runtime Qt6::Widgets
-    Qt6::GuiPrivate)
+  target_link_libraries(editor PRIVATE game_logic engine_runtime Qt6::Widgets)
 
   target_compile_options(editor PRIVATE -Wall -Wextra -Wpedantic)
   # Scenes open from the source tree, so edits show without a rebuild

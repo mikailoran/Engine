@@ -3,7 +3,6 @@
 #include <QtCore/qnamespace.h>
 #include <QtCore/qtmetamacros.h>
 #include <QtGui/qguiapplication_platform.h>
-#include <qpa/qplatformwindow_p.h>
 
 #include <QCoreApplication>
 #include <QDebug>
@@ -34,7 +33,6 @@
 #include <format>
 #include <optional>
 #include <stdexcept>
-#include <string>
 
 #include "engine/engine.h"
 #include "engine/platform/frame_context.h"
@@ -208,24 +206,6 @@ auto ViewportWindow::event(QEvent* e) -> bool {
   return QWindow::event(e);
 }
 
-auto ViewportWindow::eventFilter(QObject* watched, QEvent* event) -> bool {
-  switch (event->type()) {
-    case QEvent::KeyPress:
-    case QEvent::KeyRelease:
-      // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
-      RecordKey(static_cast<QKeyEvent*>(event),
-                event->type() == QEvent::KeyPress);
-      // RecordKey ignores the keys the engine doesn't read
-      return event->isAccepted();
-    case QEvent::FocusOut:
-      ReleaseInput();
-      break;
-    default:
-      break;
-  }
-  return QWindow::eventFilter(watched, event);
-}
-
 void ViewportWindow::keyPressEvent(QKeyEvent* event) { RecordKey(event, true); }
 
 void ViewportWindow::keyReleaseEvent(QKeyEvent* event) {
@@ -343,32 +323,20 @@ void ViewportWindow::RecordKey(QKeyEvent* event, bool down) {
 }
 
 auto ViewportWindow::Surface() const -> NativeSurface {
-  NativeSurface surface{.size = BackbufferSize()};
-
-  const std::string platform = QGuiApplication::platformName().toStdString();
-  if (platform == "wayland") {
-    const auto* app =
-        qGuiApp->nativeInterface<QNativeInterface::QWaylandApplication>();
-    // The wl_surface is only reachable through Qt's private API
-    const auto* window =
-        nativeInterface<QNativeInterface::Private::QWaylandWindow>();
-    surface.kind = SurfaceKind::kWayland;
-    surface.display = app != nullptr ? app->display() : nullptr;
-    surface.window = window != nullptr ? window->surface() : nullptr;
-  } else if (platform == "xcb") {
-    const auto* app =
-        qGuiApp->nativeInterface<QNativeInterface::QX11Application>();
-    surface.kind = SurfaceKind::kX11;
-    surface.display = app != nullptr ? app->display() : nullptr;
-    // An X11 window is an integer id; bgfx takes it in a pointer
-    surface.window = std::bit_cast<void*>(static_cast<std::uintptr_t>(winId()));
-  }
-
-  if (surface.window == nullptr || surface.display == nullptr) {
+  const auto* app =
+      qGuiApp->nativeInterface<QNativeInterface::QX11Application>();
+  if (app == nullptr || app->display() == nullptr) {
     throw std::runtime_error(
-        std::format("no native window handles for Qt platform '{}'", platform));
+        std::format("no X11 display for Qt platform '{}'",
+                    QGuiApplication::platformName().toStdString()));
   }
-  return surface;
+  return {
+      // An X11 window is an integer id; bgfx takes it in a pointer
+      .window = std::bit_cast<void*>(static_cast<std::uintptr_t>(winId())),
+      .display = app->display(),
+      .kind = SurfaceKind::kX11,
+      .size = BackbufferSize(),
+  };
 }
 
 auto ViewportWindow::BackbufferSize() const -> PixelSize {

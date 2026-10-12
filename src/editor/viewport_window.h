@@ -17,7 +17,6 @@ class QExposeEvent;
 class QFocusEvent;
 class QKeyEvent;
 class QMouseEvent;
-class QObject;
 class QPointF;
 class QWheelEvent;
 
@@ -47,13 +46,6 @@ class ViewportWindow : public QWindow {
    *         the world then holds whatever loaded before the failure.
    */
   void LoadScene(const std::filesystem::path& path);
-
-  /**
-   * @brief Takes key and focus events from a widget it is installed on. On
-   * Wayland the keyboard goes to the window container, never to this window.
-   * @return True when the event was the game's and Qt should stop there.
-   */
-  auto eventFilter(QObject* watched, QEvent* event) -> bool override;
 
  signals:
   /**
@@ -116,10 +108,9 @@ class ViewportWindow : public QWindow {
       -> engine::ScreenPosition;
 
   /**
-   * @brief The native handles and backbuffer size, for the engine. Valid once
+   * @brief The X11 handles and backbuffer size, for the engine. Valid once
    * the window has been exposed.
-   * @throws std::runtime_error If Qt runs on neither Wayland nor xcb, or a
-   *         handle is missing.
+   * @throws std::runtime_error If Qt isn't running on xcb.
    */
   [[nodiscard]] auto Surface() const -> engine::NativeSurface;
 

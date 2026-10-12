@@ -1,6 +1,7 @@
 # 0012: Build the editor with Qt Widgets
 
-**Status:** accepted 2026-10-11, implemented from M4a
+**Status:** accepted 2026-10-11, implemented from M4a; viewport amended
+2026-10-12 (X11 instead of native Wayland)
 
 ## Context
 
@@ -22,8 +23,9 @@ job applications, so the choice is partly which skills matter more.
 - **Qt Widgets** (Qt 6.9 or later). The editor is a `QMainWindow`, and its
   panels are widgets around the viewport.
 - **The viewport is a native `QWindow`** that bgfx presents to directly,
-  embedded with `QWidget::createWindowContainer`. Its Wayland surface comes
-  through Qt's private API (`Qt6::GuiPrivate`).
+  embedded with `QWidget::createWindowContainer`. The editor forces Qt's
+  xcb platform (XWayland on a Wayland desktop), so the window's handle comes
+  from public API (`winId()`, `QX11Application`).
 
 ## Alternatives considered
 
@@ -40,15 +42,16 @@ job applications, so the choice is partly which skills matter more.
 
 - The editor practises desktop-tool skills: model/view, signals and slots,
   `QUndoStack`, property editors and custom widgets. QML is not covered.
-- Building the editor needs Qt's private headers
-  (`qt6-qtbase-private-devel` on Fedora).
+- Under XWayland the editor is blurry with fractional scaling, and it
+  doesn't match the game's native Wayland window.
 - No widget can be drawn over the viewport: a window container always sits
   on top. Viewport overlays (selection, gizmos) are drawn by the engine.
-- On Wayland the keyboard goes to the window container, not the viewport, so
-  the viewport takes key events through an event filter on the container.
 
 ## Revisit when
 
 - The target jobs turn out to be mostly QML or HMI: add a QML panel through
   `QQuickWidget`, or a separate QML tool, instead of porting the editor.
 - A panel needs fluid, animated or touch UI that Widgets does badly.
+- The editor needs native Wayland (e.g. HiDPI): the `wl_surface` comes only
+  through Qt's private API (`Qt6::GuiPrivate`), and the keyboard goes to the
+  window container, so the viewport would need an event filter on it.

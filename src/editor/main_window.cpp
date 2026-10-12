@@ -56,8 +56,6 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
   QWidget* container = QWidget::createWindowContainer(viewport.release(), this);
   // Clicking or tabbing to the viewport gives the game the keyboard
   container->setFocusPolicy(Qt::StrongFocus);
-  // On Wayland the keyboard reaches the container, not the window inside it
-  container->installEventFilter(viewport_);
   setCentralWidget(container);
   container->setFocus();
 
