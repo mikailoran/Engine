@@ -20,13 +20,10 @@
 #include <QWheelEvent>
 #include <QWindow>
 #include <QtLogging>
-#include <algorithm>
-#include <array>
 #include <bit>
 #include <cassert>
 #include <chrono>
 #include <cmath>
-#include <cstddef>
 #include <cstdint>
 #include <exception>
 #include <filesystem>
@@ -55,81 +52,27 @@ namespace editor {
 
 namespace {
 
-/** @brief An engine key and the Qt key that drives it. */
-struct KeyBinding {
-  Key key;
-  Qt::Key qt_key;
-};
-
-// Keys as the layout names them. Qt has one key per modifier, not a left and a
-// right one, so it drives the left one and the right ones stay unbound
-constexpr auto kKeyBindings = std::to_array<KeyBinding>({
-    // clang-format off
-    {.key = Key::kW,         .qt_key = Qt::Key_W},
-    {.key = Key::kA,         .qt_key = Qt::Key_A},
-    {.key = Key::kS,         .qt_key = Qt::Key_S},
-    {.key = Key::kD,         .qt_key = Qt::Key_D},
-    {.key = Key::kQ,         .qt_key = Qt::Key_Q},
-    {.key = Key::kE,         .qt_key = Qt::Key_E},
-    {.key = Key::kC,         .qt_key = Qt::Key_C},
-    {.key = Key::kV,         .qt_key = Qt::Key_V},
-    {.key = Key::kX,         .qt_key = Qt::Key_X},
-    {.key = Key::kY,         .qt_key = Qt::Key_Y},
-    {.key = Key::kZ,         .qt_key = Qt::Key_Z},
-    {.key = Key::kTab,       .qt_key = Qt::Key_Tab},
-    {.key = Key::kLeft,      .qt_key = Qt::Key_Left},
-    {.key = Key::kRight,     .qt_key = Qt::Key_Right},
-    {.key = Key::kUp,        .qt_key = Qt::Key_Up},
-    {.key = Key::kDown,      .qt_key = Qt::Key_Down},
-    {.key = Key::kPageUp,    .qt_key = Qt::Key_PageUp},
-    {.key = Key::kPageDown,  .qt_key = Qt::Key_PageDown},
-    {.key = Key::kHome,      .qt_key = Qt::Key_Home},
-    {.key = Key::kEnd,       .qt_key = Qt::Key_End},
-    {.key = Key::kDelete,    .qt_key = Qt::Key_Delete},
-    {.key = Key::kBackspace, .qt_key = Qt::Key_Backspace},
-    {.key = Key::kEnter,     .qt_key = Qt::Key_Return},
-    {.key = Key::kEscape,    .qt_key = Qt::Key_Escape},
-    {.key = Key::kLeftCtrl,  .qt_key = Qt::Key_Control},
-    {.key = Key::kLeftShift, .qt_key = Qt::Key_Shift},
-    {.key = Key::kLeftAlt,   .qt_key = Qt::Key_Alt},
-    {.key = Key::kSpace,     .qt_key = Qt::Key_Space},
-    {.key = Key::kF1,        .qt_key = Qt::Key_F1},
-    // clang-format on
-});
-
-/** @brief Whether Qt can report @p key: every key but the right modifiers. */
-constexpr auto QtReports(Key key) -> bool {
-  return key != Key::kRightCtrl && key != Key::kRightShift &&
-         key != Key::kRightAlt;
-}
-
-/** @brief Whether every Key Qt reports appears in exactly one binding. */
-constexpr auto BindsEveryKeyOnce() -> bool {
-  std::array<int, static_cast<std::size_t>(Key::kCount)> uses{};
-  for (const KeyBinding& binding : kKeyBindings) {
-    ++uses.at(static_cast<std::size_t>(binding.key));
-  }
-  for (std::size_t index = 0; index < uses.size(); ++index) {
-    const int expected = QtReports(static_cast<Key>(index)) ? 1 : 0;
-    if (uses.at(index) != expected) {
-      return false;
-    }
-  }
-  return true;
-}
-
-static_assert(BindsEveryKeyOnce(), "every Key Qt reports needs one binding");
-
-/** @brief The engine key for a QKeyEvent::key(), if the engine has one. */
+/**
+ * @brief The engine key for a QKeyEvent::key(), if the game reads it. Qt has
+ * one key per modifier, so Shift drives the left one.
+ */
 auto KeyFromQt(int qt_key) -> std::optional<Key> {
-  const auto* const binding = std::ranges::find_if(
-      kKeyBindings, [qt_key](const KeyBinding& candidate) -> bool {
-        return candidate.qt_key == qt_key;
-      });
-  if (binding == kKeyBindings.end()) {
-    return std::nullopt;
+  switch (qt_key) {
+    case Qt::Key_W:
+      return Key::kW;
+    case Qt::Key_A:
+      return Key::kA;
+    case Qt::Key_S:
+      return Key::kS;
+    case Qt::Key_D:
+      return Key::kD;
+    case Qt::Key_Space:
+      return Key::kSpace;
+    case Qt::Key_Shift:
+      return Key::kLeftShift;
+    default:
+      return std::nullopt;
   }
-  return binding->key;
 }
 
 /** @brief The engine's button for a Qt button, if the engine reads it. */
