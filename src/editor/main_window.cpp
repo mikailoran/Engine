@@ -211,6 +211,7 @@ void MainWindow::OpenScene(const std::filesystem::path& path) {
   if (engine_) {
     entities_->Refresh(engine_.value().World());
   }
+  // The model reset drops the selection without emitting selectionChanged
   inspector_->Clear();
 }
 
