@@ -33,6 +33,8 @@ class EntityListModel : public QAbstractListModel {
   [[nodiscard]] auto data(const QModelIndex& index, int role) const
       -> QVariant override;
 
+  // auto sort(int column, Qt::SortOrder order) -> void override;
+
   /**
    * @brief Replaces the rows with every entity in @p world that has a Name.
    * Resets attached views; @p world isn't kept.

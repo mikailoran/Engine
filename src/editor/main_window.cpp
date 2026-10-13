@@ -8,7 +8,9 @@
 #include <QDebug>
 #include <QDockWidget>
 #include <QFileDialog>
+#include <QItemSelectionModel>
 #include <QKeySequence>
+#include <QLabel>
 #include <QListView>
 #include <QMainWindow>
 #include <QMenu>
@@ -16,6 +18,7 @@
 #include <QMessageBox>
 #include <QMetaObject>
 #include <QObject>
+#include <QSplitter>
 #include <QString>
 #include <QWidget>
 #include <QtLogging>
@@ -71,13 +74,31 @@ MainWindow::MainWindow(QWidget* parent)
   quit->setShortcut(QKeySequence::Quit);
   connect(quit, &QAction::triggered, this, &MainWindow::close);
 
-  auto* entity_list_view = new QListView;
+  // View dock
+  auto* dock_left = new QDockWidget(tr("Entities"), this);
+  MainWindow::addDockWidget(Qt::LeftDockWidgetArea, dock_left);
+  auto* dock_left_splitter =
+      new QSplitter(Qt::Orientation::Vertical, dock_left);
+  dock_left->setWidget(dock_left_splitter);
+
+  auto* entity_list_view = new QListView(dock_left_splitter);
   entity_list_view->setModel(entities_);
+  entity_list_view->setSelectionMode(QAbstractItemView::SingleSelection);
   entity_list_view->setEditTriggers(QAbstractItemView::NoEditTriggers);
-  // entity_list_view->setUniformItemSizes(true);
-  auto* dock = new QDockWidget(tr("Entities"), this);
-  dock->setWidget(entity_list_view);
-  addDockWidget(Qt::LeftDockWidgetArea, dock);
+  entity_list_view->setUniformItemSizes(true);
+  dock_left_splitter->addWidget(entity_list_view);
+
+  auto* selection_label = new QLabel(dock_left_splitter);
+  dock_left_splitter->addWidget(selection_label);
+
+  const auto* view_selection_model = entity_list_view->selectionModel();
+  selection_label->setText(tr("placeholder"));
+  connect(view_selection_model, &QItemSelectionModel::selectionChanged,
+          selection_label,
+          [selection_label](const QItemSelection& selected) -> void {
+            const auto value = selected.indexes().value(0).data().toString();
+            selection_label->setText(value);
+          });
 
   // The container takes ownership of the viewport and lays it out like a widget
   QWidget* container = QWidget::createWindowContainer(viewport_, this);
