@@ -30,7 +30,10 @@
 #include <string_view>
 
 #include "editor/entity_list_model.h"
+#include "editor/inspector_widget.h"
 #include "editor/viewport_window.h"
+#include "engine/ecs/components/transform.h"
+#include "engine/ecs/core/types.h"
 #include "engine/engine.h"
 #include "engine/platform/frame_context.h"
 #include "engine/platform/screen.h"
@@ -88,17 +91,12 @@ MainWindow::MainWindow(QWidget* parent)
   entity_list_view->setUniformItemSizes(true);
   dock_left_splitter->addWidget(entity_list_view);
 
-  auto* selection_label = new QLabel(dock_left_splitter);
-  dock_left_splitter->addWidget(selection_label);
+  inspector_ = new InspectorWidget(dock_left_splitter);
+  dock_left_splitter->addWidget(inspector_);
 
   const auto* view_selection_model = entity_list_view->selectionModel();
-  selection_label->setText(tr("placeholder"));
-  connect(view_selection_model, &QItemSelectionModel::selectionChanged,
-          selection_label,
-          [selection_label](const QItemSelection& selected) -> void {
-            const auto value = selected.indexes().value(0).data().toString();
-            selection_label->setText(value);
-          });
+  connect(view_selection_model, &QItemSelectionModel::selectionChanged, this,
+          &MainWindow::UpdateInspectorFromSelection);
 
   // The container takes ownership of the viewport and lays it out like a widget
   QWidget* container = QWidget::createWindowContainer(viewport_, this);
@@ -222,6 +220,33 @@ void MainWindow::ChooseScene() {
   // Empty when the dialog was cancelled
   if (!file.isEmpty()) {
     OpenScene(file.toStdString());
+  }
+}
+
+auto MainWindow::UpdateInspectorFromSelection(const QItemSelection& selected)
+    -> void {
+  if (!engine_) {
+    return;
+  }
+
+  // Handle deselection case.
+  if (selected.empty()) {
+    inspector_->SetDiagnostic(InspectorWidget::Diagnostic::kNoSelection);
+    return;
+  }
+
+  const auto index = selected.indexes().value(0);
+  const auto entity =
+      // NOLINTNEXTLINE(clazy-qvariant-template-instantiation)
+      index.data(EntityListModel::kEntityRole).value<engine::Entity>();
+
+  const auto* transform =
+      engine_->World().TryGetComponent<engine::Transform>(entity);
+
+  if (transform) {
+    inspector_->UpdateTransform(*transform);
+  } else {
+    inspector_->SetDiagnostic(InspectorWidget::Diagnostic::kNoTransform);
   }
 }
 

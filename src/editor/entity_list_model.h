@@ -2,6 +2,7 @@
 
 #include <QAbstractListModel>
 #include <QObject>
+#include <Qt>
 #include <vector>
 
 #include "engine/ecs/core/ecs.h"
@@ -20,6 +21,8 @@ class EntityListModel : public QAbstractListModel {
   Q_OBJECT
 
  public:
+  static constexpr int kEntityRole = Qt::UserRole;
+
   /** @brief Creates an empty list. */
   explicit EntityListModel(QObject* parent = nullptr);
 
