@@ -8,7 +8,6 @@
 
 class QStackedWidget;
 class QLabel;
-class QVBoxLayout;
 
 namespace editor {
 
@@ -20,11 +19,7 @@ class InspectorWidget : public QWidget {
  public:
   explicit InspectorWidget(QWidget* parent = nullptr);
 
-  enum class Diagnostic : std::uint8_t {
-    kNone = 0,
-    kNoSelection,
-    kNoTransform
-  };
+  enum class Diagnostic : std::uint8_t { kNoSelection = 0, kNoTransform };
 
   auto UpdateTransform(const QString& entity_name,
                        const engine::Transform& transform) -> void;
@@ -34,7 +29,6 @@ class InspectorWidget : public QWidget {
   auto Clear() -> void;
 
  private:
-  QVBoxLayout* layout_{nullptr};
   QStackedWidget* content_{nullptr};
   QLabel* diagnostic_label_{nullptr};
   TransformPanel* transform_panel_{nullptr};

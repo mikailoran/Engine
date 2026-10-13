@@ -22,6 +22,8 @@ class TransformPanel : public QWidget {
                         const engine::Transform& transform) -> void;
 
  private:
+  static constexpr double kSpinboxMax = 10'000.0;
+  static constexpr double kSpinboxMin = -kSpinboxMax;
   QLabel* entity_name_{nullptr};
   QGroupBox* transform_group_{nullptr};
   std::array<QDoubleSpinBox*, 3> position_{};

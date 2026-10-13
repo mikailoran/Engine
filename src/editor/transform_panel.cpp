@@ -31,6 +31,8 @@ TransformPanel::TransformPanel(QWidget* parent)
     auto& spinbox = position_.at(axis);
     spinbox = new QDoubleSpinBox(transform_group_);
     spinbox->setReadOnly(true);
+    spinbox->setMinimum(kSpinboxMin);
+    spinbox->setMaximum(kSpinboxMax);
     spinbox->setDecimals(2);
     grid->addWidget(spinbox, 1, static_cast<int>(axis) + 1);
   }

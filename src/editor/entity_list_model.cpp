@@ -36,7 +36,7 @@ auto EntityListModel::data(const QModelIndex& index, int role) const
   if (role == Qt::DisplayRole) {
     return rows_.at(static_cast<std::size_t>(index.row())).name;
   }
-  auto entity = rows_.at(static_cast<std::size_t>(index.row())).entity;
+  const auto entity = rows_.at(static_cast<std::size_t>(index.row())).entity;
   if (role == Qt::ToolTipRole) {
     return tr("Entity<%1>").arg(entity);
   }
