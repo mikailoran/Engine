@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QString>
 #include <QWidget>
 #include <cstdint>
 
@@ -10,6 +11,8 @@ class QLabel;
 class QVBoxLayout;
 
 namespace editor {
+
+class TransformPanel;
 
 class InspectorWidget : public QWidget {
   Q_OBJECT
@@ -23,14 +26,18 @@ class InspectorWidget : public QWidget {
     kNoTransform
   };
 
-  auto UpdateTransform(const engine::Transform& transform) -> void;
+  auto UpdateTransform(const QString& entity_name,
+                       const engine::Transform& transform) -> void;
 
   auto SetDiagnostic(Diagnostic diagnostic) -> void;
+
+  auto Clear() -> void;
 
  private:
   QVBoxLayout* layout_{nullptr};
   QStackedWidget* content_{nullptr};
   QLabel* diagnostic_label_{nullptr};
+  TransformPanel* transform_panel_{nullptr};
 };
 
 }  // namespace editor

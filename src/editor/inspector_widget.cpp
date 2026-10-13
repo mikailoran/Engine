@@ -6,6 +6,7 @@
 #include <QVBoxLayout>
 #include <QWidget>
 
+#include "editor/transform_panel.h"
 #include "engine/ecs/components/transform.h"
 
 using engine::Transform;
@@ -15,30 +16,44 @@ InspectorWidget::InspectorWidget(QWidget* parent)
     : QWidget(parent),
       layout_(new QVBoxLayout(this)),
       content_(new QStackedWidget(this)),
-      diagnostic_label_(new QLabel(content_)) {
+      diagnostic_label_(new QLabel(content_)),
+      transform_panel_(new TransformPanel(content_)) {
   layout_->addWidget(content_);
   content_->addWidget(diagnostic_label_);
+  content_->addWidget(transform_panel_);
+
   content_->setCurrentWidget(diagnostic_label_);
 
   SetDiagnostic(Diagnostic::kNoSelection);
 }
 
-auto InspectorWidget::UpdateTransform(const engine::Transform& /*transform*/)
+auto InspectorWidget::UpdateTransform(const QString& entity_name,
+                                      const engine::Transform& transform)
     -> void {
   SetDiagnostic(Diagnostic::kNone);
+
+  transform_panel_->DisplayTransform(entity_name, transform);
+  content_->setCurrentWidget(transform_panel_);
 }
 
 auto InspectorWidget::SetDiagnostic(Diagnostic diagnostic) -> void {
   switch (diagnostic) {
     case Diagnostic::kNoSelection:
       diagnostic_label_->setText(tr("No entity selected."));
+      content_->setCurrentWidget(diagnostic_label_);
       break;
     case Diagnostic::kNoTransform:
       diagnostic_label_->setText(tr("No Transform."));
+      content_->setCurrentWidget(diagnostic_label_);
       break;
     case Diagnostic::kNone:
       diagnostic_label_->clear();
+      content_->setCurrentWidget(transform_panel_);
       break;
   }
+}
+
+auto InspectorWidget::Clear() -> void {
+  SetDiagnostic(Diagnostic::kNoSelection);
 }
 }  // namespace editor

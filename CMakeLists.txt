@@ -443,7 +443,9 @@ if(ENGINE_BUILD_EDITOR)
     src/editor/entity_list_model.h
     src/editor/entity_list_model.cpp
     src/editor/inspector_widget.h
-    src/editor/inspector_widget.cpp)
+    src/editor/inspector_widget.cpp
+    src/editor/transform_panel.h
+    src/editor/transform_panel.cpp)
   target_link_libraries(editor PRIVATE game_logic engine_runtime Qt6::Widgets)
 
   target_compile_options(editor PRIVATE -Wall -Wextra -Wpedantic)

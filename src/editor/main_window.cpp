@@ -211,6 +211,7 @@ void MainWindow::OpenScene(const std::filesystem::path& path) {
   if (engine_) {
     entities_->Refresh(engine_.value().World());
   }
+  inspector_->Clear();
 }
 
 void MainWindow::ChooseScene() {
@@ -239,12 +240,13 @@ auto MainWindow::UpdateInspectorFromSelection(const QItemSelection& selected)
   const auto entity =
       // NOLINTNEXTLINE(clazy-qvariant-template-instantiation)
       index.data(EntityListModel::kEntityRole).value<engine::Entity>();
+  const auto name = index.data().toString();
 
   const auto* transform =
       engine_->World().TryGetComponent<engine::Transform>(entity);
 
   if (transform) {
-    inspector_->UpdateTransform(*transform);
+    inspector_->UpdateTransform(name, *transform);
   } else {
     inspector_->SetDiagnostic(InspectorWidget::Diagnostic::kNoTransform);
   }
