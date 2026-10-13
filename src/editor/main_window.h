@@ -2,6 +2,7 @@
 
 #include <QtCore/qtclasshelpermacros.h>
 
+#include <QItemSelection>
 #include <QMainWindow>
 #include <QTimer>
 #include <chrono>
@@ -17,6 +18,7 @@ class QAction;
 namespace editor {
 
 class ViewportWindow;
+class InspectorWidget;
 
 /**
  * @brief The editor's top-level window: the menus, the viewport, and the
@@ -78,11 +80,20 @@ class MainWindow : public QMainWindow {
   /** @brief Asks for a scene file in the source tree, then opens it. */
   void ChooseScene();
 
+  /**
+   * @brief Shows the newly selected entity in the inspector, or why there is
+   * none. Relies on single selection: @p selected is the whole selection.
+   */
+  auto UpdateInspectorFromSelection(const QItemSelection& selected) -> void;
+
   // Owned by the central widget's window container.
   ViewportWindow* viewport_{nullptr};
 
   // Owned by this window as its Qt child; the Entities dock's list shows it.
   EntityListModel* entities_{nullptr};
+
+  // Owned by the Entities dock's splitter, below the list.
+  InspectorWidget* inspector_{nullptr};
 
   // Owned by the File menu; disabled until a scene has been opened.
   QAction* reload_{nullptr};

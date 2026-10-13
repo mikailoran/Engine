@@ -8,7 +8,9 @@
 #include <QDebug>
 #include <QDockWidget>
 #include <QFileDialog>
+#include <QItemSelectionModel>
 #include <QKeySequence>
+#include <QLabel>
 #include <QListView>
 #include <QMainWindow>
 #include <QMenu>
@@ -16,6 +18,7 @@
 #include <QMessageBox>
 #include <QMetaObject>
 #include <QObject>
+#include <QSplitter>
 #include <QString>
 #include <QWidget>
 #include <QtLogging>
@@ -27,7 +30,10 @@
 #include <string_view>
 
 #include "editor/entity_list_model.h"
+#include "editor/inspector_widget.h"
 #include "editor/viewport_window.h"
+#include "engine/ecs/components/transform.h"
+#include "engine/ecs/core/types.h"
 #include "engine/engine.h"
 #include "engine/platform/frame_context.h"
 #include "engine/platform/screen.h"
@@ -71,13 +77,26 @@ MainWindow::MainWindow(QWidget* parent)
   quit->setShortcut(QKeySequence::Quit);
   connect(quit, &QAction::triggered, this, &MainWindow::close);
 
-  auto* entity_list_view = new QListView;
+  // View dock
+  auto* dock_left = new QDockWidget(tr("Entities"), this);
+  MainWindow::addDockWidget(Qt::LeftDockWidgetArea, dock_left);
+  auto* dock_left_splitter =
+      new QSplitter(Qt::Orientation::Vertical, dock_left);
+  dock_left->setWidget(dock_left_splitter);
+
+  auto* entity_list_view = new QListView(dock_left_splitter);
   entity_list_view->setModel(entities_);
+  entity_list_view->setSelectionMode(QAbstractItemView::SingleSelection);
   entity_list_view->setEditTriggers(QAbstractItemView::NoEditTriggers);
-  // entity_list_view->setUniformItemSizes(true);
-  auto* dock = new QDockWidget(tr("Entities"), this);
-  dock->setWidget(entity_list_view);
-  addDockWidget(Qt::LeftDockWidgetArea, dock);
+  entity_list_view->setUniformItemSizes(true);
+  dock_left_splitter->addWidget(entity_list_view);
+
+  inspector_ = new InspectorWidget(dock_left_splitter);
+  dock_left_splitter->addWidget(inspector_);
+
+  const auto* view_selection_model = entity_list_view->selectionModel();
+  connect(view_selection_model, &QItemSelectionModel::selectionChanged, this,
+          &MainWindow::UpdateInspectorFromSelection);
 
   // The container takes ownership of the viewport and lays it out like a widget
   QWidget* container = QWidget::createWindowContainer(viewport_, this);
@@ -192,6 +211,8 @@ void MainWindow::OpenScene(const std::filesystem::path& path) {
   if (engine_) {
     entities_->Refresh(engine_.value().World());
   }
+  // The model reset drops the selection without emitting selectionChanged
+  inspector_->Clear();
 }
 
 void MainWindow::ChooseScene() {
@@ -201,6 +222,34 @@ void MainWindow::ChooseScene() {
   // Empty when the dialog was cancelled
   if (!file.isEmpty()) {
     OpenScene(file.toStdString());
+  }
+}
+
+auto MainWindow::UpdateInspectorFromSelection(const QItemSelection& selected)
+    -> void {
+  if (!engine_) {
+    return;
+  }
+
+  // Handle deselection case.
+  if (selected.empty()) {
+    inspector_->SetDiagnostic(InspectorWidget::Diagnostic::kNoSelection);
+    return;
+  }
+
+  const auto index = selected.indexes().value(0);
+  const auto entity =
+      // NOLINTNEXTLINE(clazy-qvariant-template-instantiation)
+      index.data(EntityListModel::kEntityRole).value<engine::Entity>();
+  const auto name = index.data().toString();
+
+  const auto* transform =
+      engine_->World().TryGetComponent<engine::Transform>(entity);
+
+  if (transform) {
+    inspector_->UpdateTransform(name, *transform);
+  } else {
+    inspector_->SetDiagnostic(InspectorWidget::Diagnostic::kNoTransform);
   }
 }
 

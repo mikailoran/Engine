@@ -2,6 +2,7 @@
 
 #include <QAbstractListModel>
 #include <QObject>
+#include <Qt>
 #include <vector>
 
 #include "engine/ecs/core/ecs.h"
@@ -20,6 +21,9 @@ class EntityListModel : public QAbstractListModel {
   Q_OBJECT
 
  public:
+  /// Data role holding the row's engine::Entity, read with value<Entity>().
+  static constexpr int kEntityRole = Qt::UserRole;
+
   /** @brief Creates an empty list. */
   explicit EntityListModel(QObject* parent = nullptr);
 
@@ -27,11 +31,15 @@ class EntityListModel : public QAbstractListModel {
   [[nodiscard]] auto rowCount(const QModelIndex& parent) const -> int override;
 
   /**
-   * @brief The name for Qt::DisplayRole, the entity id for Qt::ToolTipRole.
-   * @return Empty for other roles and for an index outside the list.
+   * @brief The name for Qt::DisplayRole, the entity id for Qt::ToolTipRole,
+   * and the engine::Entity for kEntityRole.
+   * @return Empty for other roles and for an index outside the list. An empty
+   *         QVariant reads back as entity 0, so check the index first.
    */
   [[nodiscard]] auto data(const QModelIndex& index, int role) const
       -> QVariant override;
+
+  // auto sort(int column, Qt::SortOrder order) -> void override;
 
   /**
    * @brief Replaces the rows with every entity in @p world that has a Name.
