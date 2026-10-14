@@ -380,6 +380,7 @@ set(ENGINE_GLTF_ASSETS
   meshes/torus.glb
   meshes/bunny.glb
   meshes/uv_cube.glb
+  meshes/characters/Male_Casual.glb
   levels/level01.glb
   levels/level02.glb
   levels/kenney_prototype_01.glb
@@ -428,6 +429,7 @@ endforeach()
 
 # Prefab files, relative to assets/prefabs/, copied the same way
 set(ENGINE_PREFABS
+  enemy.json
 )
 
 foreach(prefab IN LISTS ENGINE_PREFABS)

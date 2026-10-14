@@ -102,6 +102,7 @@ void SceneLoader::LoadEntities(const nlohmann::json& scene, Ecs& ecs,
   for (const auto& entry : scene.at("entities")) {
     const auto name = entry.value("name", std::string{"<unnamed>"});
     // TODO: handle case where name is empty string
+    // TODO: reject unknown entry keys, so a typo like "prefb" fails loudly
 
     // Prefab components first, then the entry's patched over them
     nlohmann::json components = nlohmann::json::object();
@@ -113,6 +114,7 @@ void SceneLoader::LoadEntities(const nlohmann::json& scene, Ecs& ecs,
       if (entry.contains("components")) {
         components.merge_patch(entry.at("components"));
       }
+      // TODO: throw when an entry has neither "prefab" nor "components"
       if (!components.is_object()) {
         throw std::runtime_error("components must be an object");
       }
@@ -124,6 +126,7 @@ void SceneLoader::LoadEntities(const nlohmann::json& scene, Ecs& ecs,
 
     const auto entity = ecs.CreateEntity();
     ecs.AddComponent(entity, Name{.value = name});
+    // TODO: record the prefab path, so scene saving writes only overrides
 
     for (const auto& component : components.items()) {
       const std::string where =
