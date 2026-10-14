@@ -30,7 +30,10 @@ using ComponentLoader =
  * @brief Loads JSON scene files into the ECS through per-component loaders.
  *
  * Each entity's "components" object maps a registered key to that
- * component's data.
+ * component's data. An entity may also name a "prefab" file (relative to the
+ * asset root) whose "components" it starts from; its own "components" are
+ * merged over them as a JSON merge patch (RFC 7386), so an override can set
+ * single fields and null removes a component.
  */
 class SceneLoader {
  public:
@@ -44,8 +47,9 @@ class SceneLoader {
    * @param ecs World to create the entities in.
    * @param assets Registry to load the scene's meshes through.
    * @param physics World to build the scene's collision meshes in.
-   * @throws std::runtime_error On an unreadable file, malformed JSON, a wrong
-   *         version, an unknown key or a missing field.
+   * @throws std::runtime_error On an unreadable scene or prefab file,
+   *         malformed JSON, a wrong version, an unknown key or a missing
+   *         field.
    */
   void Load(const std::filesystem::path& path, Ecs& ecs, AssetRegistry& assets,
             physics::PhysicsWorld& physics) const;

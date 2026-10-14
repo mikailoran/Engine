@@ -380,6 +380,7 @@ set(ENGINE_GLTF_ASSETS
   meshes/torus.glb
   meshes/bunny.glb
   meshes/uv_cube.glb
+  meshes/characters/Male_Casual.glb
   levels/level01.glb
   levels/level02.glb
   levels/kenney_prototype_01.glb
@@ -424,6 +425,24 @@ foreach(scene IN LISTS ENGINE_SCENES)
     MAIN_DEPENDENCY ${scene_src}
   )
   list(APPEND ENGINE_SCENE_OUTPUTS ${scene_out})
+endforeach()
+
+# Prefab files, relative to assets/prefabs/, copied the same way
+set(ENGINE_PREFABS
+  enemy.json
+)
+
+foreach(prefab IN LISTS ENGINE_PREFABS)
+  set(prefab_src ${CMAKE_CURRENT_SOURCE_DIR}/assets/prefabs/${prefab})
+  set(prefab_out ${ENGINE_RUNTIME_DIR}/assets/prefabs/${prefab})
+  get_filename_component(prefab_dir ${prefab_out} DIRECTORY)
+  add_custom_command(
+    OUTPUT ${prefab_out}
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${prefab_dir}
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${prefab_src} ${prefab_out}
+    MAIN_DEPENDENCY ${prefab_src}
+  )
+  list(APPEND ENGINE_SCENE_OUTPUTS ${prefab_out})
 endforeach()
 add_custom_target(scenes DEPENDS ${ENGINE_SCENE_OUTPUTS})
 add_dependencies(launcher scenes)
