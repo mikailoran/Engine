@@ -26,7 +26,11 @@
 #include <Jolt/Physics/Character/CharacterBase.h>
 #include <Jolt/Physics/Character/CharacterVirtual.h>
 #include <Jolt/Physics/Collision/BroadPhase/BroadPhaseLayer.h>
+#include <Jolt/Physics/Collision/CastResult.h>
+#include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
+#include <Jolt/Physics/Collision/NarrowPhaseQuery.h>
 #include <Jolt/Physics/Collision/ObjectLayer.h>
+#include <Jolt/Physics/Collision/RayCast.h>
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
 #include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
 #include <Jolt/Physics/Collision/Shape/MeshShape.h>
@@ -40,10 +44,12 @@
 #include <Jolt/Physics/EPhysicsUpdateError.h>
 #include <Jolt/Physics/PhysicsSettings.h>
 #include <Jolt/Physics/PhysicsSystem.h>
+#include <bx/bounds.h>
 #include <bx/math.h>
 
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -541,6 +547,47 @@ auto PhysicsWorld::Characters() const -> std::vector<CharacterEntry> {
                           .user_data = character->GetUserData()});
   }
   return characters;
+}
+
+auto PhysicsWorld::CastRay(const bx::Ray& ray, float max_distance) const
+    -> std::vector<RayHit> {
+  assert(std::abs(bx::length(ray.dir) - 1.0F) < 1e-3F && "unit direction");
+  assert(max_distance >= 0.0F && "negative ray length");
+  // Jolt's direction carries the ray's length
+  const JPH::RRayCast jolt_ray{ToJolt(ray.pos),
+                               ToJolt(bx::mul(ray.dir, max_distance))};
+  const auto hit_at = [&](float fraction) -> RayHit {
+    RayHit hit{};
+    hit.distance = fraction * max_distance;
+    hit.point = bx::mad(ray.dir, hit.distance, ray.pos);
+    return hit;
+  };
+
+  std::vector<RayHit> hits;
+  JPH::ClosestHitPerBodyCollisionCollector<JPH::CastRayCollector> collector;
+  impl_->system.GetNarrowPhaseQuery().CastRay(jolt_ray, JPH::RayCastSettings{},
+                                              collector);
+  const JPH::BodyInterface& body_interface = impl_->system.GetBodyInterface();
+  for (const JPH::RayCastResult& result : collector.mHits) {
+    RayHit hit = hit_at(result.mFraction);
+    hit.body = BodyHandle(result.mBodyID.GetIndexAndSequenceNumber());
+    hit.user_data = body_interface.GetUserData(result.mBodyID);
+    hits.push_back(hit);
+  }
+
+  // Characters aren't in Jolt's world, so their capsules are tested apart
+  for (const auto& [value, character] : impl_->characters) {
+    JPH::RayCastResult result;
+    if (character->GetTransformedShape().CastRay(jolt_ray, result)) {
+      RayHit hit = hit_at(result.mFraction);
+      hit.character = CharacterHandle(value);
+      hit.user_data = character->GetUserData();
+      hits.push_back(hit);
+    }
+  }
+
+  std::ranges::sort(hits, {}, &RayHit::distance);
+  return hits;
 }
 
 void PhysicsWorld::Step(float dt) {

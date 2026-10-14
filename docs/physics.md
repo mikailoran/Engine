@@ -121,6 +121,39 @@ the same `.bin` the renderer draws or a separate, simpler one:
 - **Not drawn by debug draw yet**, and the inspector shows the shape
   read-only.
 
+### Ray casts
+
+To find what a line of sight or a shot meets, ask the engine for the nearest
+entity along a ray:
+
+```cpp
+// From the eye, along the view direction (unit length), up to 100 m
+const auto hit = engine.CastRay({.pos = eye, .dir = forward}, 100.0F, player);
+if (hit) {
+  // hit->entity, hit->distance (m), hit->point (world space)
+}
+```
+
+- **Pass the caster as `ignore`.** A ray from the eye starts inside the
+  caster's own capsule, and Jolt treats convex shapes as solid, so without it
+  every ray hits the caster at 0 m. The same holds for any shape a ray starts
+  inside.
+- **It sees colliders and characters, not meshes you draw.** Bodies are found
+  by Jolt's narrow phase, against their real shapes. Characters aren't in
+  Jolt's world, so their capsules are tested one by one. An entity without a
+  `Collider` or `CharacterBody` can't be hit; use `Engine::Pick`, which tests
+  mesh bounds, to select those.
+- **Poses are those of the last physics step.** Gameplay runs before
+  physics, so an entity created or teleported this frame is found where
+  physics last put it, or not at all. A body whose entity was destroyed but
+  not yet swept is skipped.
+- **Meshes are one-sided** here too: a ray from behind a level wall passes
+  through it.
+- Under the hood, `PhysicsWorld::CastRay` returns every hit, nearest first,
+  at most one per body or character, tagged with its user data. The free
+  function `CastRay` (`ecs/systems/physics_query.h`) takes the first that
+  still belongs to a live entity, and `Engine::CastRay` calls it.
+
 ### Things that may surprise you
 
 - **Editing a moving body's `Transform` teleports it.** While a body is
@@ -340,7 +373,10 @@ The tests cover body lifetime (destruction, reused ids, copied links, no
 leaks), the simulation (bouncing, friction, walls, rolling spheres) and every
 wake-up rule. `character_test.cpp` drives characters through the facade alone
 (standing, falling, walls, the slope limit, jumping, pushing), and the
-harness covers their ECS sync. The most important one is `RampContactMatchesTheRenderedTilt`: it
+harness covers their ECS sync. `ray_cast_test.cpp` covers the facade's ray
+casts (order, range, characters, one-sided meshes, starting inside a shape),
+and the harness covers which entity a ray returns (the ignored caster,
+destroyed entities not yet swept). The most important one is `RampContactMatchesTheRenderedTilt`: it
 drops a box on the tilted ramp and checks it lands on the surface as the
 renderer draws it. It fails if the rotation convention between rendering and
 physics ever drifts apart.
