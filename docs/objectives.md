@@ -14,7 +14,8 @@ One codebase, three products, with clean boundaries between them:
 
 1. **A hand-written 3D engine**: bgfx rendering, its own ECS, Jolt physics.
 2. **A small first-person game** built on the engine.
-3. **A Qt editor** for setting up the game's physical world.
+3. **A Qt editor** that composes the game's scenes: placing, configuring and
+   tuning what Blender made.
 
 The editor is also where the project builds real Qt experience: model/view,
 widgets, undo, embedding a native viewport. When choosing between editor
@@ -31,7 +32,7 @@ are what make it worth building
 |---|---|---|
 | **Engine** | A library. Knows nothing about Qt, SDL, gameplay or the editor | Rendering, ECS, physics, assets, scene loading and saving, picking |
 | **Game** | A kinematic first-person character exploring a map full of physics objects, hosted in an SDL3 window | The main loop, input mapping, character and camera behaviour |
-| **Editor** | A Qt Widgets application ([ADR 0012](adr/0012-qt-widgets-editor.md)): a **physics lab**, not a map creator | Arranging and tuning physical objects, constraints and surfaces |
+| **Editor** | A Qt Widgets application ([ADR 0012](adr/0012-qt-widgets-editor.md)): a **scene composer** with a physics lab at its core, not a map creator ([ADR 0014](adr/0014-editor-scene-composer.md)) | The scene file: placement, physics, gameplay setup, lighting and tuning |
 | **Devtools** | An in-game developer console, like Fallout's `` ` `` menu: typed commands such as spawning items. Today an ImGui overlay (inspector, free camera, click-select) | Commands on the running game. Its inspector, free camera and selection move to the editor ([ADR 0013](adr/0013-devtools-console.md)) |
 
 The gameplay direction stops at "first-person exploration of a physical
@@ -40,24 +41,44 @@ and specific enough to drive the engine work.
 
 ## Scope
 
-### Editor: a physics lab, not a map creator
+### Editor: a scene composer, not a map creator
 
-The editor **arranges and tunes things that already exist. It never creates
-geometry.**
+The rule: **the editor composes scenes; Blender makes assets**
+([ADR 0014](adr/0014-editor-scene-composer.md)). Blender owns everything
+inside a `.glb`. The editor owns the scene file: which assets are placed
+where, and every component value on every entity.
+
+A feature belongs in the editor only if it passes both tests:
+
+1. **Its output is editor-owned data:** the scene file, or another file the
+   editor owns (the surface library, later prefabs). Anything that would
+   change a `.glb` or create vertices or pixels belongs to Blender.
+2. **The engine or the game already reads it.** The editor exposes
+   components that exist, and never invents data that no runtime code reads.
+
+The in-scope column lists kinds of work, not a schedule: each item arrives
+once the engine or game has the component it edits.
 
 | In scope | Out of scope |
 |---|---|
-| Move, rotate, scale and duplicate entities | Modelling geometry: brushes, CSG, extrusion |
-| Mass, friction, restitution, damping, gravity, motion type | Terrain sculpting, foliage painting |
-| Constraints (hinge, slider, distance, fixed) with limits and motors | Texture painting, UVs, material graphs |
-| Sensors and trigger volumes | Light baking, navmesh generation |
-| Character tuning: speed, step height, max slope, push strength | Asset libraries with import pipelines |
-| Simulate, pause, step and inspect live values | Shipping the editor as a modding tool |
-| Choosing the physics surface of a placed object or the level | Anything visual: creating, choosing or assigning render materials |
-| Creating and tuning physics surfaces ("ice", "rubber") | Editing the level's static shell |
+| Place, move, rotate, scale and duplicate entities, including new props from existing assets | Modelling geometry: brushes, CSG, extrusion |
+| Blockout with primitive props, before the layout is built in Blender | Terrain sculpting, foliage painting |
+| Mass, friction, restitution, damping, gravity, motion type | Texture painting, UVs, material graphs, shader editing |
+| Constraints (hinge, slider, distance, fixed) with limits and motors | Light baking, navmesh generation |
+| Sensors and trigger volumes, and what they trigger: kill zones, jump pads, teleporters | Asset libraries with import pipelines |
+| Gameplay markers: spawn points, objectives, pickups, waypoints | Animation authoring, visual scripting |
+| Character and gameplay tuning: movement, jumping, any component the game registers | Creating or assigning render materials |
+| Choosing, creating and tuning physics surfaces ("ice", "rubber") | Editing the level's static shell |
+| Lighting and atmosphere: sun, ambient, sky, shadows | Shipping the editor as a modding tool |
+| Per-instance tint (`Renderable::color`) | |
+| Authored cameras: spectator points, menu backdrops, intro shots | |
+| Simulate, pause, step and inspect live values | |
+| Diagnostics: jump-arc preview, spawn sight-lines, collider vs render mismatch | |
+| Engine debug views: shadow map, normals, draw and body counts | |
+| Prefabs: reusable entity templates, once objects repeat | |
 
-The rule: **the editor may reference any asset, but it only authors physics
-data.** Blender owns everything visual.
+Blockout is composition: placing scaled primitives. Merging or cutting them
+would be CSG, which stays out.
 
 ### Assets
 
@@ -70,9 +91,10 @@ directly at runtime: there is no mesh format of our own and no import step
 
 | Content | Owned by | Changed by |
 |---|---|---|
-| The level's static shell (geometry, its looks) | Blender, built from CC0 packs or our own models | Re-export, then rebuild |
+| The level's static shell (geometry, its materials) | Blender, built from CC0 packs or our own models | Re-export, then rebuild |
 | Render materials, textures | Blender, inside each glTF | Editing in Blender, then re-export |
-| Placed objects, constraints, physics surfaces | The editor | The editor, saved to the scene file |
+| The scene: placed objects, physics, constraints, gameplay setup, lighting, cameras | The editor | The editor, saved to the scene file |
+| Physics surfaces, later prefabs | The editor | The editor, saved to their own files |
 
 Each level is two files: its **glTF**, exported from Blender, and a **scene**
 file the editor owns, which places the level and everything on it.

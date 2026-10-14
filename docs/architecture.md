@@ -163,7 +163,7 @@ saves, then starts `launcher --scene <path>`.
 
 ```
  CC0 packs (Kenney, Quaternius...) or our own models
-        │ assembled and textured in Blender           owns geometry and looks
+        │ assembled and textured in Blender           owns geometry and materials
         ▼ export GLB
  assets/levels/<level>.glb, assets/meshes/*.glb              (git)
         │ copied beside the executable at build time
@@ -189,7 +189,7 @@ saves, then starts `launcher --scene <path>`.
 - **The editor saves into the source tree** (`assets/scenes/`). The build
   copies scenes beside the executable, so a save into the build directory
   would be overwritten and never reach git.
-- **Blender is the level editor for geometry and looks.** It assembles kits
+- **Blender is the level editor for geometry and materials.** It assembles kits
   and fixes CC0 assets (units, transforms, materials) so the loader can
   assume a clean export: metres and +Y up, base color materials, normals.
 - **The static shell, first version:** the `.glb` loads as one mesh, its node

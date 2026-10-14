@@ -1,7 +1,8 @@
 # 0007: Split the engine from its hosts, and the editor from the game
 
 **Status:** accepted; the engine/host split and devtools are implemented
-(M1), the game-logic library and the editor are not yet
+(M1), the game-logic library and the editor are not yet. The editor-scope
+bullet is superseded by [0014](0014-editor-scene-composer.md)
 
 ## Context
 

@@ -19,6 +19,7 @@ these explain why it isn't built some other way.
 | [0011](0011-directional-shadow-map.md) | Shadow the sun with one stable, camera-fitted shadow map |
 | [0012](0012-qt-widgets-editor.md) | Build the editor with Qt Widgets |
 | [0013](0013-devtools-console.md) | The editor takes over the devtools' tools; the devtools become a console |
+| [0014](0014-editor-scene-composer.md) | The editor composes scenes; Blender makes assets |
 
 ## Adding one
 
