@@ -1,5 +1,6 @@
 #pragma once
 
+#include <bx/bounds.h>
 #include <bx/math.h>
 
 #include <cstdint>
@@ -84,6 +85,20 @@ struct CharacterState {
 struct CharacterEntry {
   CharacterHandle character;
   UserTag user_data{0};
+};
+
+/** @brief Output of CastRay: where a ray met a body or a character. */
+struct RayHit {
+  /// Tag of what was hit, as given at creation.
+  UserTag user_data{0};
+  /// The body hit; invalid when a character was hit.
+  BodyHandle body;
+  /// The character hit; invalid when a body was hit.
+  CharacterHandle character;
+  /// Distance from the ray's origin, in m; 0 if it starts inside a shape.
+  float distance{0.0F};
+  /// World-space hit point.
+  bx::Vec3 point{0.0F};
 };
 
 /**
@@ -208,6 +223,19 @@ class PhysicsWorld {
 
   /** @brief Lists every character; a copy, safe to destroy while looping. */
   [[nodiscard]] auto Characters() const -> std::vector<CharacterEntry>;
+
+  /**
+   * @brief Casts @p ray against every body and character, as of the last
+   * Step.
+   *
+   * A ray starting inside a convex shape hits it at distance 0; meshes are
+   * one-sided, so their back faces are never hit.
+   * @param ray Origin and unit-length direction, in world space.
+   * @param max_distance How far the ray reaches, in m.
+   * @return Every hit, nearest first; at most one per body or character.
+   */
+  [[nodiscard]] auto CastRay(const bx::Ray& ray, float max_distance) const
+      -> std::vector<RayHit>;
 
   /**
    * @brief Advances the simulation by exactly @p dt seconds: moves every
