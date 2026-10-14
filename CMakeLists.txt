@@ -123,7 +123,9 @@ set_target_properties(engine_physics PROPERTIES
 # example-common.
 add_library(engine_physics_system STATIC
   src/engine/ecs/systems/physics_system.h
-  src/engine/ecs/systems/physics_system.cpp)
+  src/engine/ecs/systems/physics_system.cpp
+  src/engine/ecs/systems/physics_query.h
+  src/engine/ecs/systems/physics_query.cpp)
 
 target_link_libraries(engine_physics_system PUBLIC ecs_core engine_physics)
 target_compile_options(engine_physics_system PRIVATE -Wall -Wextra -Wpedantic)

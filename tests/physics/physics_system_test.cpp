@@ -13,6 +13,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <vector>
 
 #include "engine/ecs/components/character_body.h"
@@ -23,6 +24,7 @@
 #include "engine/ecs/components/transform.h"
 #include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
+#include "engine/ecs/systems/physics_query.h"
 #include "engine/math/rotation.h"
 #include "engine/physics/body_handle.h"
 #include "engine/physics/collision_mesh_handle.h"
@@ -176,6 +178,16 @@ class PhysicsHarness {
   template <class Component>
   auto Get(Entity entity) -> Component& {
     return ecs_.GetComponent<Component>(entity);
+  }
+
+  /**
+   * @brief Casts from @p origin along unit @p dir, up to 100 m. A miss
+   * returns entity kMaxEntities, which names no entity.
+   */
+  auto Cast(const bx::Vec3& origin, const bx::Vec3& dir,
+            std::optional<Entity> ignore = std::nullopt) -> RayHit {
+    return CastRay(ecs_, world_, {.pos = origin, .dir = dir}, 100.0F, ignore)
+        .value_or(RayHit{.entity = kMaxEntities});
   }
 
   /** @brief The ECS, for structural changes. */
@@ -780,6 +792,48 @@ TEST(Physics, MeshColliderStaysStaticWithARigidBody) {
   scene.Entities().AddComponent(floor, RigidBody{});
   scene.Run(30);
   EXPECT_EQ(scene.Get<Transform>(floor).position.y, 0.0F);
+}
+
+// --- Ray casts -------------------------------------------------------------
+
+TEST(Physics, RayHitsTheNearestEntity) {
+  PhysicsHarness scene;
+  scene.AddStatic(At({8.0F, 0.0F, 0.0F}));
+  const Entity near = scene.AddStatic(At({4.0F, 0.0F, 0.0F}));
+  scene.Run(1);
+
+  const auto hit = scene.Cast({0.0F, 0.0F, 0.0F}, {1.0F, 0.0F, 0.0F});
+  EXPECT_EQ(hit.entity, near);
+  EXPECT_NEAR(hit.distance, 3.5F, 1e-3F);
+}
+
+TEST(Physics, RaySkipsTheIgnoredCharacter) {
+  PhysicsHarness scene;
+  const Entity shooter = scene.AddCharacter({0.0F, 0.0F, 0.0F});
+  const Entity wall =
+      scene.AddStatic(At({4.0F, 2.0F, 0.0F}, bx::Quaternion{bx::InitIdentity},
+                         {1.0F, 4.0F, 1.0F}));
+  scene.Run(1);
+
+  // From inside the capsule, the shooter itself is the nearest hit
+  const bx::Vec3 eye{0.0F, 1.6F, 0.0F};
+  EXPECT_EQ(scene.Cast(eye, {1.0F, 0.0F, 0.0F}).entity, shooter);
+  const auto hit = scene.Cast(eye, {1.0F, 0.0F, 0.0F}, shooter);
+  EXPECT_EQ(hit.entity, wall);
+}
+
+TEST(Physics, RaySkipsADestroyedEntityNotYetSwept) {
+  PhysicsHarness scene;
+  const Entity doomed = scene.AddStatic(At({4.0F, 0.0F, 0.0F}));
+  const Entity behind = scene.AddStatic(At({8.0F, 0.0F, 0.0F}));
+  scene.Run(1);
+
+  // Its body lives until the next physics update sweeps it
+  scene.Entities().DestroyEntity(doomed);
+  scene.Entities().Flush();
+  ASSERT_EQ(scene.BodyCount(), 2U);
+  const auto hit = scene.Cast({0.0F, 0.0F, 0.0F}, {1.0F, 0.0F, 0.0F});
+  EXPECT_EQ(hit.entity, behind);
 }
 
 }  // namespace

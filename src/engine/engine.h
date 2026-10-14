@@ -1,5 +1,7 @@
 #pragma once
 
+#include <bx/bounds.h>
+
 #include <cstdint>
 #include <filesystem>
 #include <optional>
@@ -10,6 +12,7 @@
 #include "engine/ecs/core/types.h"
 #include "engine/ecs/systems/debug_draw_system.h"
 #include "engine/ecs/systems/lighting_system.h"
+#include "engine/ecs/systems/physics_query.h"
 #include "engine/ecs/systems/physics_system.h"
 #include "engine/ecs/systems/render_system.h"
 #include "engine/ecs/systems/shadow_system.h"
@@ -99,6 +102,18 @@ class Engine {
    * @return Empty on a miss, or when no camera is active.
    */
   auto Pick(ScreenPosition position, ScreenSize size) -> std::optional<Entity>;
+
+  /**
+   * @brief Finds the nearest entity whose collider or character @p ray hits,
+   * as of the last physics step.
+   * @param ray Origin and unit-length direction, in world space.
+   * @param max_distance How far the ray reaches, in m.
+   * @param ignore An entity never hit, usually the one casting.
+   * @return Empty on a miss.
+   */
+  auto CastRay(const bx::Ray& ray, float max_distance,
+               std::optional<Entity> ignore = std::nullopt)
+      -> std::optional<RayHit>;
 
   /**
    * @brief Requests a wire box around @p entity for this frame. Only a Render

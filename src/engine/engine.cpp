@@ -1,5 +1,7 @@
 #include "engine/engine.h"
 
+#include <bx/bounds.h>
+
 #include <filesystem>
 #include <optional>
 #include <string>
@@ -18,6 +20,7 @@
 #include "engine/ecs/components/transform.h"
 #include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
+#include "engine/ecs/systems/physics_query.h"
 #include "engine/platform/frame_context.h"
 #include "engine/platform/native_surface.h"
 #include "engine/platform/screen.h"
@@ -95,6 +98,11 @@ auto Engine::Pick(ScreenPosition position, ScreenSize size)
     return std::nullopt;
   }
   return engine::Pick(ecs_, assets_, *active_camera_, position, size);
+}
+
+auto Engine::CastRay(const bx::Ray& ray, float max_distance,
+                     std::optional<Entity> ignore) -> std::optional<RayHit> {
+  return engine::CastRay(ecs_, physics_world_, ray, max_distance, ignore);
 }
 
 void Engine::Highlight(Entity entity) { debug_draw_.Highlight(entity); }
