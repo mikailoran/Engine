@@ -129,6 +129,16 @@ label for tools, not an identifier, so names need not be unique. Entities
 the hosts spawn at runtime (their cameras) have none, and the editor's
 entity list shows only named entities.
 
+**Prefabs** are reusable entity templates: a file under `assets/prefabs/`
+holding `{ "version": 1, "components": { ... } }`, the same component blocks
+a scene entity has. A scene entity names one with `"prefab"`, and its own
+`"components"` are merged over the prefab's as a JSON merge patch (RFC 7386):
+an override can set a single field (a `transform`'s `position` keeps the
+prefab's scale), and `null` removes a component. The loader flattens the two
+while loading, so once loaded a prefab instance is an ordinary entity.
+Nothing records which prefab an entity came from yet; scene saving (M4d)
+needs that link to write an instance back as its prefab and overrides.
+
 The editor shouldn't hard-code the game's components. Game logic registers
 each component with the engine (its scene loader and saver, and a description
 of its fields). Loaders are there today: `RegisterGameLogic` registers
@@ -172,6 +182,9 @@ saves, then starts `launcher --scene <path>`.
         ▲ referenced by
         │
  assets/scenes/<level>.json                                  owned by the editor
+        │ entities may instantiate
+        ▼
+ assets/prefabs/*.json                     hand-written; later owned by the editor
 ```
 
 - **glTF is the runtime format** ([ADR 0010](adr/0010-gltf-runtime-format.md)).
@@ -186,6 +199,9 @@ saves, then starts `launcher --scene <path>`.
   file places it (an ordinary entity with a renderable and a mesh collider on
   the `.glb`) and holds what the editor placed and tuned. Re-exporting never
   wipes editor work.
+- **Prefabs are templates for repeated entities** (an enemy, a crate).
+  They reference `.glb` files like scenes do, and the build copies them
+  beside the executable with the scenes.
 - **The editor saves into the source tree** (`assets/scenes/`). The build
   copies scenes beside the executable, so a save into the build directory
   would be overwritten and never reach git.

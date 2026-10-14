@@ -94,7 +94,7 @@ directly at runtime: there is no mesh format of our own and no import step
 | The level's static shell (geometry, its materials) | Blender, built from CC0 packs or our own models | Re-export, then rebuild |
 | Render materials, textures | Blender, inside each glTF | Editing in Blender, then re-export |
 | The scene: placed objects, physics, constraints, gameplay setup, lighting, cameras | The editor | The editor, saved to the scene file |
-| Physics surfaces, later prefabs | The editor | The editor, saved to their own files |
+| Prefabs, later physics surfaces | The editor | The editor, saved to their own files; prefabs are hand-written JSON until then |
 
 Each level is two files: its **glTF**, exported from Blender, and a **scene**
 file the editor owns, which places the level and everything on it.
@@ -125,7 +125,7 @@ Each milestone ends with something you can run and show.
 | M4a | **Qt viewport.** The `editor` executable, the engine rendering into an embedded Qt viewport, a navigable camera | The editor opens a level and you can look around it | |
 | M4b | **Select and edit.** A `Name` component from the scene file, an entity hierarchy over the ECS (by `Name`), viewport picking kept in sync with it, a `Transform` inspector | Select a crate in the viewport or the hierarchy, and move it with the inspector | |
 | M4c | **Simulate.** A simulate/pause toggle that steps physics in the editor | Props fall and settle while simulating, and freeze on pause | |
-| M4d | **Scene saving.** Writing the editor-owned scene file, a saver beside each component loader | M4's own goal; and load, save and load again gives an identical scene | |
+| M4d | **Scene saving.** Writing the editor-owned scene file, a saver beside each component loader, prefab instances written as their prefab and overrides | M4's own goal; and load, save and load again gives an identical scene | |
 | M5 | **Physics lab.** Undo/redo, a generic inspector driven by component registration, constraints, a physics-surface library (surface assets referenced by colliders, with inline overrides), play/stop with restore, physics debug overlays, telemetry plots, a "launch game" button | You can build a hinged door or a pendulum and tune it without touching JSON | |
 
 M2, M3 and M4 are split into lettered parts, each on its own branch, so each
