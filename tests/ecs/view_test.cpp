@@ -1,6 +1,8 @@
 // Views: which entities ForEach visits, and what it hands to the callback.
 
 #include <gtest/gtest.h>
+#include <linux/prctl.h>
+#include <sys/prctl.h>
 
 #include <set>
 #include <vector>
@@ -15,6 +17,17 @@ namespace {
 struct Position {
   float x{0.0F};
 };
+
+/**
+ * @brief Stops the calling process from leaving a core dump when it aborts.
+ *
+ * Call it inside a death test's statement, so only the child is affected:
+ * its abort is expected, and a dump would make the OS report a crash.
+ */
+[[maybe_unused]] auto DisableCoreDumps() -> void {
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
+  prctl(PR_SET_DUMPABLE, 0);
+}
 
 struct Velocity {
   float dx{0.0F};
@@ -185,10 +198,14 @@ TEST(ViewDeathTest, AddingAViewedComponentDuringForEachAsserts) {
   ecs.AddComponent(ecs.CreateEntity(), Position{});
   ecs.AddComponent(ecs.CreateEntity(), Position{});
 
-  EXPECT_DEATH(ecs.View<Position>().ForEach([&ecs](Entity, Position&) -> void {
-    ecs.AddComponent(ecs.CreateEntity(), Position{});
-  }),
-               "added or removed during ForEach");
+  EXPECT_DEATH(
+      {
+        DisableCoreDumps();
+        ecs.View<Position>().ForEach([&ecs](Entity, Position&) -> void {
+          ecs.AddComponent(ecs.CreateEntity(), Position{});
+        });
+      },
+      "added or removed during ForEach");
 #endif
 }
 
@@ -203,9 +220,12 @@ TEST(ViewDeathTest, RemovingAViewedComponentDuringForEachAsserts) {
   ecs.AddComponent(ecs.CreateEntity(), Position{});
 
   EXPECT_DEATH(
-      ecs.View<Position>().ForEach([&ecs](Entity entity, Position&) -> void {
-        ecs.RemoveComponent<Position>(entity);
-      }),
+      {
+        DisableCoreDumps();
+        ecs.View<Position>().ForEach([&ecs](Entity entity, Position&) -> void {
+          ecs.RemoveComponent<Position>(entity);
+        });
+      },
       "added or removed during ForEach");
 #endif
 }
