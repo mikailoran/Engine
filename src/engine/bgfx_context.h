@@ -23,9 +23,6 @@ class BgfxContext {
   // TODO: Add anisotropy when it would make a difference
   // BGFX_RESET_VSYNC | BGFX_RESET_MSAA_X4 | BGFX_RESET_MAXANISOTROPY;
 
-  /** @brief Debug flags bgfx starts with. */
-  static constexpr std::uint32_t kDebugFlags = BGFX_DEBUG_STATS;
-
   /**
    * @brief Brings up bgfx against @p surface, rendering on this thread.
    * @throws std::runtime_error If bgfx::init fails.
@@ -44,9 +41,14 @@ class BgfxContext {
   /** @brief Resizes the backbuffer; does nothing if @p size is unchanged. */
   void Resize(PixelSize size);
 
+  /** @brief Set the display of bgfx render stats. */
+  void SetDebugStats(bool enabled);
+
  private:
   // Backbuffer size bgfx was last initialised or reset with.
   PixelSize size_;
+
+  std::uint32_t debug_flags_{BGFX_DEBUG_NONE};
 };
 
 }  // namespace engine

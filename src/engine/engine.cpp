@@ -63,6 +63,9 @@ void Engine::Render(const FrameContext& ctx, RenderOptions options) {
   // Submits to kDebugView; must precede the renderer's bgfx::frame()
   if (options.debug_draw) {
     debug_draw_.Update(ecs_, assets_, ctx);
+    bgfx_context_.SetDebugStats(true);
+  } else {
+    bgfx_context_.SetDebugStats(false);
   }
   render_.Update(ecs_, assets_, ctx, shadow_.Map());
 }
