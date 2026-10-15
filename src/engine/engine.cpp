@@ -12,6 +12,7 @@
 #include "engine/ecs/components/character_link.h"
 #include "engine/ecs/components/collider.h"
 #include "engine/ecs/components/directional_light.h"
+#include "engine/ecs/components/lifetime.h"
 #include "engine/ecs/components/name.h"
 #include "engine/ecs/components/physics_link.h"
 #include "engine/ecs/components/renderable.h"
@@ -20,6 +21,7 @@
 #include "engine/ecs/components/transform.h"
 #include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
+#include "engine/ecs/systems/lifetime_system.h"
 #include "engine/ecs/systems/physics_query.h"
 #include "engine/platform/frame_context.h"
 #include "engine/platform/native_surface.h"
@@ -43,6 +45,7 @@ Engine::Engine(const NativeSurface& surface) : bgfx_context_(surface) {
   ecs_.RegisterComponent<PhysicsLink>();
   ecs_.RegisterComponent<CharacterBody>();
   ecs_.RegisterComponent<CharacterLink>();
+  ecs_.RegisterComponent<Lifetime>();
 
   RegisterBuiltinLoaders(scene_loader_);
 }
@@ -70,7 +73,11 @@ void Engine::Render(const FrameContext& ctx, RenderOptions options) {
   render_.Update(ecs_, assets_, ctx, shadow_.Map());
 }
 
-void Engine::EndFrame() { ecs_.Flush(); }
+void Engine::EndFrame(const FrameContext& ctx) {
+  // TODO: Lifetimes expire even when simulation is stopped
+  ExpireLifetimes(ecs_, ctx);
+  ecs_.Flush();
+}
 
 void Engine::LoadScene(const std::filesystem::path& path) {
   scene_loader_.Load(path, ecs_, assets_, physics_world_);

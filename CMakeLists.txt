@@ -210,6 +210,7 @@ add_library(engine_runtime STATIC
   src/engine/ecs/components/character_body.h
   src/engine/ecs/components/character_link.h
   src/engine/ecs/components/collider.h
+  src/engine/ecs/components/lifetime.h
   src/engine/ecs/components/name.h
   src/engine/ecs/components/physics_link.h
   src/engine/ecs/components/renderable.h
@@ -219,6 +220,8 @@ add_library(engine_runtime STATIC
   src/engine/ecs/components/transform.h
   src/engine/ecs/systems/debug_draw_system.h
   src/engine/ecs/systems/debug_draw_system.cpp
+  src/engine/ecs/systems/lifetime_system.h
+  src/engine/ecs/systems/lifetime_system.cpp
   src/engine/ecs/systems/lighting_system.h
   src/engine/ecs/systems/lighting_system.cpp
   src/engine/ecs/systems/render_system.h

@@ -2,6 +2,9 @@
   "version": 1,
   "components": {
     "transform": {},
+    "renderable": {
+      "mesh": "assets/meshes/characters/Male_Casual.glb"
+    },
     "character_body": {
       "height": 1.8,
       "radius": 0.3

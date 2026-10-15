@@ -64,7 +64,7 @@ class Engine {
   void Render(const FrameContext& ctx, RenderOptions options);
 
   /** @brief Destroys the entities whose destruction was requested. */
-  void EndFrame();
+  void EndFrame(const FrameContext& ctx);
 
   /**
    * @brief Loads a scene file's entities into the world.
