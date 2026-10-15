@@ -112,7 +112,7 @@ auto StandaloneHost::Run() -> int {
     // Typed text only flows while a UI text field asks for it
     window_.SetTextInput(!play && ui_.WantsText());
 
-    engine_.EndFrame(ctx);
+    engine_.EndFrame();
   }
 
   return 0;

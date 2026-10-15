@@ -54,6 +54,7 @@ void Engine::Resize(PixelSize size) { bgfx_context_.Resize(size); }
 
 void Engine::Update(const FrameContext& ctx) {
   physics_system_.Update(ecs_, physics_world_, ctx);
+  ExpireLifetimes(ecs_, ctx);
   // Frame uniforms must be set before the renderer submits
   lighting_.Update(ecs_, ctx);
 }
@@ -73,11 +74,7 @@ void Engine::Render(const FrameContext& ctx, RenderOptions options) {
   render_.Update(ecs_, assets_, ctx, shadow_.Map());
 }
 
-void Engine::EndFrame(const FrameContext& ctx) {
-  // TODO: Lifetimes expire even when simulation is stopped
-  ExpireLifetimes(ecs_, ctx);
-  ecs_.Flush();
-}
+void Engine::EndFrame() { ecs_.Flush(); }
 
 void Engine::LoadScene(const std::filesystem::path& path) {
   scene_loader_.Load(path, ecs_, assets_, physics_world_);

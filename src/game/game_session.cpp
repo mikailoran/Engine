@@ -29,7 +29,10 @@ GameSession::GameSession(Engine& engine) {
 void GameSession::PrePhysics(Engine& engine, const FrameContext& ctx,
                              bool has_control) {
   player_.Control(engine.World(), ctx, has_control);
-  UpdateCooldowns(engine.World(), ctx.dt);
+  // Game time stands still without control (F1), as physics does
+  if (has_control) {
+    UpdateCooldowns(engine.World(), ctx.dt);
+  }
   HandleShots(engine);
 }
 
