@@ -16,8 +16,9 @@
     },
     "weapon": {
       "damage": 20,
-      "cooldown_s": 0.2,
-      "range_m": 100
+      "cooldown_s": 0.1,
+      "range_m": 100,
+      "beam_s": 0.1
     }
   }
 }

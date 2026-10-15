@@ -47,11 +47,12 @@ void LoadHealth(const nlohmann::json& data, engine::Entity entity,
 void LoadWeapon(const nlohmann::json& data, engine::Entity entity,
                 engine::Ecs& ecs, engine::AssetRegistry& /*assets*/,
                 engine::physics::PhysicsWorld& /*physics*/) {
-  engine::CheckKeys(data, {"damage", "cooldown_s", "range_m"});
+  engine::CheckKeys(data, {"damage", "cooldown_s", "range_m", "beam_s"});
   Weapon weapon{};
   engine::ReadPositive(data, "damage", weapon.damage);
   engine::ReadPositive(data, "cooldown_s", weapon.cooldown_s);
   engine::ReadPositive(data, "range_m", weapon.range_m);
+  engine::ReadPositive(data, "beam_s", weapon.beam_s);
   ecs.AddComponent(entity, weapon);
   // Runtime: whoever controls the entity writes it every frame
   ecs.AddComponent(entity, Aim{});

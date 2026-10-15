@@ -33,10 +33,25 @@ using engine::YawPitch;
 
 namespace {
 struct Shot {
-  bx::Vec3 from{bx::InitZero};
+  bx::Vec3 from{bx::InitZero};  // muzzle
   bx::Vec3 to{bx::InitZero};
-  float distance{0.0F};
+  float beam_s{0.0F};
 };
+
+/// Muzzle offset from the eyes in m, right and down in the view.
+constexpr float kMuzzleRight = 0.2F;
+constexpr float kMuzzleDown = 0.15F;
+
+/**
+ * @brief Where a beam fired along @p ray starts: below and right of its origin.
+ * The ray must not be vertical (look pitch stays under 90°).
+ */
+auto Muzzle(const bx::Ray& ray) -> bx::Vec3 {
+  const bx::Vec3 right = bx::normalize(bx::cross(ray.dir, {0.0F, 1.0F, 0.0F}));
+  const bx::Vec3 up = bx::cross(right, ray.dir);
+  return bx::add(
+      ray.pos, bx::sub(bx::mul(right, kMuzzleRight), bx::mul(up, kMuzzleDown)));
+}
 
 /**
  * @brief Rotation turning a mesh's +Y axis along the segment @p from → @p to.
@@ -85,19 +100,17 @@ auto HandleShots(Engine& engine) -> void {
         if (!aim.trigger || weapon.cooldown_left_s > 0.0F) {
           return;
         }
-        Shot shot{.from = aim.ray.pos};
+        Shot shot{.from = Muzzle(aim.ray), .beam_s = weapon.beam_s};
         // Increment weapon cooldown
         weapon.cooldown_left_s = weapon.cooldown_s;
 
         const auto hit = engine.CastRay(aim.ray, weapon.range_m, entity);
         if (!hit) {
           shot.to = bx::add(shot.from, bx::mul(aim.ray.dir, weapon.range_m));
-          shot.distance = weapon.range_m;
           shots.push_back(shot);
           return;
         }
         shot.to = hit->point;
-        shot.distance = hit->distance;
         shots.push_back(shot);
 
         // Damage the hit entity
@@ -120,13 +133,15 @@ auto HandleShots(Engine& engine) -> void {
       engine.Assets().LoadMesh("assets/meshes/cylinder.glb");
   for (const auto& shot : shots) {
     auto beam = ecs.CreateEntity();
-    ecs.AddComponent(beam, Renderable{.mesh_handle = beam_mesh_handle});
-    ecs.AddComponent(beam, Lifetime{0.2F});
+    ecs.AddComponent(beam, Renderable{.mesh_handle = beam_mesh_handle,
+                                      .color = {1.0F, 0.85F, 0.3F, 1.0F}});
+    ecs.AddComponent(beam, Lifetime{shot.beam_s});
     const auto middle_pos = bx::div(bx::add(shot.from, shot.to), 2.0F);
+    const float length = bx::length(bx::sub(shot.to, shot.from));
     ecs.AddComponent(beam,
                      Transform{.position = middle_pos,
                                .rotation = AlongSegment(shot.from, shot.to),
-                               .scale = {0.05F, shot.distance, 0.05F}});
+                               .scale = {0.05F, length, 0.05F}});
   }
 }
 
