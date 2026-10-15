@@ -1,6 +1,8 @@
 #include "game/game_logic.h"
 
-#include <nlohmann/json_fwd.hpp>
+#include <nlohmann/json.hpp>
+
+#include <stdexcept>
 
 #include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
@@ -40,7 +42,11 @@ void LoadHealth(const nlohmann::json& data, engine::Entity entity,
   engine::CheckKeys(data, {"max", "current"});
   Health health{};
   engine::ReadPositive(data, "max", health.max);
-  engine::ReadPositive(data, "current", health.current);
+  // Starts full unless current is given; 0 is a valid start
+  health.current = data.value("current", health.max);
+  if (health.current < 0 || health.current > health.max) {
+    throw std::runtime_error("health: current must be within 0..max");
+  }
   ecs.AddComponent(entity, health);
 }
 

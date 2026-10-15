@@ -116,7 +116,7 @@ auto HandleShots(Engine& engine) -> void {
         // Damage the hit entity
         auto& ecs = engine.World();
         if (auto* health = ecs.TryGetComponent<Health>(hit->entity)) {
-          health->current = std::max(0, health->current - weapon.damage);
+          ApplyDamage(*health, weapon.damage);
           const auto* name = ecs.TryGetComponent<Name>(hit->entity);
           std::cout << std::format(
                            "Player shot entity {} for {} damage. Remaining "
