@@ -1,7 +1,6 @@
 #include "game/game_logic.h"
 
 #include <nlohmann/json.hpp>
-
 #include <stdexcept>
 
 #include "engine/ecs/core/ecs.h"

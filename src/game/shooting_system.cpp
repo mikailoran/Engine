@@ -1,11 +1,14 @@
 #include "game/shooting_system.h"
 
+#include <bx/bounds.h>
+#include <bx/bx.h>
 #include <bx/math.h>
 
+#include <algorithm>
 #include <format>
 #include <iostream>
+#include <vector>
 
-#include "engine/ecs/components/camera.h"
 #include "engine/ecs/components/lifetime.h"
 #include "engine/ecs/components/name.h"
 #include "engine/ecs/components/renderable.h"
@@ -13,25 +16,22 @@
 #include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
 #include "engine/engine.h"
-#include "engine/math/rotation.h"
-#include "engine/platform/frame_context.h"
 #include "game/aim.h"
 #include "game/health.h"
-#include "game/player.h"
 #include "game/weapon.h"
 
-using engine::Camera;
 using engine::Ecs;
 using engine::Engine;
 using engine::Entity;
-using engine::FrameContext;
 using engine::Lifetime;
 using engine::Name;
 using engine::Renderable;
 using engine::Transform;
-using engine::YawPitch;
+
+namespace game {
 
 namespace {
+
 struct Shot {
   bx::Vec3 from{bx::InitZero};  // muzzle
   bx::Vec3 to{bx::InitZero};
@@ -75,33 +75,16 @@ auto AlongSegment(const bx::Vec3& from, const bx::Vec3& to) -> bx::Quaternion {
 
 }  // namespace
 
-namespace game {
-
-// auto Shoot(engine::Engine& engine) -> void {
-//   bool shot = TryHit(engine, angles);
-//   if (!shot) {
-//     return;
-//   }
-//   // Make the projectile beam
-//   auto& ecs = engine.World();
-//   auto beam = ecs.CreateEntity();
-//   auto beam_mesh_handle =
-//       engine.Assets().LoadMesh("assets/meshes/cylinder.glb");
-//   ecs.AddComponent(beam, Lifetime{0.5F});
-//   ecs.AddComponent(beam, Transform{.position = eye, .rotation = look});
-//   ecs.AddComponent(beam, Renderable{.mesh_handle = beam_mesh_handle});
-// }
-
 auto HandleShots(Engine& engine) -> void {
   std::vector<Shot> shots;
   engine.World().View<Aim, Weapon>().ForEach(
       [&](Entity entity, const Aim& aim, Weapon& weapon) -> void {
-        // Weapon still on cooldown.
+        // Fire only on a trigger pull with the weapon ready
         if (!aim.trigger || weapon.cooldown_left_s > 0.0F) {
           return;
         }
         Shot shot{.from = Muzzle(aim.ray), .beam_s = weapon.beam_s};
-        // Increment weapon cooldown
+        // Start the cooldown
         weapon.cooldown_left_s = weapon.cooldown_s;
 
         const auto hit = engine.CastRay(aim.ray, weapon.range_m, entity);

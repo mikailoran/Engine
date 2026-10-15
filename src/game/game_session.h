@@ -31,7 +31,9 @@ class GameSession {
   void PrePhysics(engine::Engine& engine, const engine::FrameContext& ctx,
                   bool has_control);
 
-  /** @brief Moves the view camera to the player's eyes. After Engine::Update. */
+  /**
+   * @brief Moves the view camera to the player's eyes. After Engine::Update.
+   */
   void PostPhysics(engine::Engine& engine) const;
 
   /**

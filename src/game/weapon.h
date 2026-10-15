@@ -1,5 +1,7 @@
 #pragma once
 
+namespace game {
+
 struct Weapon {
   /// Damage done by the weapon.
   int damage{10};
@@ -13,3 +15,5 @@ struct Weapon {
   /// Runtime: s until the next shot, counting down; fires only at 0.
   float cooldown_left_s{0.0F};
 };
+
+}  // namespace game
