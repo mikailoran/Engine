@@ -7,10 +7,8 @@
 #include <algorithm>
 #include <array>
 #include <cstdint>
-#include <format>
 #include <functional>
 #include <stdexcept>
-#include <string>
 #include <vector>
 
 #include "engine/ecs/components/camera.h"
@@ -30,26 +28,6 @@ namespace engine {
 namespace {
 
 constexpr uint32_t kClearColor = 0x303030ff;  // RGBA
-
-/** @brief Prints @p text to bgfx's debug overlay at a character cell. */
-void DebugText(std::uint16_t x, std::uint16_t y, std::uint8_t attr,
-               const std::string& text) {
-  // Only vararg call; "%s" keeps the format fixed.
-  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg)
-  bgfx::dbgTextPrintf(x, y, attr, "%s", text.c_str());
-}
-
-/** @brief Draws generic debug info to the window. */
-auto DrawDebugOverlay(const FrameContext& ctx) -> void {
-  const bgfx::Stats* stats = bgfx::getStats();
-  bgfx::dbgTextClear();
-  DebugText(0, 0, 0x0f,
-            std::format("Backbuffer {}W x {}H", stats->width, stats->height));
-  // First frame has dt == 0.
-  const float fps = ctx.dt > 0.0F ? 1.0F / ctx.dt : 0.0F;
-  DebugText(0, 1, 0x0f,
-            std::format("Frame {:.2f} ms ({:.0f} fps)", ctx.dt * 1000.0F, fps));
-}
 
 /** @brief One submesh to draw this frame, and what to draw it with. */
 struct DrawItem {
@@ -123,7 +101,6 @@ RenderSystem::RenderSystem()
 void RenderSystem::Update(Ecs& ecs, const AssetRegistry& assets,
                           const FrameContext& ctx,
                           bgfx::TextureHandle shadow_map) {
-  DrawDebugOverlay(ctx);
   bgfx::setFrameUniform(u_time_.Get(), &ctx.time);
 
   // View and projection for the scene view, from the camera's pose and lens

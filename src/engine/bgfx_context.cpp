@@ -1,6 +1,7 @@
 #include "engine/bgfx_context.h"
 
 #include <bgfx/bgfx.h>
+#include <bgfx/defines.h>
 
 #include <stdexcept>
 
@@ -26,8 +27,6 @@ BgfxContext::BgfxContext(const NativeSurface& surface) : size_(surface.size) {
   if (!bgfx::init(init)) {
     throw std::runtime_error("bgfx::init failed");
   }
-
-  bgfx::setDebug(kDebugFlags);
 }
 
 BgfxContext::~BgfxContext() { bgfx::shutdown(); }
@@ -38,6 +37,15 @@ void BgfxContext::Resize(PixelSize size) {
   }
   size_ = size;
   bgfx::reset(size.width, size.height, kResetFlags);
+}
+
+void BgfxContext::SetDebugStats(bool enabled) {
+  if (enabled) {
+    debug_flags_ |= BGFX_DEBUG_STATS;
+  } else {
+    debug_flags_ &= ~BGFX_DEBUG_STATS;
+  }
+  bgfx::setDebug(debug_flags_);
 }
 
 }  // namespace engine

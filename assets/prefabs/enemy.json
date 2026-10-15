@@ -8,6 +8,10 @@
     "character_body": {
       "height": 1.7,
       "radius": 0.3
+    },
+    "health": {
+      "max": 100,
+      "current": 100
     }
   }
 }

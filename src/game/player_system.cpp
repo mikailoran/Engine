@@ -12,6 +12,7 @@
 #include "engine/math/rotation.h"
 #include "engine/platform/frame_context.h"
 #include "engine/platform/input.h"
+#include "game/aim.h"
 #include "game/player.h"
 
 using engine::CharacterBody;
@@ -61,6 +62,7 @@ void PlayerSystem::SetViewCamera(Entity camera) { camera_ = camera; }
 void PlayerSystem::Control(Ecs& ecs, const FrameContext& ctx,
                            bool has_control) {
   const Input& input = ctx.input;
+  // Accumulate mouse input into stored angles_
   if (has_control) {
     // Moving the mouse right turns clockwise seen from above: negative yaw
     angles_.yaw -= kLookRadiansPerPixel * input.MouseMotion().x;
@@ -68,9 +70,19 @@ void PlayerSystem::Control(Ecs& ecs, const FrameContext& ctx,
         angles_.pitch - (kLookRadiansPerPixel * input.MouseMotion().y),
         -kMaxPitch, kMaxPitch);
   }
+
+  // Fire only in play mode; PlaceCamera aims once physics has moved us
+  const bool trigger = has_control && input.Pressed(engine::MouseButton::kLeft);
+  ecs.View<Player, Aim>().ForEach(
+      [trigger](Entity /*entity*/, const Player& /*player*/, Aim& aim) -> void {
+        aim.trigger = trigger;
+      });
+
   // The body turns about the vertical only; looking up tilts the camera
+  // TODO: Where should Player's transform rotation be updated ideally??
   const bx::Quaternion facing = YawPitchToQuat({.yaw = angles_.yaw});
 
+  // Update player rotation and velocity from keyboard input
   ecs.View<Player, CharacterBody, Transform>().ForEach(
       [&](Entity entity, const Player& player, CharacterBody& body,
           Transform& transform) -> void {
@@ -97,16 +109,23 @@ void PlayerSystem::Control(Ecs& ecs, const FrameContext& ctx,
 }
 
 void PlayerSystem::PlaceCamera(Ecs& ecs) const {
-  if (!camera_) {
-    return;
-  }
-  auto& camera = ecs.GetComponent<Transform>(*camera_);
+  const bx::Quaternion look = YawPitchToQuat(angles_);
   ecs.View<Player, Transform>().ForEach(
-      [&](Entity /*entity*/, const Player& player,
+      [&](Entity entity, const Player& player,
           const Transform& transform) -> void {
-        camera.position =
+        const bx::Vec3 eyes =
             bx::add(transform.position, {0.0F, player.eye_height, 0.0F});
-        camera.rotation = YawPitchToQuat(angles_);
+        // TODO: a camera entity per Player instead of one in the player system?
+        if (camera_) {
+          auto& camera = ecs.GetComponent<Transform>(*camera_);
+          camera.position = eyes;
+          camera.rotation = look;
+        }
+        // Aim from where the camera now draws
+        if (auto* aim = ecs.TryGetComponent<Aim>(entity)) {
+          aim->ray = {.pos = eyes,
+                      .dir = bx::mul(bx::Vec3{0.0F, 0.0F, -1.0F}, look)};
+        }
       });
 }
 

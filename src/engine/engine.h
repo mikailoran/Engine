@@ -57,7 +57,7 @@ class Engine {
    */
   void Resize(PixelSize size);
 
-  /** @brief Steps physics and sets this frame's lighting. */
+  /** @brief Steps physics and lifetimes, and sets this frame's lighting. */
   void Update(const FrameContext& ctx);
 
   /** @brief Draws the frame and submits it with bgfx::frame. After Update. */

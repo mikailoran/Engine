@@ -12,6 +12,7 @@
 #include "engine/ecs/components/character_link.h"
 #include "engine/ecs/components/collider.h"
 #include "engine/ecs/components/directional_light.h"
+#include "engine/ecs/components/lifetime.h"
 #include "engine/ecs/components/name.h"
 #include "engine/ecs/components/physics_link.h"
 #include "engine/ecs/components/renderable.h"
@@ -20,6 +21,7 @@
 #include "engine/ecs/components/transform.h"
 #include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
+#include "engine/ecs/systems/lifetime_system.h"
 #include "engine/ecs/systems/physics_query.h"
 #include "engine/platform/frame_context.h"
 #include "engine/platform/native_surface.h"
@@ -43,6 +45,7 @@ Engine::Engine(const NativeSurface& surface) : bgfx_context_(surface) {
   ecs_.RegisterComponent<PhysicsLink>();
   ecs_.RegisterComponent<CharacterBody>();
   ecs_.RegisterComponent<CharacterLink>();
+  ecs_.RegisterComponent<Lifetime>();
 
   RegisterBuiltinLoaders(scene_loader_);
 }
@@ -51,6 +54,7 @@ void Engine::Resize(PixelSize size) { bgfx_context_.Resize(size); }
 
 void Engine::Update(const FrameContext& ctx) {
   physics_system_.Update(ecs_, physics_world_, ctx);
+  ExpireLifetimes(ecs_, ctx);
   // Frame uniforms must be set before the renderer submits
   lighting_.Update(ecs_, ctx);
 }
@@ -63,6 +67,9 @@ void Engine::Render(const FrameContext& ctx, RenderOptions options) {
   // Submits to kDebugView; must precede the renderer's bgfx::frame()
   if (options.debug_draw) {
     debug_draw_.Update(ecs_, assets_, ctx);
+    bgfx_context_.SetDebugStats(true);
+  } else {
+    bgfx_context_.SetDebugStats(false);
   }
   render_.Update(ecs_, assets_, ctx, shadow_.Map());
 }

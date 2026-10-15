@@ -210,6 +210,7 @@ add_library(engine_runtime STATIC
   src/engine/ecs/components/character_body.h
   src/engine/ecs/components/character_link.h
   src/engine/ecs/components/collider.h
+  src/engine/ecs/components/lifetime.h
   src/engine/ecs/components/name.h
   src/engine/ecs/components/physics_link.h
   src/engine/ecs/components/renderable.h
@@ -219,6 +220,8 @@ add_library(engine_runtime STATIC
   src/engine/ecs/components/transform.h
   src/engine/ecs/systems/debug_draw_system.h
   src/engine/ecs/systems/debug_draw_system.cpp
+  src/engine/ecs/systems/lifetime_system.h
+  src/engine/ecs/systems/lifetime_system.cpp
   src/engine/ecs/systems/lighting_system.h
   src/engine/ecs/systems/lighting_system.cpp
   src/engine/ecs/systems/render_system.h
@@ -266,13 +269,17 @@ set_target_properties(engine_runtime PROPERTIES
 # Gameplay components and systems, shared by the game and later the editor.
 # Never SDL, ImGui or devtools.
 add_library(game_logic STATIC
+  src/game/health.h
   src/game/game_logic.h
   src/game/game_logic.cpp
   src/game/game_session.h
   src/game/game_session.cpp
   src/game/player.h
   src/game/player_system.h
-  src/game/player_system.cpp)
+  src/game/player_system.cpp
+  src/game/weapon.h
+  src/game/shooting_system.h
+  src/game/shooting_system.cpp)
 
 target_link_libraries(game_logic PUBLIC engine_runtime)
 
@@ -432,6 +439,7 @@ endforeach()
 # Prefab files, relative to assets/prefabs/, copied the same way
 set(ENGINE_PREFABS
   enemy.json
+  player.json
 )
 
 foreach(prefab IN LISTS ENGINE_PREFABS)

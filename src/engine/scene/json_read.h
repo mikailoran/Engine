@@ -41,11 +41,11 @@ auto ReadFloats(const nlohmann::json& data) -> std::array<float, N> {
 }
 
 /** @brief Reads the optional positive number @p key into @p out. */
-inline void ReadPositive(const nlohmann::json& data, const char* key,
-                         float& out) {
+template <class T = float>
+inline void ReadPositive(const nlohmann::json& data, const char* key, T& out) {
   if (data.contains(key)) {
-    out = data.at(key).get<float>();
-    if (out <= 0.0F) {
+    out = data.at(key).get<T>();
+    if (out <= static_cast<T>(0.0F)) {
       throw std::runtime_error(std::string(key) + " must be positive");
     }
   }

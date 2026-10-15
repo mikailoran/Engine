@@ -10,6 +10,7 @@
 #include "engine/ecs/components/character_body.h"
 #include "engine/ecs/components/collider.h"
 #include "engine/ecs/components/directional_light.h"
+#include "engine/ecs/components/lifetime.h"
 #include "engine/ecs/components/renderable.h"
 #include "engine/ecs/components/rigid_body.h"
 #include "engine/ecs/components/transform.h"
@@ -224,6 +225,15 @@ void LoadCharacterBody(const json& data, Entity entity, Ecs& ecs,
   ecs.AddComponent(entity, body);
 }
 
+void LoadLifetime(const json& data, Entity entity, Ecs& ecs,
+                  AssetRegistry& /*assets*/,
+                  physics::PhysicsWorld& /*physics*/) {
+  CheckKeys(data, {"remaining_s"});
+  Lifetime lifetime{};
+  ReadPositive(data, "remaining_s", lifetime.remaining_s);
+  ecs.AddComponent(entity, lifetime);
+}
+
 }  // namespace
 
 void RegisterBuiltinLoaders(SceneLoader& loader) {
@@ -233,6 +243,7 @@ void RegisterBuiltinLoaders(SceneLoader& loader) {
   loader.Register("collider", LoadCollider);
   loader.Register("rigid_body", LoadRigidBody);
   loader.Register("character_body", LoadCharacterBody);
+  loader.Register("lifetime", LoadLifetime);
 }
 
 }  // namespace engine

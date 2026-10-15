@@ -25,14 +25,17 @@ class PlayerSystem {
   void SetViewCamera(engine::Entity camera);
 
   /**
-   * @brief Turns this frame's input into the player's velocity and facing.
-   * Run before physics.
+   * @brief Turns this frame's input into the player's velocity, facing and
+   * Aim trigger. Run before physics.
    * @param has_control False stops the player where it stands.
    */
   void Control(engine::Ecs& ecs, const engine::FrameContext& ctx,
                bool has_control);
 
-  /** @brief Moves the view camera to the player's eyes. Run after physics. */
+  /**
+   * @brief Moves the view camera to the player's eyes and points the player's
+   * Aim ray from them along the look. Run after physics.
+   */
   void PlaceCamera(engine::Ecs& ecs) const;
 
  private:
@@ -42,6 +45,7 @@ class PlayerSystem {
   /// Steepest look up or down, short of straight, in radians.
   static constexpr float kMaxPitch = 1.55F;
 
+  // TODO: make angles_ part of the Player component.
   engine::YawPitch angles_{};
   std::optional<engine::Entity> camera_;
 };
