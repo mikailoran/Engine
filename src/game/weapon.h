@@ -2,6 +2,10 @@
 
 namespace game {
 
+/**
+ * @brief A hitscan gun's tuning plus its cooldown. Fires along the entity's
+ * Aim (see HandleShots); loaded from a scene's "weapon" block.
+ */
 struct Weapon {
   /// Damage done by the weapon.
   int damage{10};

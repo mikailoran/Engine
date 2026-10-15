@@ -35,6 +35,10 @@ void LoadPlayer(const nlohmann::json& data, engine::Entity entity,
   ecs.AddComponent(entity, player);
 }
 
+/**
+ * @brief Adds a Health. `max` is optional and positive; `current` defaults to
+ * `max` and must be within 0..max, or the load throws.
+ */
 void LoadHealth(const nlohmann::json& data, engine::Entity entity,
                 engine::Ecs& ecs, engine::AssetRegistry& /*assets*/,
                 engine::physics::PhysicsWorld& /*physics*/) {
@@ -49,6 +53,11 @@ void LoadHealth(const nlohmann::json& data, engine::Entity entity,
   ecs.AddComponent(entity, health);
 }
 
+/**
+ * @brief Adds a Weapon and the Aim it fires along. Every field is optional
+ * and positive: damage in health points, cooldown_s and beam_s in s, range_m
+ * in m.
+ */
 void LoadWeapon(const nlohmann::json& data, engine::Entity entity,
                 engine::Ecs& ecs, engine::AssetRegistry& /*assets*/,
                 engine::physics::PhysicsWorld& /*physics*/) {

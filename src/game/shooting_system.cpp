@@ -32,9 +32,13 @@ namespace game {
 
 namespace {
 
+/** @brief One shot fired this frame, kept until its beam is spawned. */
 struct Shot {
-  bx::Vec3 from{bx::InitZero};  // muzzle
+  /// Muzzle point the beam starts at; the ray itself starts at the eyes.
+  bx::Vec3 from{bx::InitZero};
+  /// Hit point, or full range on a miss.
   bx::Vec3 to{bx::InitZero};
+  /// How long the beam shows, in s.
   float beam_s{0.0F};
 };
 
