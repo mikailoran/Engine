@@ -193,7 +193,7 @@ void MainWindow::Tick() {
   engine_->Update(ctx);
   session_->PostPhysics(*engine_);
   engine_->Render(ctx, {.debug_draw = false});
-  engine_->EndFrame();
+  engine_->EndFrame(ctx);
 }
 
 void MainWindow::OpenScene(const std::filesystem::path& path) {

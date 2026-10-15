@@ -93,7 +93,7 @@ auto StandaloneHost::Run() -> int {
       engine_.Update(ctx);
     }
     // After physics, so the view doesn't trail the player by a frame
-    session_.PostPhysics(engine_, ctx);
+    session_.PostPhysics(engine_);
 
     // Playing shows the game alone, without wireframes or the inspector
     const RenderOptions render_options{.debug_draw =

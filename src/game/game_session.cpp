@@ -29,12 +29,12 @@ GameSession::GameSession(Engine& engine) {
 void GameSession::PrePhysics(Engine& engine, const FrameContext& ctx,
                              bool has_control) {
   player_.Control(engine.World(), ctx, has_control);
-  HandleShots(engine, ctx);
+  UpdateCooldowns(engine.World(), ctx.dt);
+  HandleShots(engine);
 }
 
-void GameSession::PostPhysics(Engine& engine, const FrameContext& ctx) const {
+void GameSession::PostPhysics(Engine& engine) const {
   player_.PlaceCamera(engine.World());
-  UpdateCooldowns(engine, ctx);
 }
 
 auto GameSession::ViewCamera() const -> Entity { return camera_; }

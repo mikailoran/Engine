@@ -8,12 +8,10 @@ struct YawPitch;
 }  // namespace engine
 
 namespace game {
-auto HandleShots(engine::Engine& engine, const engine::FrameContext& ctx)
-    -> void;
+auto HandleShots(engine::Engine& engine) -> void;
 
 auto Shoot(engine::Engine& engine) -> void;
 
-auto UpdateCooldowns(engine::Engine& engine, const engine::FrameContext& ctx)
-    -> void;
+auto UpdateCooldowns(engine::Ecs& ecs, float dt) -> void;
 
 }  // namespace game

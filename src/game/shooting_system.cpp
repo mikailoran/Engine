@@ -10,6 +10,7 @@
 #include "engine/ecs/components/name.h"
 #include "engine/ecs/components/renderable.h"
 #include "engine/ecs/components/transform.h"
+#include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
 #include "engine/engine.h"
 #include "engine/math/rotation.h"
@@ -20,6 +21,7 @@
 #include "game/weapon.h"
 
 using engine::Camera;
+using engine::Ecs;
 using engine::Engine;
 using engine::Entity;
 using engine::FrameContext;
@@ -75,7 +77,7 @@ namespace game {
 //   ecs.AddComponent(beam, Renderable{.mesh_handle = beam_mesh_handle});
 // }
 
-auto HandleShots(Engine& engine, const FrameContext& ctx) -> void {
+auto HandleShots(Engine& engine) -> void {
   std::vector<Shot> shots;
   engine.World().View<Aim, Weapon>().ForEach(
       [&](Entity entity, Aim& aim, Weapon& weapon) -> void {
@@ -129,11 +131,9 @@ auto HandleShots(Engine& engine, const FrameContext& ctx) -> void {
   }
 }
 
-auto UpdateCooldowns(engine::Engine& engine, const engine::FrameContext& ctx)
-    -> void {
-  engine.World().View<Weapon>().ForEach([&ctx](Entity /* entity */,
-                                               Weapon& weapon) -> void {
-    weapon.cooldown_left_s = std::max(0.0F, weapon.cooldown_left_s - ctx.dt);
+auto UpdateCooldowns(Ecs& ecs, float dt) -> void {
+  ecs.View<Weapon>().ForEach([dt](Entity /*entity*/, Weapon& weapon) -> void {
+    weapon.cooldown_left_s = std::max(0.0F, weapon.cooldown_left_s - dt);
   });
 }
 
