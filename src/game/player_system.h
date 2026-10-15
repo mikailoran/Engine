@@ -6,6 +6,7 @@
 #include "engine/math/rotation.h"
 
 namespace engine {
+class Engine;
 class Ecs;
 struct FrameContext;
 }  // namespace engine
@@ -32,6 +33,8 @@ class PlayerSystem {
   void Control(engine::Ecs& ecs, const engine::FrameContext& ctx,
                bool has_control);
 
+  auto Shoot(engine::Engine& engine) -> void;
+
   /** @brief Moves the view camera to the player's eyes. Run after physics. */
   void PlaceCamera(engine::Ecs& ecs) const;
 
@@ -42,6 +45,7 @@ class PlayerSystem {
   /// Steepest look up or down, short of straight, in radians.
   static constexpr float kMaxPitch = 1.55F;
 
+  // TODO: make angles_ part of the Player component.
   engine::YawPitch angles_{};
   std::optional<engine::Entity> camera_;
 };

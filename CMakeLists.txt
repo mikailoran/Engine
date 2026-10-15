@@ -277,7 +277,9 @@ add_library(game_logic STATIC
   src/game/player.h
   src/game/player_system.h
   src/game/player_system.cpp
-  src/game/weapon.h)
+  src/game/weapon.h
+  src/game/shooting_system.h
+  src/game/shooting_system.cpp)
 
 target_link_libraries(game_logic PUBLIC engine_runtime)
 

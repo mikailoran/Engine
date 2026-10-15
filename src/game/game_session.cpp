@@ -6,6 +6,7 @@
 #include "engine/ecs/core/types.h"
 #include "engine/engine.h"
 #include "engine/platform/frame_context.h"
+#include "game/shooting_system.h"
 
 using engine::Camera;
 using engine::Ecs;
@@ -28,10 +29,12 @@ GameSession::GameSession(Engine& engine) {
 void GameSession::PrePhysics(Engine& engine, const FrameContext& ctx,
                              bool has_control) {
   player_.Control(engine.World(), ctx, has_control);
+  HandleShots(engine, ctx);
 }
 
-void GameSession::PostPhysics(Engine& engine) const {
+void GameSession::PostPhysics(Engine& engine, const FrameContext& ctx) const {
   player_.PlaceCamera(engine.World());
+  UpdateCooldowns(engine, ctx);
 }
 
 auto GameSession::ViewCamera() const -> Entity { return camera_; }

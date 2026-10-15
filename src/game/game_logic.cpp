@@ -8,6 +8,7 @@
 #include "engine/physics/physics_world.h"
 #include "engine/resource/asset_registry.h"
 #include "engine/scene/json_read.h"
+#include "game/aim.h"
 #include "game/health.h"
 #include "game/player.h"
 #include "game/weapon.h"
@@ -46,11 +47,15 @@ void LoadHealth(const nlohmann::json& data, engine::Entity entity,
 void LoadWeapon(const nlohmann::json& data, engine::Entity entity,
                 engine::Ecs& ecs, engine::AssetRegistry& /*assets*/,
                 engine::physics::PhysicsWorld& /*physics*/) {
-  engine::CheckKeys(data, {"damage", "cooldown"});
+  engine::CheckKeys(data, {"damage", "cooldown_s", "range_m"});
   Weapon weapon{};
   engine::ReadPositive(data, "damage", weapon.damage);
-  engine::ReadPositive(data, "cooldown", weapon.cooldown_s);
+  engine::ReadPositive(data, "cooldown_s", weapon.cooldown_s);
+  engine::ReadPositive(data, "range_m", weapon.range_m);
   ecs.AddComponent(entity, weapon);
+  // TODO: Make aim readable from scene description?
+  // What would it mean to not specify Aim component in this case?
+  ecs.AddComponent(entity, Aim{});
 }
 
 }  // namespace
@@ -59,6 +64,7 @@ void RegisterGameLogic(engine::Engine& engine) {
   engine.World().RegisterComponent<Player>();
   engine.World().RegisterComponent<Health>();
   engine.World().RegisterComponent<Weapon>();
+  engine.World().RegisterComponent<Aim>();
   engine.RegisterSceneLoader("player", LoadPlayer);
   engine.RegisterSceneLoader("health", LoadHealth);
   engine.RegisterSceneLoader("weapon", LoadWeapon);
