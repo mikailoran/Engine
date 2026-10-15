@@ -434,6 +434,7 @@ endforeach()
 # Prefab files, relative to assets/prefabs/, copied the same way
 set(ENGINE_PREFABS
   enemy.json
+  player.json
 )
 
 foreach(prefab IN LISTS ENGINE_PREFABS)

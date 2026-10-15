@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "components": {
+    "transform": {},
+    "character_body": {
+      "height": 1.8,
+      "radius": 0.3
+    },
+    "player": {},
+    "health": {
+      "max": 100,
+      "current": 100
+    },
+    "weapon": {
+      "damage": 20,
+      "cooldown": 0.2
+    }
+  }
+}
