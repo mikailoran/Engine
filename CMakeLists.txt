@@ -266,13 +266,15 @@ set_target_properties(engine_runtime PROPERTIES
 # Gameplay components and systems, shared by the game and later the editor.
 # Never SDL, ImGui or devtools.
 add_library(game_logic STATIC
+  src/game/health.h
   src/game/game_logic.h
   src/game/game_logic.cpp
   src/game/game_session.h
   src/game/game_session.cpp
   src/game/player.h
   src/game/player_system.h
-  src/game/player_system.cpp)
+  src/game/player_system.cpp
+  src/game/weapon.h)
 
 target_link_libraries(game_logic PUBLIC engine_runtime)
 

@@ -8,7 +8,9 @@
 #include "engine/physics/physics_world.h"
 #include "engine/resource/asset_registry.h"
 #include "engine/scene/json_read.h"
+#include "game/health.h"
 #include "game/player.h"
+#include "game/weapon.h"
 
 namespace game {
 
@@ -31,11 +33,35 @@ void LoadPlayer(const nlohmann::json& data, engine::Entity entity,
   ecs.AddComponent(entity, player);
 }
 
+void LoadHealth(const nlohmann::json& data, engine::Entity entity,
+                engine::Ecs& ecs, engine::AssetRegistry& /*assets*/,
+                engine::physics::PhysicsWorld& /*physics*/) {
+  engine::CheckKeys(data, {"max", "current"});
+  Health health{};
+  engine::ReadPositive(data, "max", health.max);
+  engine::ReadPositive(data, "current", health.current);
+  ecs.AddComponent(entity, health);
+}
+
+void LoadWeapon(const nlohmann::json& data, engine::Entity entity,
+                engine::Ecs& ecs, engine::AssetRegistry& /*assets*/,
+                engine::physics::PhysicsWorld& /*physics*/) {
+  engine::CheckKeys(data, {"damage", "cooldown"});
+  Weapon weapon{};
+  engine::ReadPositive(data, "damage", weapon.damage);
+  engine::ReadPositive(data, "cooldown", weapon.cooldown_s);
+  ecs.AddComponent(entity, weapon);
+}
+
 }  // namespace
 
 void RegisterGameLogic(engine::Engine& engine) {
   engine.World().RegisterComponent<Player>();
+  engine.World().RegisterComponent<Health>();
+  engine.World().RegisterComponent<Weapon>();
   engine.RegisterSceneLoader("player", LoadPlayer);
+  engine.RegisterSceneLoader("health", LoadHealth);
+  engine.RegisterSceneLoader("weapon", LoadWeapon);
 }
 
 }  // namespace game
