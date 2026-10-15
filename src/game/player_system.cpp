@@ -71,16 +71,10 @@ void PlayerSystem::Control(Ecs& ecs, const FrameContext& ctx,
         -kMaxPitch, kMaxPitch);
   }
 
-  // Aim from the eyes along this frame's look; fire only in play mode
-  const bx::Quaternion look = YawPitchToQuat(angles_);
-  const bx::Vec3 forward = bx::mul(bx::Vec3{0.0F, 0.0F, -1.0F}, look);
+  // Fire only in play mode; PlaceCamera aims once physics has moved us
   const bool trigger = has_control && input.Pressed(engine::MouseButton::kLeft);
-  ecs.View<Player, Transform, Aim>().ForEach(
-      [&](Entity /*entity*/, const Player& player, const Transform& transform,
-          Aim& aim) -> void {
-        aim.ray = {
-            .pos = bx::add(transform.position, {0.0F, player.eye_height, 0.0F}),
-            .dir = forward};
+  ecs.View<Player, Aim>().ForEach(
+      [trigger](Entity /*entity*/, const Player& /*player*/, Aim& aim) -> void {
         aim.trigger = trigger;
       });
 
@@ -115,16 +109,23 @@ void PlayerSystem::Control(Ecs& ecs, const FrameContext& ctx,
 }
 
 void PlayerSystem::PlaceCamera(Ecs& ecs) const {
-  if (!camera_) {
-    return;
-  }
-  auto& camera = ecs.GetComponent<Transform>(*camera_);
+  const bx::Quaternion look = YawPitchToQuat(angles_);
   ecs.View<Player, Transform>().ForEach(
-      [&](Entity /*entity*/, const Player& player,
+      [&](Entity entity, const Player& player,
           const Transform& transform) -> void {
-        camera.position =
+        const bx::Vec3 eyes =
             bx::add(transform.position, {0.0F, player.eye_height, 0.0F});
-        camera.rotation = YawPitchToQuat(angles_);
+        // TODO: a camera entity per Player instead of one in the player system?
+        if (camera_) {
+          auto& camera = ecs.GetComponent<Transform>(*camera_);
+          camera.position = eyes;
+          camera.rotation = look;
+        }
+        // Aim from where the camera now draws
+        if (auto* aim = ecs.TryGetComponent<Aim>(entity)) {
+          aim->ray = {.pos = eyes,
+                      .dir = bx::mul(bx::Vec3{0.0F, 0.0F, -1.0F}, look)};
+        }
       });
 }
 

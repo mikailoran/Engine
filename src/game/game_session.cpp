@@ -33,11 +33,11 @@ void GameSession::PrePhysics(Engine& engine, const FrameContext& ctx,
   if (has_control) {
     UpdateCooldowns(engine.World(), ctx.dt);
   }
-  HandleShots(engine);
 }
 
 void GameSession::PostPhysics(Engine& engine) const {
   player_.PlaceCamera(engine.World());
+  HandleShots(engine);
 }
 
 auto GameSession::ViewCamera() const -> Entity { return camera_; }

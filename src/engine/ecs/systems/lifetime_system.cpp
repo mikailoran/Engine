@@ -3,7 +3,6 @@
 #include "engine/ecs/components/lifetime.h"
 #include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
-#include "engine/engine.h"
 #include "engine/platform/frame_context.h"
 
 namespace engine {
