@@ -53,8 +53,7 @@ void LoadWeapon(const nlohmann::json& data, engine::Entity entity,
   engine::ReadPositive(data, "cooldown_s", weapon.cooldown_s);
   engine::ReadPositive(data, "range_m", weapon.range_m);
   ecs.AddComponent(entity, weapon);
-  // TODO: Make aim readable from scene description?
-  // What would it mean to not specify Aim component in this case?
+  // Runtime: whoever controls the entity writes it every frame
   ecs.AddComponent(entity, Aim{});
 }
 

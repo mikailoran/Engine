@@ -81,28 +81,30 @@ void PlayerSystem::Control(Ecs& ecs, const FrameContext& ctx,
     angles_.pitch = std::clamp(
         angles_.pitch - (kLookRadiansPerPixel * input.MouseMotion().y),
         -kMaxPitch, kMaxPitch);
-
-    const auto left_click_pressed = input.Pressed(engine::MouseButton::kLeft);
-    // Update the player's Aim with the mouse input
-    ecs.View<Player, Transform, Aim>().ForEach(
-        [&](Entity /*entity*/, const Player& player, const Transform& transform,
-            Aim& aim) -> void {
-          aim.ray.pos =
-              bx::add(transform.position, {0.0F, player.eye_height, 0.0F});
-          // Rotate foward direction vector (-z) by look quaternion
-          const bx::Quaternion look = YawPitchToQuat(angles_);
-          aim.ray.dir = bx::mul(bx::Vec3{0.0F, 0.0F, -1.0F}, look);
-          aim.trigger = left_click_pressed;
-        });
   }
+
+  // Aim from the eyes along this frame's look; fire only in play mode
+  const bx::Quaternion look = YawPitchToQuat(angles_);
+  const bx::Vec3 forward = bx::mul(bx::Vec3{0.0F, 0.0F, -1.0F}, look);
+  const bool trigger =
+      has_control && input.Pressed(engine::MouseButton::kLeft);
+  ecs.View<Player, Transform, Aim>().ForEach(
+      [&](Entity /*entity*/, const Player& player, const Transform& transform,
+          Aim& aim) -> void {
+        aim.ray = {.pos = bx::add(transform.position,
+                                  {0.0F, player.eye_height, 0.0F}),
+                   .dir = forward};
+        aim.trigger = trigger;
+      });
+
+  // The body turns about the vertical only; looking up tilts the camera
+  // TODO: Where should Player's transform rotation be updated ideally??
+  const bx::Quaternion facing = YawPitchToQuat({.yaw = angles_.yaw});
 
   // Update player rotation and velocity from keyboard input
   ecs.View<Player, CharacterBody, Transform>().ForEach(
       [&](Entity entity, const Player& player, CharacterBody& body,
           Transform& transform) -> void {
-        // The body turns about the vertical only; looking up tilts the camera
-        // TODO: Where should Player's transform rotation be updated ideally??
-        const bx::Quaternion facing = YawPitchToQuat({.yaw = angles_.yaw});
         transform.rotation = facing;
 
         bx::Vec3 walk{0.0F};

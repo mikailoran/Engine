@@ -80,7 +80,7 @@ namespace game {
 auto HandleShots(Engine& engine) -> void {
   std::vector<Shot> shots;
   engine.World().View<Aim, Weapon>().ForEach(
-      [&](Entity entity, Aim& aim, Weapon& weapon) -> void {
+      [&](Entity entity, const Aim& aim, Weapon& weapon) -> void {
         // Weapon still on cooldown.
         if (!aim.trigger || weapon.cooldown_left_s > 0.0F) {
           return;
@@ -88,7 +88,6 @@ auto HandleShots(Engine& engine) -> void {
         Shot shot{.from = aim.ray.pos};
         // Increment weapon cooldown
         weapon.cooldown_left_s = weapon.cooldown_s;
-        aim.trigger = false;
 
         const auto hit = engine.CastRay(aim.ray, weapon.range_m, entity);
         if (!hit) {
