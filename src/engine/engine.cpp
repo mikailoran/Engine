@@ -23,6 +23,7 @@
 #include "engine/ecs/core/types.h"
 #include "engine/ecs/systems/lifetime_system.h"
 #include "engine/ecs/systems/physics_query.h"
+#include "engine/hud/crosshair.h"
 #include "engine/platform/frame_context.h"
 #include "engine/platform/native_surface.h"
 #include "engine/platform/screen.h"
@@ -71,6 +72,8 @@ void Engine::Render(const FrameContext& ctx, RenderOptions options) {
   } else {
     bgfx_context_.SetDebugStats(false);
   }
+  // Submits to kHudView; must precede the renderer's bgfx::frame()
+  hud_.Update(ctx, options.hud);
   render_.Update(ecs_, assets_, ctx, shadow_.Map());
 }
 
@@ -125,6 +128,10 @@ auto Engine::CastRay(const bx::Ray& ray, float max_distance,
 }
 
 void Engine::Highlight(Entity entity) { debug_draw_.Highlight(entity); }
+
+void Engine::DrawCrosshair(const CrosshairStyle& style) {
+  hud_.DrawCrosshair(style);
+}
 
 auto Engine::World() -> Ecs& { return ecs_; }
 

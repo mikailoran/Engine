@@ -11,12 +11,14 @@
 #include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
 #include "engine/ecs/systems/debug_draw_system.h"
+#include "engine/ecs/systems/hud_system.h"
 #include "engine/ecs/systems/lighting_system.h"
 #include "engine/ecs/systems/physics_query.h"
 #include "engine/ecs/systems/physics_system.h"
 #include "engine/ecs/systems/render_system.h"
 #include "engine/ecs/systems/shadow_system.h"
 #include "engine/ecs/systems/sky_system.h"
+#include "engine/hud/crosshair.h"
 #include "engine/physics/jolt_runtime.h"
 #include "engine/physics/physics_world.h"
 #include "engine/platform/native_surface.h"
@@ -33,6 +35,8 @@ struct Transform;
 struct RenderOptions {
   // Grid, axes, collider wireframes, velocity arrows and highlights.
   bool debug_draw{true};
+  // HUD overlays such as the crosshair; requests are cleared either way.
+  bool hud{true};
 };
 
 /**
@@ -136,6 +140,12 @@ class Engine {
    */
   void Highlight(Entity entity);
 
+  /**
+   * @brief Requests a crosshair at the screen centre for this frame. Every
+   * Render clears the request, and draws it only with RenderOptions::hud on.
+   */
+  void DrawCrosshair(const CrosshairStyle& style);
+
   /** @brief The ECS world, for hosts and their tools to read and edit. */
   auto World() -> Ecs&;
 
@@ -160,6 +170,7 @@ class Engine {
   SkySystem sky_;
   DebugDrawSystem debug_draw_;
   RenderSystem render_;
+  HudSystem hud_;
 
   // Camera rendered and picked from; empty until SetActiveCamera.
   std::optional<Entity> active_camera_;

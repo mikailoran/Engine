@@ -231,6 +231,9 @@ add_library(engine_runtime STATIC
   src/engine/ecs/components/transform.h
   src/engine/ecs/systems/debug_draw_system.h
   src/engine/ecs/systems/debug_draw_system.cpp
+  src/engine/ecs/systems/hud_system.h
+  src/engine/ecs/systems/hud_system.cpp
+  src/engine/hud/crosshair.h
   src/engine/ecs/systems/lifetime_system.h
   src/engine/ecs/systems/lifetime_system.cpp
   src/engine/ecs/systems/lighting_system.h
@@ -360,6 +363,7 @@ bgfx_compile_shaders(
   SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/vs_mesh.sc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/vs_sky.sc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/vs_shadow.sc
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/vs_hud.sc
   VARYING_DEF ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/varying.def.sc
   OUTPUT_DIR ${ENGINE_RUNTIME_DIR}/shaders
   INCLUDE_DIRS ${BGFX_SHADER_DIR}
@@ -371,6 +375,7 @@ bgfx_compile_shaders(
   SHADERS ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/fs_mesh.sc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/fs_sky.sc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/fs_shadow.sc
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/fs_hud.sc
   VARYING_DEF ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/varying.def.sc
   OUTPUT_DIR ${ENGINE_RUNTIME_DIR}/shaders
   INCLUDE_DIRS ${BGFX_SHADER_DIR}
