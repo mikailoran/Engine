@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <string>
 
+#include "engine/ecs/components/animator.h"
 #include "engine/ecs/components/character_body.h"
 #include "engine/ecs/components/collider.h"
 #include "engine/ecs/components/directional_light.h"
@@ -19,6 +20,7 @@
 #include "engine/math/rotation.h"
 #include "engine/physics/physics_world.h"
 #include "engine/physics/shape.h"
+#include "engine/resource/animation_handles.h"
 #include "engine/resource/asset_registry.h"
 #include "engine/scene/json_read.h"
 #include "engine/scene/scene_loader.h"
@@ -64,6 +66,41 @@ void LoadRenderable(const json& data, Entity entity, Ecs& ecs,
     renderable.color = ReadFloats<4>(data.at("color"));
   }
   ecs.AddComponent(entity, renderable);
+}
+
+/**
+ * @brief Adds an Animator. "clips" (a glTF path) is required and needs the
+ * entity's skinned Renderable; "play" names a clip to loop on the base layer
+ * at "speed" (default 1).
+ * @throws std::runtime_error If the entity has no skinned Renderable or the
+ *         clip isn't in the file.
+ */
+void LoadAnimator(const json& data, Entity entity, Ecs& ecs,
+                  AssetRegistry& assets, physics::PhysicsWorld& /*physics*/) {
+  CheckKeys(data, {"clips", "play", "speed"});
+
+  // Renderable's loader runs first, being registered first
+  const auto* renderable = ecs.TryGetComponent<Renderable>(entity);
+  if (renderable == nullptr) {
+    throw std::runtime_error("animator needs a renderable");
+  }
+  const RigHandle rig = assets.GetMesh(renderable->mesh_handle).rig;
+  if (!rig.IsValid()) {
+    throw std::runtime_error("animator needs a skinned mesh");
+  }
+
+  Animator animator{
+      .clips = assets.LoadClips(data.at("clips").get<std::string>(), rig)};
+  if (data.contains("play")) {
+    const auto name = data.at("play").get<std::string>();
+    const ClipHandle clip = assets.FindClip(animator.clips, name);
+    if (!clip.IsValid()) {
+      throw std::runtime_error("no clip named '" + name + "'");
+    }
+    Play(animator, 0, clip,
+         {.fade_s = 0.0F, .speed = data.value("speed", 1.0F)});
+  }
+  ecs.AddComponent(entity, animator);
 }
 
 /** @brief Adds a DirectionalLight; every field is optional. */
@@ -244,6 +281,7 @@ void LoadLifetime(const json& data, Entity entity, Ecs& ecs,
 void RegisterBuiltinLoaders(SceneLoader& loader) {
   loader.Register("transform", LoadTransform);
   loader.Register("renderable", LoadRenderable);
+  loader.Register("animator", LoadAnimator);
   loader.Register("directional_light", LoadDirectionalLight);
   loader.Register("collider", LoadCollider);
   loader.Register("rigid_body", LoadRigidBody);

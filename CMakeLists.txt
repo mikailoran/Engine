@@ -118,6 +118,7 @@ set_target_properties(ozz_base ozz_animation ozz_animation_offline PROPERTIES
 # JPH_* defines out of every target that links this.
 add_library(engine_physics STATIC
   src/engine/util/handle.h
+  src/engine/util/mat4.h
   src/engine/physics/body_handle.h
   src/engine/physics/character_handle.h
   src/engine/physics/collision_mesh_handle.h
@@ -209,6 +210,7 @@ add_library(engine_animation STATIC
   src/engine/animation/rig.cpp
   src/engine/animation/evaluate.h
   src/engine/animation/evaluate.cpp
+  src/engine/animation/playback.h
   src/engine/animation/ozz_state.h)
 
 target_include_directories(engine_animation PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -282,6 +284,10 @@ add_library(engine_runtime STATIC
   src/engine/ecs/components/transform.h
   src/engine/ecs/systems/debug_draw_system.h
   src/engine/ecs/systems/debug_draw_system.cpp
+  src/engine/ecs/components/animator.h
+  src/engine/ecs/components/skin_pose.h
+  src/engine/ecs/systems/animation_system.h
+  src/engine/ecs/systems/animation_system.cpp
   src/engine/ecs/systems/hud_system.h
   src/engine/ecs/systems/hud_system.cpp
   src/engine/hud/crosshair.h

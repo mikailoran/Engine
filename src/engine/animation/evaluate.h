@@ -10,8 +10,9 @@
 
 namespace engine::animation {
 
-/// Most layers one Evaluate call blends.
-inline constexpr std::size_t kMaxLayers = 4;
+/// Most layers one Evaluate call blends: an Animator's four, each of which
+/// may be crossfading.
+inline constexpr std::size_t kMaxLayers = 8;
 
 /**
  * @brief One layer of a pose: a clip, or two blended, sampled at a phase.

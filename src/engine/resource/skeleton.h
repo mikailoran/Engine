@@ -10,13 +10,12 @@
 #include <string>
 #include <vector>
 
+#include "engine/util/mat4.h"  // IWYU pragma: export
+
 namespace engine {
 
 /// Most joints a skeleton may have; the skinning shaders hold this many.
 inline constexpr std::size_t kMaxJoints = 128;
-
-/// A column-major 4x4 matrix, glTF's layout and bx's memory layout.
-using Mat4 = std::array<float, 16>;
 
 /**
  * @brief One bone of a Skeleton: its place in the hierarchy, its rest pose

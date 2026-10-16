@@ -7,6 +7,7 @@
 #include <string>
 #include <utility>
 
+#include "engine/ecs/components/animator.h"
 #include "engine/ecs/components/camera.h"
 #include "engine/ecs/components/character_body.h"
 #include "engine/ecs/components/character_link.h"
@@ -17,6 +18,7 @@
 #include "engine/ecs/components/physics_link.h"
 #include "engine/ecs/components/renderable.h"
 #include "engine/ecs/components/rigid_body.h"
+#include "engine/ecs/components/skin_pose.h"
 #include "engine/ecs/components/sky.h"
 #include "engine/ecs/components/transform.h"
 #include "engine/ecs/core/ecs.h"
@@ -47,6 +49,8 @@ Engine::Engine(const NativeSurface& surface) : bgfx_context_(surface) {
   ecs_.RegisterComponent<CharacterBody>();
   ecs_.RegisterComponent<CharacterLink>();
   ecs_.RegisterComponent<Lifetime>();
+  ecs_.RegisterComponent<Animator>();
+  ecs_.RegisterComponent<SkinPose>();
 
   RegisterBuiltinLoaders(scene_loader_);
 }
@@ -55,6 +59,8 @@ void Engine::Resize(PixelSize size) { bgfx_context_.Resize(size); }
 
 void Engine::Update(const FrameContext& ctx) {
   physics_system_.Update(ecs_, physics_world_, ctx);
+  // After physics: gameplay picks clips from this frame's motion
+  animation_.Update(ecs_, assets_, ctx);
   ExpireLifetimes(ecs_, ctx);
   // Frame uniforms must be set before the renderer submits
   lighting_.Update(ecs_, ctx);

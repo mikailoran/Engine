@@ -10,6 +10,7 @@
 #include "engine/bgfx_context.h"
 #include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
+#include "engine/ecs/systems/animation_system.h"
 #include "engine/ecs/systems/debug_draw_system.h"
 #include "engine/ecs/systems/hud_system.h"
 #include "engine/ecs/systems/lighting_system.h"
@@ -62,7 +63,10 @@ class Engine {
    */
   void Resize(PixelSize size);
 
-  /** @brief Steps physics and lifetimes, and sets this frame's lighting. */
+  /**
+   * @brief Steps physics, then animation, then lifetimes, and sets this
+   * frame's lighting.
+   */
   void Update(const FrameContext& ctx);
 
   /** @brief Draws the frame and submits it with bgfx::frame. After Update. */
@@ -165,6 +169,7 @@ class Engine {
   SceneLoader scene_loader_;
 
   PhysicsSystem physics_system_;
+  AnimationSystem animation_;
   LightingSystem lighting_;
   ShadowSystem shadow_;
   SkySystem sky_;
