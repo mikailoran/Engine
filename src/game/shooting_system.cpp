@@ -121,12 +121,13 @@ auto HandleShots(Engine& engine) -> void {
 
   // Make the projectile beam
   auto& ecs = engine.World();
-  auto beam_mesh_handle =
-      engine.Assets().LoadMesh("assets/meshes/cylinder.glb");
+  auto beam_mesh_handle = engine.Assets().LoadMesh("assets/meshes/beam.glb");
   for (const auto& shot : shots) {
     auto beam = ecs.CreateEntity();
-    ecs.AddComponent(beam, Renderable{.mesh_handle = beam_mesh_handle,
-                                      .color = {1.0F, 0.85F, 0.3F, 1.0F}});
+    ecs.AddComponent(beam, Renderable{
+                               .mesh_handle = beam_mesh_handle,
+                           });
+    // .color = {1.0F, 0.85F, 0.3F, 1.0F}});
     ecs.AddComponent(beam, Lifetime{shot.beam_s});
     const auto middle_pos = bx::div(bx::add(shot.from, shot.to), 2.0F);
     const float length = bx::length(bx::sub(shot.to, shot.from));
