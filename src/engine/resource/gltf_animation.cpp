@@ -147,7 +147,9 @@ auto ReadClips(const cgltf_data& data, const cgltf_skin& skin)
        std::span(data.animations, data.animations_count)) {
     AnimationClip clip{.name = animation.name != nullptr
                                    ? animation.name
-                                   : "clip" + std::to_string(clips.size())};
+                                   : "clip" + std::to_string(clips.size()),
+                       .duration = 0.0F,
+                       .tracks = {}};
     // Sorted by joint, as AnimationClip::tracks must be
     std::map<std::uint32_t, JointTrack> tracks;
     for (const cgltf_animation_channel& channel :
