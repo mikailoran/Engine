@@ -12,10 +12,11 @@ namespace game {
  *
  * Casts along the Aim's ray, ignoring the shooter: the first hit stops the
  * shot and lowers its Health, if any, by the weapon's damage. At 0 it dies:
- * with a Ragdoll it goes limp and lies for a while, otherwise it is
- * destroyed. Spawns a beam entity per shot, from the Aim's muzzle, that its
- * Lifetime removes. Run after physics, once aims are placed (PlaceCamera,
- * AimEnemies), and after UpdateCooldowns.
+ * the player respawns at its spawn point with full health, a character with
+ * a Ragdoll goes limp and lies for a while, anything else is destroyed. Spawns
+ * a beam entity per shot, from the Aim's muzzle, that its Lifetime removes. Run
+ * after physics, once aims are placed (PlaceCamera, AimEnemies), and after
+ * UpdateCooldowns.
  */
 auto HandleShots(engine::Engine& engine) -> void;
 

@@ -22,6 +22,7 @@
 #include "game/aim.h"
 #include "game/enemy.h"
 #include "game/health.h"
+#include "game/player.h"
 #include "game/weapon.h"
 
 using engine::CharacterBody;
@@ -80,11 +81,24 @@ void RemoveIfPresent(Ecs& ecs, Entity entity) {
 }
 
 /**
- * @brief Kills @p entity: a character with a ragdoll goes limp and stays for
+ * @brief Kills @p entity: the player respawns at its spawn point with full
+ * health, a character with a ragdoll goes limp and stays for
  * kCorpseSeconds, anything else is destroyed.
  * @pre Not inside a ForEach: it removes components.
  */
 void Die(Ecs& ecs, Entity entity) {
+  if (const auto* player = ecs.TryGetComponent<Player>(entity)) {
+    // Physics teleports the character to the edited feet next update
+    ecs.GetComponent<Transform>(entity).position = player->spawn_point;
+    if (auto* body = ecs.TryGetComponent<CharacterBody>(entity)) {
+      body->velocity = bx::Vec3{0.0F};
+    }
+    if (auto* health = ecs.TryGetComponent<Health>(entity)) {
+      Revive(*health);
+    }
+    std::cout << "player died and respawned\n";
+    return;
+  }
   auto* ragdoll = ecs.TryGetComponent<Ragdoll>(entity);
   if (ragdoll == nullptr) {
     ecs.DestroyEntity(entity);

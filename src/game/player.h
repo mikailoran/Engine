@@ -1,5 +1,7 @@
 #pragma once
 
+#include <bx/math.h>
+
 namespace game {
 
 /**
@@ -15,6 +17,9 @@ struct Player {
   float jump_speed{5.0F};
   /// Height of the eyes above the feet, in m.
   float eye_height{1.6F};
+  /// Where its feet go when it respawns after dying, in world space; its
+  /// Transform's position when it loads.
+  bx::Vec3 spawn_point{0.0F};
 };
 
 }  // namespace game

@@ -24,6 +24,9 @@ inline auto ApplyDamage(Health& health, int damage) -> int {
   return health.current;
 }
 
+/** @brief Restores @p health to full, as on a respawn. */
+inline void Revive(Health& health) { health.current = health.max; }
+
 /** @brief Whether @p health has run out. */
 inline auto IsDead(const Health& health) -> bool { return health.current <= 0; }
 

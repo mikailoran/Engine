@@ -6,6 +6,7 @@
 #include <string>
 
 #include "engine/ecs/components/animator.h"
+#include "engine/ecs/components/transform.h"
 #include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
 #include "engine/engine.h"
@@ -25,7 +26,7 @@ namespace {
 
 /**
  * @brief Adds a Player; every field is optional and positive. Speeds in m/s,
- * the eye height in m.
+ * the eye height in m. Its spawn point is where its Transform puts it.
  */
 void LoadPlayer(const nlohmann::json& data, engine::Entity entity,
                 engine::Ecs& ecs, engine::AssetRegistry& /*assets*/,
@@ -37,6 +38,10 @@ void LoadPlayer(const nlohmann::json& data, engine::Entity entity,
   engine::ReadPositive(data, "sprint_multiplier", player.sprint_multiplier);
   engine::ReadPositive(data, "jump_speed", player.jump_speed);
   engine::ReadPositive(data, "eye_height", player.eye_height);
+  // The transform loader runs first, being the engine's
+  if (const auto* transform = ecs.TryGetComponent<engine::Transform>(entity)) {
+    player.spawn_point = transform->position;
+  }
   ecs.AddComponent(entity, player);
 }
 
