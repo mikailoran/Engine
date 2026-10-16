@@ -5,7 +5,6 @@
 
 #include <bx/bounds.h>
 #include <bx/bx.h>
-#include <bx/constants.h>
 #include <bx/math.h>
 #include <gtest/gtest.h>
 

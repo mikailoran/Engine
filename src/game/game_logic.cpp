@@ -1,6 +1,7 @@
 #include "game/game_logic.h"
 
 #include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
 #include <stdexcept>
 #include <string>
 
