@@ -20,14 +20,23 @@ namespace engine {
 
 namespace {
 
-/** @brief Every .glb and .gltf under the source tree's assets/. */
+/**
+ * @brief Every .glb and .gltf under the source tree's assets/, except the
+ * untracked raw packs in assets/downloads/.
+ */
 auto GltfAssets() -> std::vector<std::filesystem::path> {
   std::vector<std::filesystem::path> paths;
-  for (const auto& entry :
-       std::filesystem::recursive_directory_iterator(ENGINE_ASSET_DIR)) {
-    const auto extension = entry.path().extension();
+  for (auto it =
+           std::filesystem::recursive_directory_iterator(ENGINE_ASSET_DIR);
+       it != std::filesystem::recursive_directory_iterator(); ++it) {
+    // Raw downloads are converted into assets/, not loaded as they are
+    if (it.depth() == 0 && it->path().filename() == "downloads") {
+      it.disable_recursion_pending();
+      continue;
+    }
+    const auto extension = it->path().extension();
     if (extension == ".glb" || extension == ".gltf") {
-      paths.push_back(entry.path());
+      paths.push_back(it->path());
     }
   }
   return paths;
@@ -123,8 +132,8 @@ TEST(GltfReader, ReadsBaseColorTexture) {
 
 TEST(GltfReader, ReadsMetallicRoughnessFactors) {
   // Every material in the level is a dielectric at roughness 0.8
-  const CpuMesh mesh = ReadGltf(std::filesystem::path(ENGINE_ASSET_DIR) /
-                                "levels/level02.glb");
+  const CpuMesh mesh =
+      ReadGltf(std::filesystem::path(ENGINE_ASSET_DIR) / "levels/level02.glb");
 
   ASSERT_FALSE(mesh.materials.empty());
   for (const MeshMaterial& material : mesh.materials) {
