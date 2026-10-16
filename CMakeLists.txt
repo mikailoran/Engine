@@ -149,7 +149,13 @@ target_include_directories(engine_cgltf SYSTEM PUBLIC ${BGFX_DIR}/3rdparty)
 add_library(engine_assets STATIC
   src/engine/resource/cpu_mesh.h
   src/engine/resource/gltf_reader.h
-  src/engine/resource/gltf_reader.cpp)
+  src/engine/resource/gltf_reader.cpp
+  src/engine/resource/gltf_document.h
+  src/engine/resource/gltf_document.cpp
+  src/engine/resource/gltf_geometry.h
+  src/engine/resource/gltf_geometry.cpp
+  src/engine/resource/gltf_materials.h
+  src/engine/resource/gltf_materials.cpp)
 
 target_include_directories(engine_assets PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 # bimg decodes PNG/JPEG; bimg_encode only for imageGenerateMips
