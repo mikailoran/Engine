@@ -92,6 +92,27 @@ set(JPH_USE_VK OFF CACHE BOOL "" FORCE)
 set(JPH_USE_CPU_COMPUTE OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(JoltPhysics)
 
+# --- ozz-animation ----------------------------------------------------------
+# EXCLUDE_FROM_ALL: only the libraries engine_animation links get built
+FetchContent_Declare(ozz_animation
+  URL https://github.com/guillaumeblanc/ozz-animation/archive/refs/tags/0.17.0.tar.gz
+  URL_HASH SHA256=22b4401c77a2be68acb0a8aa2e857f94dbaccfed3ab25e304a1ddea4c546e86b
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+  EXCLUDE_FROM_ALL
+  SYSTEM)
+# The runtime and the offline builders only: no tools, samples or tests
+set(ozz_build_tools OFF CACHE BOOL "" FORCE)
+set(ozz_build_fbx OFF CACHE BOOL "" FORCE)
+set(ozz_build_gltf OFF CACHE BOOL "" FORCE)
+set(ozz_build_samples OFF CACHE BOOL "" FORCE)
+set(ozz_build_howtos OFF CACHE BOOL "" FORCE)
+set(ozz_build_tests OFF CACHE BOOL "" FORCE)
+set(ozz_build_postfix OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(ozz_animation)
+# ozz makes its warnings errors; a newer compiler's must not break our build
+set_target_properties(ozz_base ozz_animation ozz_animation_offline PROPERTIES
+  COMPILE_WARNING_AS_ERROR OFF)
+
 # --- Physics ----------------------------------------------------------------
 # PhysicsWorld's headers are Jolt-free; PRIVATE keeps Jolt's include paths and
 # JPH_* defines out of every target that links this.
