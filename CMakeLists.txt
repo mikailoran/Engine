@@ -163,6 +163,8 @@ add_library(engine_assets STATIC
   src/engine/resource/gltf_skin.cpp
   src/engine/resource/gltf_animation.h
   src/engine/resource/gltf_animation.cpp
+  src/engine/resource/retarget.h
+  src/engine/resource/retarget.cpp
   src/engine/resource/bone_parts.h
   src/engine/resource/bone_parts.cpp)
 

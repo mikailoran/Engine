@@ -59,7 +59,8 @@ add_executable(asset_tests
   assets/gltf_reader_test.cpp
   assets/bone_parts_test.cpp
   assets/skeleton_test.cpp
-  assets/animation_clip_test.cpp)
+  assets/animation_clip_test.cpp
+  assets/retarget_test.cpp)
 
 target_link_libraries(asset_tests PRIVATE engine_assets GTest::gtest_main)
 # Reads the source tree's assets, not the copies beside the executable
