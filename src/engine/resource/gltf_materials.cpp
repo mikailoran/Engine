@@ -6,6 +6,7 @@
 #include <bx/allocator.h>
 #include <cgltf/cgltf.h>
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <filesystem>
@@ -97,8 +98,8 @@ auto DecodeImage(std::span<const std::uint8_t> bytes) -> CpuImage {
 }
 
 /**
- * @brief Reads one glTF material's base color into @p mesh, decoding its
- * image unless an earlier material already did.
+ * @brief Reads one glTF material's base color and metallic-roughness factors
+ * into @p mesh, decoding its image unless an earlier material already did.
  *
  * @param image_slots Index in mesh.images per glTF image, filled as decoded.
  */
@@ -112,6 +113,8 @@ auto ReadMaterial(const cgltf_data& data, const cgltf_material& source,
   }
   const cgltf_pbr_metallic_roughness& pbr = source.pbr_metallic_roughness;
   material.base_color = std::to_array(pbr.base_color_factor);
+  material.metallic = std::clamp(pbr.metallic_factor, 0.0F, 1.0F);
+  material.roughness = std::clamp(pbr.roughness_factor, 0.0F, 1.0F);
 
   const cgltf_texture_view& view = pbr.base_color_texture;
   if (view.texture == nullptr || view.texture->image == nullptr) {

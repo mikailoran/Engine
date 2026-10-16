@@ -82,6 +82,7 @@ RenderSystem::RenderSystem()
       u_time_(bgfx::createUniform("u_time", bgfx::UniformFreq::Frame,
                                   bgfx::UniformType::Vec4)),
       u_color_(bgfx::createUniform("u_color", bgfx::UniformType::Vec4)),
+      u_material_(bgfx::createUniform("u_material", bgfx::UniformType::Vec4)),
       u_eye_pos_(bgfx::createUniform("u_eyePos", bgfx::UniformFreq::Frame,
                                      bgfx::UniformType::Vec4)),
       s_albedo_(bgfx::createUniform("s_albedo", bgfx::UniformType::Sampler)),
@@ -149,8 +150,11 @@ void RenderSystem::Update(Ecs& ecs, const AssetRegistry& assets,
             ? mesh.textures.at(*material.base_color_image).Get()
             : default_texture_.Get();
     const auto color = Modulate(material.base_color, renderable.color);
+    const std::array<float, 4> factors{material.metallic, material.roughness,
+                                       0.0F, 0.0F};
 
     bgfx::setUniform(u_color_.Get(), color.data());
+    bgfx::setUniform(u_material_.Get(), factors.data());
     bgfx::setTexture(0, s_albedo_.Get(), texture);
     bgfx::setTexture(1, s_shadow_map_.Get(), shadow_map);
     bgfx::setState(renderable.state);

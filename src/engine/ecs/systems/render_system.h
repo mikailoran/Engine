@@ -63,6 +63,9 @@ class RenderSystem {
   // Per-draw surface color: the material's base color times the entity's tint.
   UniqueHandle<bgfx::UniformHandle> u_color_;
 
+  // Per-draw material factors: x metallic, y roughness.
+  UniqueHandle<bgfx::UniformHandle> u_material_;
+
   // Per-frame camera world position.
   UniqueHandle<bgfx::UniformHandle> u_eye_pos_;
 

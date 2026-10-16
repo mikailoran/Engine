@@ -27,14 +27,21 @@ struct Submesh {
 };
 
 /**
- * @brief How a submesh looks: glTF's base color, the only part drawn so far.
- * Shared by CpuMesh and GpuMesh.
+ * @brief How a submesh looks: glTF's base color and metallic-roughness
+ * factors. Shared by CpuMesh and GpuMesh.
+ *
+ * Defaults are a white dielectric, used for primitives without a glTF
+ * material (glTF's own defaults would make them fully metallic).
  */
 struct MeshMaterial {
   /// Linear RGBA, multiplied with the image's color.
   std::array<float, 4> base_color{1.0F, 1.0F, 1.0F, 1.0F};
   /// Index into the mesh's images (textures on the GPU); empty for none.
   std::optional<std::uint32_t> base_color_image;
+  /// 0 dielectric to 1 metal.
+  float metallic{0.0F};
+  /// Perceptual roughness, 0 mirror-smooth to 1 fully rough.
+  float roughness{0.5F};
 };
 
 /**
