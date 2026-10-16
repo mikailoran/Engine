@@ -83,7 +83,8 @@ add_executable(animation_tests
   animation/rig_test.cpp
   animation/evaluate_test.cpp
   animation/playback_test.cpp
-  animation/mask_test.cpp)
+  animation/mask_test.cpp
+  animation/ragdoll_fit_test.cpp)
 
 target_link_libraries(animation_tests PRIVATE engine_animation GTest::gtest_main)
 target_compile_definitions(animation_tests PRIVATE

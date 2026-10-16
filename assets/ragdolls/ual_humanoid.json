@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "parts": [
+    { "joint": "pelvis", "end": "spine_02", "radius": 0.14, "mass_kg": 15 },
+    { "joint": "spine_02", "end": "neck_01", "parent": "pelvis",
+      "radius": 0.15, "mass_kg": 15, "swing_deg": 25, "twist_deg": 20 },
+    { "joint": "Head", "length": 0.24, "parent": "spine_02",
+      "radius": 0.11, "mass_kg": 5, "swing_deg": 40, "twist_deg": 45 },
+    { "joint": "upperarm_l", "end": "lowerarm_l", "parent": "spine_02",
+      "radius": 0.055, "mass_kg": 2.5, "swing_deg": 80, "twist_deg": 45 },
+    { "joint": "lowerarm_l", "end": "hand_l", "parent": "upperarm_l",
+      "radius": 0.05, "mass_kg": 1.5, "swing_deg": 70, "twist_deg": 30 },
+    { "joint": "upperarm_r", "end": "lowerarm_r", "parent": "spine_02",
+      "radius": 0.055, "mass_kg": 2.5, "swing_deg": 80, "twist_deg": 45 },
+    { "joint": "lowerarm_r", "end": "hand_r", "parent": "upperarm_r",
+      "radius": 0.05, "mass_kg": 1.5, "swing_deg": 70, "twist_deg": 30 },
+    { "joint": "thigh_l", "end": "calf_l", "parent": "pelvis",
+      "radius": 0.08, "mass_kg": 7, "swing_deg": 60, "twist_deg": 25 },
+    { "joint": "calf_l", "end": "foot_l", "parent": "thigh_l",
+      "radius": 0.06, "mass_kg": 4, "swing_deg": 60, "twist_deg": 15 },
+    { "joint": "thigh_r", "end": "calf_r", "parent": "pelvis",
+      "radius": 0.08, "mass_kg": 7, "swing_deg": 60, "twist_deg": 25 },
+    { "joint": "calf_r", "end": "foot_r", "parent": "thigh_r",
+      "radius": 0.06, "mass_kg": 4, "swing_deg": 60, "twist_deg": 15 }
+  ]
+}

@@ -189,13 +189,16 @@ add_library(engine_assets STATIC
   src/engine/resource/gltf_animation.cpp
   src/engine/resource/retarget.h
   src/engine/resource/retarget.cpp
+  src/engine/resource/ragdoll_fit.h
+  src/engine/resource/ragdoll_fit.cpp
   src/engine/resource/bone_parts.h
   src/engine/resource/bone_parts.cpp)
 
 target_include_directories(engine_assets PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 # bimg decodes PNG/JPEG; bimg_encode only for imageGenerateMips
 target_link_libraries(engine_assets PUBLIC bx
-  PRIVATE engine_cgltf bimg bimg_decode bimg_encode)
+  PRIVATE engine_math nlohmann_json::nlohmann_json engine_cgltf bimg
+  bimg_decode bimg_encode)
 target_compile_options(engine_assets PRIVATE -Wall -Wextra -Wpedantic)
 
 set_target_properties(engine_assets PROPERTIES
@@ -552,6 +555,24 @@ foreach(prefab IN LISTS ENGINE_PREFABS)
     MAIN_DEPENDENCY ${prefab_src}
   )
   list(APPEND ENGINE_SCENE_OUTPUTS ${prefab_out})
+endforeach()
+
+# Ragdoll files, one per rig; prefabs name them
+set(ENGINE_RAGDOLLS
+  ual_humanoid.json
+)
+
+foreach(ragdoll IN LISTS ENGINE_RAGDOLLS)
+  set(ragdoll_src ${CMAKE_CURRENT_SOURCE_DIR}/assets/ragdolls/${ragdoll})
+  set(ragdoll_out ${ENGINE_RUNTIME_DIR}/assets/ragdolls/${ragdoll})
+  get_filename_component(ragdoll_dir ${ragdoll_out} DIRECTORY)
+  add_custom_command(
+    OUTPUT ${ragdoll_out}
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${ragdoll_dir}
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ragdoll_src} ${ragdoll_out}
+    MAIN_DEPENDENCY ${ragdoll_src}
+  )
+  list(APPEND ENGINE_SCENE_OUTPUTS ${ragdoll_out})
 endforeach()
 add_custom_target(scenes DEPENDS ${ENGINE_SCENE_OUTPUTS})
 add_dependencies(launcher scenes)

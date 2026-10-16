@@ -145,6 +145,18 @@ TEST(Rotation, QuatToEulerKeepsRotationAtGimbalLock) {
   EXPECT_LT(max_diff, 2e-3F);
 }
 
+TEST(Rotation, RotationOfReadsModelMatrices) {
+  Random random;
+  for (int i = 0; i < kSamples; ++i) {
+    const bx::Quaternion q = RandomRotation(random);
+    const Transform transform{.position = random.NextVec3(-10.0F, 10.0F),
+                              .rotation = q,
+                              .scale = random.NextVec3(0.1F, 3.0F)};
+    ASSERT_LT(RotationDiff(RotationOf(ModelMatrix(transform)), q), 1e-3F)
+        << "sample " << i;
+  }
+}
+
 }  // namespace
 
 }  // namespace engine

@@ -14,6 +14,7 @@
 #include "engine/animation/rig.h"
 #include "engine/physics/collision_mesh_handle.h"
 #include "engine/physics/hitbox_handle.h"
+#include "engine/physics/ragdoll.h"
 #include "engine/resource/animation_handles.h"
 #include "engine/resource/gpu_mesh.h"
 #include "engine/resource/mesh_handle.h"
@@ -128,6 +129,23 @@ class AssetRegistry {
   /** @brief Resolves a clip handle; it must be valid. */
   [[nodiscard]] auto GetClip(ClipHandle handle) const -> const animation::Clip&;
 
+  /**
+   * @brief Builds ragdoll settings from a ragdoll file fitted to @p rig's
+   * rest pose (ReadRagdollFile, FitRagdoll), or returns those already built
+   * for that file and rig.
+   *
+   * Same preconditions as LoadMesh.
+   * @param path Ragdoll file, e.g. "assets/ragdolls/ual_humanoid.json".
+   * @param rig A loaded mesh's rig; must be valid.
+   * @param physics World to build the settings in; every call must pass the
+   *        same.
+   * @throws std::runtime_error If the file can't be read, names joints the
+   *         rig lacks, or Jolt rejects the parts.
+   */
+  auto LoadRagdoll(const std::filesystem::path& path, RigHandle rig,
+                   physics::PhysicsWorld& physics)
+      -> physics::RagdollSettingsHandle;
+
  private:
   /** @brief One clip file's clips built for one rig, by name. */
   struct ClipSet {
@@ -149,6 +167,10 @@ class AssetRegistry {
   /// Keyed by clip file and RigHandle::Value.
   std::map<std::pair<std::filesystem::path, std::uint16_t>, ClipSetHandle>
       clip_set_by_key_;
+  /// Keyed by ragdoll file and RigHandle::Value.
+  std::map<std::pair<std::filesystem::path, std::uint16_t>,
+           physics::RagdollSettingsHandle>
+      ragdoll_by_key_;
 };
 
 }  // namespace engine

@@ -2,6 +2,8 @@
 
 #include <bx/math.h>
 
+#include <array>
+
 namespace engine {
 
 // Rotations are unit quaternions applied as v' = q v q*, the convention of
@@ -28,5 +30,12 @@ struct YawPitch {
 
 /** @brief Rotation pointing local -Z along @p angles, local +X level. */
 auto YawPitchToQuat(YawPitch angles) -> bx::Quaternion;
+
+/**
+ * @brief The rotation in @p matrix, a column-major transform (ModelMatrix's
+ * and glTF's layout) with any positive scale, which is divided out.
+ * @return A unit quaternion; ±q are the same rotation.
+ */
+auto RotationOf(const std::array<float, 16>& matrix) -> bx::Quaternion;
 
 }  // namespace engine

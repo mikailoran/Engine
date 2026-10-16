@@ -11,10 +11,12 @@
 #include <utility>
 #include <vector>
 
+#include "engine/animation/evaluate.h"
 #include "engine/animation/rig.h"
 #include "engine/physics/collision_mesh_handle.h"
 #include "engine/physics/hitbox_handle.h"
 #include "engine/physics/physics_world.h"
+#include "engine/physics/ragdoll.h"
 #include "engine/physics/shape.h"
 #include "engine/platform/asset_root.h"
 #include "engine/resource/animation_clip.h"
@@ -24,7 +26,9 @@
 #include "engine/resource/gltf_reader.h"
 #include "engine/resource/gpu_mesh.h"
 #include "engine/resource/mesh_handle.h"
+#include "engine/resource/ragdoll_fit.h"
 #include "engine/resource/retarget.h"
+#include "engine/util/mat4.h"
 
 namespace engine {
 
@@ -138,6 +142,28 @@ auto AssetRegistry::LoadClips(const std::filesystem::path& path, RigHandle rig)
   const ClipSetHandle handle(static_cast<std::uint16_t>(clip_sets_.size()));
   clip_sets_.push_back(std::move(set));
   clip_set_by_key_.emplace(key, handle);
+  return handle;
+}
+
+auto AssetRegistry::LoadRagdoll(const std::filesystem::path& path,
+                                RigHandle rig, physics::PhysicsWorld& physics)
+    -> physics::RagdollSettingsHandle {
+  const auto key = std::make_pair(path, rig.Value());
+  if (auto it = ragdoll_by_key_.find(key); it != ragdoll_by_key_.end()) {
+    return it->second;
+  }
+
+  // Capsules and joint limits are set from the rig's rest pose
+  const animation::Rig& target = GetRig(rig);
+  std::vector<Mat4> rest;
+  animation::RestPose(target, rest);
+  const auto specs = ReadRagdollFile(std::filesystem::path(AssetRoot()) / path);
+  const physics::RagdollSettingsHandle handle = physics.CreateRagdollSettings(
+      FitRagdoll(specs, target.Source(), rest), PosesOf(rest));
+  if (!handle.IsValid()) {
+    throw std::runtime_error("cannot build ragdoll: " + path.string());
+  }
+  ragdoll_by_key_.emplace(key, handle);
   return handle;
 }
 
