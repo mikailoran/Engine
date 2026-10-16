@@ -13,7 +13,8 @@ namespace {
 // One broad-phase layer per object layer
 constexpr JPH::BroadPhaseLayer kNonMovingBroadPhase{0};
 constexpr JPH::BroadPhaseLayer kMovingBroadPhase{1};
-constexpr JPH::uint kBroadPhaseCount = 2;
+constexpr JPH::BroadPhaseLayer kRagdollBroadPhase{2};
+constexpr JPH::uint kBroadPhaseCount = 3;
 
 }  // namespace
 
@@ -24,11 +25,17 @@ CollisionLayers::CollisionLayers()
                                           kNonMovingBroadPhase);
   broad_phase_.MapObjectToBroadPhaseLayer(object_layer::kMoving,
                                           kMovingBroadPhase);
+  broad_phase_.MapObjectToBroadPhaseLayer(object_layer::kRagdoll,
+                                          kRagdollBroadPhase);
 
   // Non-moving pairs stay disabled: static bodies never touch each other
   object_pairs_.EnableCollision(object_layer::kMoving, object_layer::kMoving);
   object_pairs_.EnableCollision(object_layer::kMoving,
                                 object_layer::kNonMoving);
+  object_pairs_.EnableCollision(object_layer::kRagdoll,
+                                object_layer::kNonMoving);
+  object_pairs_.EnableCollision(object_layer::kRagdoll, object_layer::kMoving);
+  object_pairs_.EnableCollision(object_layer::kRagdoll, object_layer::kRagdoll);
 
   object_vs_broad_phase_.emplace(broad_phase_, kBroadPhaseCount, object_pairs_,
                                  object_layer::kCount);

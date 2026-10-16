@@ -128,6 +128,8 @@ add_library(engine_physics STATIC
   src/engine/physics/layers.h
   src/engine/physics/layers.cpp
   src/engine/physics/physics_world.h
+  src/engine/physics/pose.h
+  src/engine/physics/ragdoll.h
   src/engine/physics/shape.h
   src/engine/physics/physics_world.cpp)
 

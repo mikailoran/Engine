@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Jolt/Jolt.h>
+#include <Jolt/Core/Core.h>
 #include <Jolt/Physics/Collision/BroadPhase/BroadPhaseLayer.h>
 #include <Jolt/Physics/Collision/BroadPhase/BroadPhaseLayerInterfaceTable.h>
 #include <Jolt/Physics/Collision/BroadPhase/ObjectVsBroadPhaseLayerFilterTable.h>
@@ -15,12 +16,14 @@ namespace engine::physics {
 namespace object_layer {
 inline constexpr JPH::ObjectLayer kNonMoving = 0;
 inline constexpr JPH::ObjectLayer kMoving = 1;
-inline constexpr JPH::uint kCount = 2;
+/// Ragdoll parts, kinematic or simulated; characters ignore them.
+inline constexpr JPH::ObjectLayer kRagdoll = 2;
+inline constexpr JPH::uint kCount = 3;
 }  // namespace object_layer
 
 /**
- * @brief Jolt's collision filtering: moving bodies collide with everything,
- * non-moving bodies only with moving ones.
+ * @brief Jolt's collision filtering: moving bodies and ragdoll parts
+ * collide with everything, non-moving bodies only with the other two.
  *
  * The PhysicsSystem keeps references to these tables, so this must outlive it.
  */

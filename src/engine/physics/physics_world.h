@@ -12,17 +12,13 @@
 #include "engine/physics/character_handle.h"
 #include "engine/physics/collision_mesh_handle.h"
 #include "engine/physics/hitbox_handle.h"
+#include "engine/physics/pose.h"  // IWYU pragma: export
+#include "engine/physics/ragdoll.h"
 #include "engine/physics/shape.h"
 
 namespace engine::physics {
 
 class JoltRuntime;
-
-/** @brief A body's position and rotation in world space. */
-struct Pose {
-  bx::Vec3 position{0.0F};
-  bx::Quaternion rotation{bx::InitIdentity};
-};
 
 /** @brief Whether a body moves under forces and collisions. */
 enum class Motion : std::uint8_t { kStatic, kDynamic };
@@ -71,6 +67,9 @@ struct CharacterDesc {
   float push_force{200.0F};
   /// What rays hit instead of the capsule; invalid: the capsule.
   HitboxHandle hitbox{HitboxHandle::kInvalid};
+  /// Whether CastRay hits it at all; false when something else stands in
+  /// for it, such as its ragdoll's parts.
+  bool ray_target{true};
   /// Caller's tag for the character, returned by Characters.
   UserTag user_data{0};
 };
@@ -94,10 +93,15 @@ struct CharacterEntry {
 struct RayHit {
   /// Tag of what was hit, as given at creation.
   UserTag user_data{0};
-  /// The body hit; invalid when a character was hit.
+  /// The body hit; invalid when a character or a ragdoll was hit.
   BodyHandle body;
-  /// The character hit; invalid when a body was hit.
+  /// The character hit; invalid when a body or a ragdoll was hit.
   CharacterHandle character;
+  /// The ragdoll whose part was hit; invalid otherwise.
+  RagdollHandle ragdoll;
+  /// The part hit, an index into its RagdollDesc::parts; 0 unless a ragdoll
+  /// was hit.
+  std::uint32_t part{0};
   /// Distance from the ray's origin, in m; 0 if it starts inside a shape.
   float distance{0.0F};
   /// World-space hit point.
@@ -200,7 +204,10 @@ class PhysicsWorld {
    */
   [[nodiscard]] auto UserData(BodyHandle body) const -> std::optional<UserTag>;
 
-  /** @brief Lists every body; a copy, so destroying while looping is safe. */
+  /**
+   * @brief Lists every body but ragdoll parts; a copy, so destroying while
+   * looping is safe.
+   */
   [[nodiscard]] auto Bodies() const -> std::vector<BodyEntry>;
 
   /**
@@ -246,8 +253,71 @@ class PhysicsWorld {
   [[nodiscard]] auto Characters() const -> std::vector<CharacterEntry>;
 
   /**
-   * @brief Casts @p ray against every body and character, as of the last
-   * Step. A character with a hitbox is hit only on its hitbox.
+   * @brief Builds the parts and joints of a rig's ragdolls for every one of
+   * them to share. They live until the world is destroyed.
+   * @param rest_joints Every skeleton joint's rest pose, in model space:
+   *        the directions parts swing and twist away from.
+   * @return Invalid if Jolt rejects the parts.
+   * @pre Parents precede children; every part's joint indexes rest_joints.
+   */
+  auto CreateRagdollSettings(const RagdollDesc& desc,
+                             const std::vector<Pose>& rest_joints)
+      -> RagdollSettingsHandle;
+
+  /**
+   * @brief Adds a kinematic ragdoll posed at @p joints: rays hit its parts
+   * and it pushes dynamic bodies while it follows PoseRagdoll, until
+   * SetRagdollSimulated hands it to the simulation.
+   *
+   * Characters never collide with ragdolls, and a ragdoll's parts never
+   * collide with each other.
+   * @param joints Every skeleton joint's pose, in world space.
+   * @return Invalid if Jolt is out of bodies.
+   */
+  auto CreateRagdoll(RagdollSettingsHandle settings,
+                     const std::vector<Pose>& joints, UserTag user_data)
+      -> RagdollHandle;
+
+  /** @brief Removes @p ragdoll. Stale handles are safe to pass. */
+  void DestroyRagdoll(RagdollHandle ragdoll);
+
+  /**
+   * @brief Teleports a kinematic ragdoll's parts to follow @p joints, and
+   * records how fast they moved over @p dt seconds for SetRagdollSimulated.
+   * Ignored while the ragdoll is simulated.
+   * @param joints Every skeleton joint's pose, in world space.
+   */
+  void PoseRagdoll(RagdollHandle ragdoll, const std::vector<Pose>& joints,
+                   float dt);
+
+  /**
+   * @brief Hands @p ragdoll to the simulation, each part keeping the
+   * velocity it last moved at, or takes it back to follow PoseRagdoll.
+   */
+  void SetRagdollSimulated(RagdollHandle ragdoll, bool simulated);
+
+  /**
+   * @brief Writes the world pose of every joint a part follows into
+   * @p joints, from where the parts are now; other entries stay as they are.
+   * @param joints One entry per skeleton joint.
+   */
+  void RagdollJointPoses(RagdollHandle ragdoll,
+                         std::vector<Pose>& joints) const;
+
+  /**
+   * @brief Returns @p ragdoll's tag, or nothing if it no longer exists.
+   * Stale handles are safe to pass.
+   */
+  [[nodiscard]] auto UserData(RagdollHandle ragdoll) const
+      -> std::optional<UserTag>;
+
+  /** @brief Lists every ragdoll; a copy, safe to destroy while looping. */
+  [[nodiscard]] auto Ragdolls() const -> std::vector<RagdollEntry>;
+
+  /**
+   * @brief Casts @p ray against every body, ragdoll and character, as of the
+   * last Step (and PoseRagdoll). A character with a hitbox is hit only on
+   * its hitbox, and one that isn't a ray target never.
    *
    * A ray starting inside a convex shape hits it at distance 0; meshes are
    * one-sided, so their back faces are never hit.

@@ -23,12 +23,15 @@
 #include <Jolt/Physics/Body/BodyInterface.h>
 #include <Jolt/Physics/Body/BodyLock.h>
 #include <Jolt/Physics/Body/BodyManager.h>
+#include <Jolt/Physics/Body/MotionQuality.h>
 #include <Jolt/Physics/Body/MotionType.h>
 #include <Jolt/Physics/Character/CharacterBase.h>
 #include <Jolt/Physics/Character/CharacterVirtual.h>
 #include <Jolt/Physics/Collision/BroadPhase/BroadPhaseLayer.h>
 #include <Jolt/Physics/Collision/CastResult.h>
 #include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
+#include <Jolt/Physics/Collision/CollisionGroup.h>
+#include <Jolt/Physics/Collision/GroupFilterTable.h>
 #include <Jolt/Physics/Collision/NarrowPhaseQuery.h>
 #include <Jolt/Physics/Collision/ObjectLayer.h>
 #include <Jolt/Physics/Collision/RayCast.h>
@@ -43,10 +46,14 @@
 #include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
 #include <Jolt/Physics/Collision/ShapeFilter.h>
 #include <Jolt/Physics/Collision/TransformedShape.h>
+#include <Jolt/Physics/Constraints/Constraint.h>
+#include <Jolt/Physics/Constraints/SwingTwistConstraint.h>
 #include <Jolt/Physics/EActivation.h>
 #include <Jolt/Physics/EPhysicsUpdateError.h>
 #include <Jolt/Physics/PhysicsSettings.h>
 #include <Jolt/Physics/PhysicsSystem.h>
+#include <Jolt/Physics/Ragdoll/Ragdoll.h>
+#include <Jolt/Skeleton/Skeleton.h>
 #include <bx/bounds.h>
 #include <bx/math.h>
 
@@ -57,6 +64,7 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -67,6 +75,8 @@
 #include "engine/physics/hitbox_handle.h"
 #include "engine/physics/jolt_runtime.h"
 #include "engine/physics/layers.h"
+#include "engine/physics/pose.h"
+#include "engine/physics/ragdoll.h"
 #include "engine/physics/shape.h"
 
 namespace engine::physics {
@@ -148,6 +158,8 @@ struct CharacterSlot {
   /// Turns the hitbox about the feet.
   JPH::Quat hitbox_rotation{JPH::Quat::sIdentity()};
   JPH::Vec3 hitbox_scale{JPH::Vec3::sOne()};
+  /// False: CastRay passes through it.
+  bool ray_target{true};
 };
 
 /// Characters by CharacterHandle::Value.
@@ -283,6 +295,15 @@ auto MakeCharacterShape(const CharacterDesc& desc)
                    .Create());
 }
 
+/** @brief What characters collide with: everything but ragdoll parts. */
+class CharacterLayerFilter final : public JPH::ObjectLayerFilter {
+ public:
+  [[nodiscard]] auto ShouldCollide(JPH::ObjectLayer layer) const
+      -> bool override {
+    return layer != object_layer::kRagdoll;
+  }
+};
+
 /**
  * @brief Adds gravity to @p character's velocity, then moves it @p dt
  * seconds, sliding along and pushing what it hits.
@@ -303,11 +324,11 @@ void MoveCharacter(JPH::CharacterVirtual& character, float dt,
   // No stair stepping; stick to the floor walking down slopes
   JPH::CharacterVirtual::ExtendedUpdateSettings settings;
   settings.mWalkStairsStepUp = JPH::Vec3::sZero();
+  // A character never collides with ragdolls, its own included
   character.ExtendedUpdate(
       dt, gravity, settings,
       system.GetDefaultBroadPhaseLayerFilter(object_layer::kMoving),
-      system.GetDefaultLayerFilter(object_layer::kMoving), JPH::BodyFilter{},
-      JPH::ShapeFilter{}, allocator);
+      CharacterLayerFilter{}, JPH::BodyFilter{}, JPH::ShapeFilter{}, allocator);
 }
 
 /**
@@ -338,6 +359,122 @@ auto ActivationFor(const JPH::BodyInterface& body_interface,
              : JPH::EActivation::DontActivate;
 }
 
+/** @brief Where a part following a joint at @p joint stands. */
+auto PartPose(const Pose& joint, const Pose& offset) -> Pose {
+  const JPH::Quat rotation = ToJolt(joint.rotation);
+  return {.position = ToBx(ToJolt(joint.position) +
+                           (rotation * ToJolt(offset.position))),
+          .rotation = ToBx(rotation * ToJolt(offset.rotation))};
+}
+
+/** @brief Where the joint a part at @p part follows stands. */
+auto JointOfPart(const Pose& part, const Pose& offset) -> Pose {
+  const JPH::Quat rotation =
+      ToJolt(part.rotation) * ToJolt(offset.rotation).Conjugated();
+  return {.position = ToBx(ToJolt(part.position) -
+                           (rotation * ToJolt(offset.position))),
+          .rotation = ToBx(rotation)};
+}
+
+/**
+ * @brief Jolt's settings for one ragdoll part standing at @p pose: a
+ * kinematic capsule on the ragdoll layer that may turn dynamic.
+ */
+auto PartSettings(const RagdollPart& part, const Pose& pose)
+    -> JPH::RagdollSettings::Part {
+  JPH::RagdollSettings::Part settings;
+  settings.SetShape(
+      Built(JPH::CapsuleShapeSettings(part.half_height, part.radius).Create()));
+  settings.mPosition = ToJolt(pose.position);
+  settings.mRotation = ToJolt(pose.rotation);
+  settings.mMotionType = JPH::EMotionType::Kinematic;
+  settings.mAllowDynamicOrKinematic = true;
+  settings.mObjectLayer = object_layer::kRagdoll;
+  // Thin limbs falling fast would otherwise pass through the floor
+  settings.mMotionQuality = JPH::EMotionQuality::LinearCast;
+  settings.mOverrideMassProperties =
+      JPH::EOverrideMassProperties::CalculateInertia;
+  settings.mMassPropertiesOverride.mMass = part.mass;
+  settings.mFriction = 0.6F;
+  settings.mRestitution = 0.0F;
+  return settings;
+}
+
+/**
+ * @brief The swing-twist joint holding @p part to its parent, its joint at
+ * @p joint: at the joint, twisting about the capsule's axis.
+ */
+auto JointToParent(const RagdollPart& part, const Pose& joint)
+    -> JPH::Ref<JPH::SwingTwistConstraintSettings> {
+  const Pose pose = PartPose(joint, part.offset);
+  JPH::Ref<JPH::SwingTwistConstraintSettings> constraint = new JPH::
+      SwingTwistConstraintSettings;  // NOLINT(cppcoreguidelines-owning-memory)
+  const JPH::Quat rotation = ToJolt(pose.rotation);
+  const JPH::Vec3 twist_axis = rotation * JPH::Vec3::sAxisY();
+  const JPH::Vec3 plane_axis = rotation * JPH::Vec3::sAxisX();
+  constraint->mSpace = JPH::EConstraintSpace::WorldSpace;
+  constraint->mPosition1 = constraint->mPosition2 = ToJolt(joint.position);
+  constraint->mTwistAxis1 = constraint->mTwistAxis2 = twist_axis;
+  constraint->mPlaneAxis1 = constraint->mPlaneAxis2 = plane_axis;
+  const float swing = JPH::DegreesToRadians(part.swing_deg);
+  const float twist = JPH::DegreesToRadians(part.twist_deg);
+  constraint->mNormalHalfConeAngle = swing;
+  constraint->mPlaneHalfConeAngle = swing;
+  constraint->mTwistMinAngle = -twist;
+  constraint->mTwistMaxAngle = twist;
+  return constraint;
+}
+
+/** @brief Owns a ragdoll in its system: removes it before destroying it. */
+class AddedRagdoll {
+ public:
+  /** @brief Takes @p ragdoll, already added to its system. */
+  explicit AddedRagdoll(JPH::Ref<JPH::Ragdoll> ragdoll)
+      : ragdoll_(std::move(ragdoll)) {}
+  /** @brief Takes the ragdoll out of its system, destroying its bodies. */
+  ~AddedRagdoll() {
+    if (ragdoll_ != nullptr) {
+      ragdoll_->RemoveFromPhysicsSystem();
+    }
+  }
+  AddedRagdoll(const AddedRagdoll&) = delete;
+  auto operator=(const AddedRagdoll&) -> AddedRagdoll& = delete;
+  /** @brief Takes @p other's ragdoll, leaving it empty. */
+  AddedRagdoll(AddedRagdoll&& other) noexcept
+      : ragdoll_(std::move(other.ragdoll_)) {}
+  auto operator=(AddedRagdoll&&) -> AddedRagdoll& = delete;
+
+  /** @brief The ragdoll; never null unless moved from. */
+  [[nodiscard]] auto Get() const -> JPH::Ragdoll& { return *ragdoll_; }
+
+ private:
+  JPH::Ref<JPH::Ragdoll> ragdoll_;
+};
+
+/** @brief Shared settings of one rig's ragdolls. */
+struct RagdollKind {
+  JPH::Ref<JPH::RagdollSettings> settings;
+  /// As given to CreateRagdollSettings: each part's joint and offset.
+  std::vector<RagdollPart> parts;
+};
+
+/** @brief A ragdoll in the world and what posing it remembers. */
+struct RagdollSlot {
+  AddedRagdoll ragdoll;
+  /// Index into the world's ragdoll kinds.
+  std::uint32_t kind{0};
+  /// Each part's velocity over the last PoseRagdoll, in m/s.
+  std::vector<JPH::Vec3> velocities;
+  /// Handed to the simulation by SetRagdollSimulated.
+  bool simulated{false};
+};
+
+/** @brief Which ragdoll and part a ragdoll body belongs to. */
+struct PartOf {
+  std::uint32_t ragdoll{0};
+  std::uint32_t part{0};
+};
+
 }  // namespace
 
 /** @brief Jolt's world and the helpers it needs while stepping. */
@@ -356,6 +493,14 @@ struct PhysicsWorld::Impl {
   CharacterMap characters;
   /// The next CharacterHandle value; never reused.
   std::uint32_t next_character{0};
+  /// Ragdoll settings by RagdollSettingsHandle::Value.
+  std::vector<RagdollKind> ragdoll_kinds;
+  /// Ragdolls by RagdollHandle::Value; like characters, they die first.
+  std::unordered_map<std::uint32_t, RagdollSlot> ragdolls;
+  /// The ragdoll and part of each ragdoll body, by its BodyID's value.
+  std::unordered_map<std::uint32_t, PartOf> ragdoll_parts;
+  /// The next RagdollHandle value, also its collision group; never reused.
+  std::uint32_t next_ragdoll{0};
   // Last, where its 64-byte alignment adds no padding. One thread per core
   // but one by default
   // TODO: learn about job systems and how to integrate ours to Jolt's
@@ -561,6 +706,10 @@ auto PhysicsWorld::Bodies() const -> std::vector<BodyEntry> {
   std::vector<BodyEntry> bodies;
   bodies.reserve(ids.size());
   for (const JPH::BodyID& id : ids) {
+    // Ragdoll parts belong to their ragdoll, listed by Ragdolls
+    if (impl_->ragdoll_parts.contains(id.GetIndexAndSequenceNumber())) {
+      continue;
+    }
     bodies.push_back({.body = BodyHandle(id.GetIndexAndSequenceNumber()),
                       .user_data = body_interface.GetUserData(id)});
   }
@@ -583,7 +732,8 @@ auto PhysicsWorld::CreateCharacter(const CharacterDesc& desc)
       &settings, ToJolt(desc.feet), JPH::Quat::sIdentity(), desc.user_data,
       &impl_->system);
   const CharacterHandle handle(impl_->next_character++);
-  CharacterSlot slot{.character = std::move(character)};
+  CharacterSlot slot{.character = std::move(character),
+                     .ray_target = desc.ray_target};
   if (desc.hitbox.IsValid()) {
     assert(desc.hitbox.Value() < impl_->hitboxes.size() && "unknown hitbox");
     slot.hitbox = impl_->hitboxes.at(desc.hitbox.Value());
@@ -646,6 +796,181 @@ auto PhysicsWorld::Characters() const -> std::vector<CharacterEntry> {
   return characters;
 }
 
+auto PhysicsWorld::CreateRagdollSettings(const RagdollDesc& desc,
+                                         const std::vector<Pose>& rest_joints)
+    -> RagdollSettingsHandle {
+  JPH::Ref<JPH::RagdollSettings> settings =
+      new JPH::RagdollSettings;  // NOLINT(cppcoreguidelines-owning-memory)
+  // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
+  settings->mSkeleton = new JPH::Skeleton;
+  // No part collides with another of its own ragdoll
+  const auto part_count = static_cast<JPH::uint>(desc.parts.size());
+  const JPH::Ref<JPH::GroupFilterTable> no_self_collision =
+      new JPH::GroupFilterTable(
+          part_count);  // NOLINT(cppcoreguidelines-owning-memory)
+  for (JPH::uint a = 0; a < part_count; ++a) {
+    for (JPH::uint b = a + 1; b < part_count; ++b) {
+      no_self_collision->DisableCollision(a, b);
+    }
+  }
+
+  for (std::size_t i = 0; i < desc.parts.size(); ++i) {
+    const RagdollPart& part = desc.parts.at(i);
+    assert((!part.parent || *part.parent < i) && "parents precede children");
+    const Pose& joint = rest_joints.at(part.joint);
+    const Pose pose = PartPose(joint, part.offset);
+    settings->mSkeleton->AddJoint(
+        "part" + std::to_string(i),
+        part.parent ? static_cast<int>(*part.parent) : -1);
+    JPH::RagdollSettings::Part& added =
+        settings->mParts.emplace_back(PartSettings(part, pose));
+    added.mCollisionGroup.SetGroupFilter(no_self_collision);
+    added.mCollisionGroup.SetSubGroupID(static_cast<JPH::uint>(i));
+    if (part.parent) {
+      added.mToParent = JointToParent(part, joint);
+    }
+  }
+  if (!settings->Stabilize()) {
+    return {};
+  }
+
+  impl_->ragdoll_kinds.push_back(
+      {.settings = std::move(settings), .parts = desc.parts});
+  return RagdollSettingsHandle(
+      static_cast<std::uint32_t>(impl_->ragdoll_kinds.size() - 1));
+}
+
+auto PhysicsWorld::CreateRagdoll(RagdollSettingsHandle settings,
+                                 const std::vector<Pose>& joints,
+                                 UserTag user_data) -> RagdollHandle {
+  assert(settings.Value() < impl_->ragdoll_kinds.size() &&
+         "unknown ragdoll settings");
+  const RagdollKind& kind = impl_->ragdoll_kinds.at(settings.Value());
+  const RagdollHandle handle(impl_->next_ragdoll++);
+  JPH::Ref<JPH::Ragdoll> ragdoll =
+      kind.settings->CreateRagdoll(handle.Value(), user_data, &impl_->system);
+  if (ragdoll == nullptr) {
+    return {};
+  }
+
+  // Place every part before it joins the world
+  JPH::BodyInterface& body_interface = impl_->system.GetBodyInterface();
+  for (std::size_t i = 0; i < kind.parts.size(); ++i) {
+    const RagdollPart& part = kind.parts.at(i);
+    const Pose pose = PartPose(joints.at(part.joint), part.offset);
+    const JPH::BodyID id = ragdoll->GetBodyID(static_cast<int>(i));
+    body_interface.SetPositionAndRotation(id, ToJolt(pose.position),
+                                          ToJolt(pose.rotation),
+                                          JPH::EActivation::DontActivate);
+    impl_->ragdoll_parts.emplace(id.GetIndexAndSequenceNumber(),
+                                 PartOf{.ragdoll = handle.Value(),
+                                        .part = static_cast<std::uint32_t>(i)});
+  }
+  ragdoll->AddToPhysicsSystem(JPH::EActivation::DontActivate);
+
+  impl_->ragdolls.emplace(
+      handle.Value(), RagdollSlot{.ragdoll = AddedRagdoll(std::move(ragdoll)),
+                                  .kind = settings.Value(),
+                                  .velocities = std::vector<JPH::Vec3>(
+                                      kind.parts.size(), JPH::Vec3::sZero()),
+                                  .simulated = false});
+  return handle;
+}
+
+void PhysicsWorld::DestroyRagdoll(RagdollHandle ragdoll) {
+  const auto it = impl_->ragdolls.find(ragdoll.Value());
+  if (it == impl_->ragdolls.end()) {
+    return;
+  }
+  for (const JPH::BodyID& id : it->second.ragdoll.Get().GetBodyIDs()) {
+    impl_->ragdoll_parts.erase(id.GetIndexAndSequenceNumber());
+  }
+  impl_->ragdolls.erase(it);
+}
+
+void PhysicsWorld::PoseRagdoll(RagdollHandle ragdoll,
+                               const std::vector<Pose>& joints, float dt) {
+  assert(impl_->ragdolls.contains(ragdoll.Value()) && "unknown ragdoll");
+  RagdollSlot& slot = impl_->ragdolls.at(ragdoll.Value());
+  if (slot.simulated) {
+    return;
+  }
+  const RagdollKind& kind = impl_->ragdoll_kinds.at(slot.kind);
+  JPH::BodyInterface& body_interface = impl_->system.GetBodyInterface();
+  for (std::size_t i = 0; i < kind.parts.size(); ++i) {
+    const RagdollPart& part = kind.parts.at(i);
+    const Pose pose = PartPose(joints.at(part.joint), part.offset);
+    const JPH::BodyID id = slot.ragdoll.Get().GetBodyID(static_cast<int>(i));
+    // Remember the motion, so a ragdoll let go keeps falling the same way
+    if (dt > 0.0F) {
+      slot.velocities.at(i) =
+          (ToJolt(pose.position) - body_interface.GetPosition(id)) / dt;
+    }
+    body_interface.SetPositionAndRotation(id, ToJolt(pose.position),
+                                          ToJolt(pose.rotation),
+                                          JPH::EActivation::DontActivate);
+  }
+}
+
+void PhysicsWorld::SetRagdollSimulated(RagdollHandle ragdoll, bool simulated) {
+  assert(impl_->ragdolls.contains(ragdoll.Value()) && "unknown ragdoll");
+  RagdollSlot& slot = impl_->ragdolls.at(ragdoll.Value());
+  if (slot.simulated == simulated) {
+    return;
+  }
+  slot.simulated = simulated;
+  JPH::BodyInterface& body_interface = impl_->system.GetBodyInterface();
+  const auto& ids = slot.ragdoll.Get().GetBodyIDs();
+  for (std::size_t i = 0; i < ids.size(); ++i) {
+    const JPH::BodyID& id = ids.at(i);
+    body_interface.SetMotionType(
+        id, simulated ? JPH::EMotionType::Dynamic : JPH::EMotionType::Kinematic,
+        JPH::EActivation::Activate);
+    body_interface.SetLinearVelocity(
+        id, simulated ? slot.velocities.at(i) : JPH::Vec3::sZero());
+    body_interface.SetAngularVelocity(id, JPH::Vec3::sZero());
+  }
+}
+
+void PhysicsWorld::RagdollJointPoses(RagdollHandle ragdoll,
+                                     std::vector<Pose>& joints) const {
+  assert(impl_->ragdolls.contains(ragdoll.Value()) && "unknown ragdoll");
+  const RagdollSlot& slot = impl_->ragdolls.at(ragdoll.Value());
+  const RagdollKind& kind = impl_->ragdoll_kinds.at(slot.kind);
+  const JPH::BodyInterface& body_interface = impl_->system.GetBodyInterface();
+  for (std::size_t i = 0; i < kind.parts.size(); ++i) {
+    const RagdollPart& part = kind.parts.at(i);
+    JPH::RVec3 position = JPH::RVec3::sZero();
+    JPH::Quat rotation = JPH::Quat::sIdentity();
+    body_interface.GetPositionAndRotation(
+        slot.ragdoll.Get().GetBodyID(static_cast<int>(i)), position, rotation);
+    joints.at(part.joint) = JointOfPart(
+        {.position = ToBx(position), .rotation = ToBx(rotation)}, part.offset);
+  }
+}
+
+auto PhysicsWorld::UserData(RagdollHandle ragdoll) const
+    -> std::optional<UserTag> {
+  const auto it = impl_->ragdolls.find(ragdoll.Value());
+  if (it == impl_->ragdolls.end()) {
+    return std::nullopt;
+  }
+  return impl_->system.GetBodyInterface().GetUserData(
+      it->second.ragdoll.Get().GetBodyID(0));
+}
+
+auto PhysicsWorld::Ragdolls() const -> std::vector<RagdollEntry> {
+  std::vector<RagdollEntry> ragdolls;
+  ragdolls.reserve(impl_->ragdolls.size());
+  const JPH::BodyInterface& body_interface = impl_->system.GetBodyInterface();
+  for (const auto& [value, slot] : impl_->ragdolls) {
+    ragdolls.push_back({.ragdoll = RagdollHandle(value),
+                        .user_data = body_interface.GetUserData(
+                            slot.ragdoll.Get().GetBodyID(0))});
+  }
+  return ragdolls;
+}
+
 auto PhysicsWorld::CastRay(const bx::Ray& ray, float max_distance) const
     -> std::vector<RayHit> {
   assert(std::abs(bx::length(ray.dir) - 1.0F) < 1e-3F && "unit direction");
@@ -667,13 +992,24 @@ auto PhysicsWorld::CastRay(const bx::Ray& ray, float max_distance) const
   const JPH::BodyInterface& body_interface = impl_->system.GetBodyInterface();
   for (const JPH::RayCastResult& result : collector.mHits) {
     RayHit hit = hit_at(result.mFraction);
-    hit.body = BodyHandle(result.mBodyID.GetIndexAndSequenceNumber());
+    const std::uint32_t value = result.mBodyID.GetIndexAndSequenceNumber();
+    // A ragdoll part reports its ragdoll and part, not the body
+    if (const auto part = impl_->ragdoll_parts.find(value);
+        part != impl_->ragdoll_parts.end()) {
+      hit.ragdoll = RagdollHandle(part->second.ragdoll);
+      hit.part = part->second.part;
+    } else {
+      hit.body = BodyHandle(value);
+    }
     hit.user_data = body_interface.GetUserData(result.mBodyID);
     hits.push_back(hit);
   }
 
   // Characters aren't in Jolt's world, so their shapes are tested apart
   for (const auto& [value, slot] : impl_->characters) {
+    if (!slot.ray_target) {
+      continue;
+    }
     const JPH::TransformedShape shape =
         slot.hitbox != nullptr ? HitboxShape(slot)
                                : slot.character->GetTransformedShape();
