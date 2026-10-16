@@ -14,6 +14,7 @@
 
 #include "engine/ecs/components/camera.h"
 #include "engine/ecs/components/renderable.h"
+#include "engine/ecs/components/skin_pose.h"
 #include "engine/ecs/components/transform.h"
 #include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
@@ -23,6 +24,8 @@
 #include "engine/resource/asset_registry.h"
 #include "engine/resource/cpu_mesh.h"
 #include "engine/resource/gpu_mesh.h"
+#include "engine/resource/skeleton.h"
+#include "engine/util/mat4.h"
 
 namespace engine {
 
@@ -38,7 +41,23 @@ struct DrawItem {
   Renderable renderable;
   /// Index into the mesh's submeshes.
   std::uint32_t submesh{0};
+  /// The entity's skinning palette when drawn posed; null for bind pose.
+  /// Points into the ECS, unchanged between gather and submit.
+  const std::vector<Mat4>* palette{nullptr};
 };
+
+/**
+ * @brief @p entity's skinning palette if its mesh is skinned and it has a
+ * pose, else null.
+ */
+auto PaletteOf(Ecs& ecs, Entity entity, const GpuMesh& mesh)
+    -> const std::vector<Mat4>* {
+  const auto* pose = ecs.TryGetComponent<SkinPose>(entity);
+  if (pose == nullptr || pose->palette.empty() || !mesh.rig.IsValid()) {
+    return nullptr;
+  }
+  return &pose->palette;
+}
 
 /**
  * @brief One draw item per submesh of every entity with a Transform and a
@@ -48,13 +67,16 @@ auto GatherDraws(Ecs& ecs, const AssetRegistry& assets)
     -> std::vector<DrawItem> {
   std::vector<DrawItem> draws;
   ecs.View<Transform, Renderable>().ForEach(
-      [&draws, &assets](Entity /*entity*/, const Transform& transform,
-                        const Renderable& renderable) -> void {
+      [&draws, &assets, &ecs](Entity entity, const Transform& transform,
+                              const Renderable& renderable) -> void {
         const auto model = ModelMatrix(transform);
         const GpuMesh& mesh = assets.GetMesh(renderable.mesh_handle);
+        const auto* palette = PaletteOf(ecs, entity, mesh);
         for (std::uint32_t i = 0; i < mesh.submeshes.size(); ++i) {
-          draws.push_back(
-              {.model = model, .renderable = renderable, .submesh = i});
+          draws.push_back({.model = model,
+                           .renderable = renderable,
+                           .submesh = i,
+                           .palette = palette});
         }
       });
   return draws;
@@ -80,6 +102,9 @@ auto Modulate(const std::array<float, 4>& a, const std::array<float, 4>& b)
 
 RenderSystem::RenderSystem()
     : default_program_(loadProgram("vs_mesh.sc", "fs_mesh.sc")),
+      skinned_program_(loadProgram("vs_mesh_skinned.sc", "fs_mesh.sc")),
+      u_bones_(bgfx::createUniform("u_bones", bgfx::UniformType::Mat4,
+                                   static_cast<std::uint16_t>(kMaxJoints))),
       u_time_(bgfx::createUniform("u_time", bgfx::UniformFreq::Frame,
                                   bgfx::UniformType::Vec4)),
       u_color_(bgfx::createUniform("u_color", bgfx::UniformType::Vec4)),
@@ -96,6 +121,9 @@ RenderSystem::RenderSystem()
   // Members are built, so throwing here still releases them
   if (!default_program_) {
     throw std::runtime_error("failed to link vs_mesh/fs_mesh program");
+  }
+  if (!skinned_program_) {
+    throw std::runtime_error("failed to link vs_mesh_skinned/fs_mesh program");
   }
 
   // The scene view clears the backbuffer each frame
@@ -135,14 +163,24 @@ void RenderSystem::Update(Ecs& ecs, const AssetRegistry& assets,
     const GpuMesh& mesh = assets.GetMesh(renderable.mesh_handle);
     const Submesh& submesh = mesh.submeshes.at(draw.submesh);
 
-    const auto program = bgfx::isValid(renderable.program)
-                             ? renderable.program
-                             : default_program_.Get();
+    // A Renderable's own program draws the bind pose
+    const bool skinned = draw.palette != nullptr;
+    bgfx::ProgramHandle program =
+        skinned ? skinned_program_.Get() : default_program_.Get();
+    if (bgfx::isValid(renderable.program)) {
+      program = renderable.program;
+    }
 
     bgfx::setTransform(draw.model.data());
     bgfx::setVertexBuffer(0, mesh.positions.Get());
     bgfx::setVertexBuffer(1, mesh.normals.Get());
     bgfx::setVertexBuffer(2, mesh.uvs.Get());
+    if (skinned) {
+      bgfx::setVertexBuffer(3, mesh.joints.Get());
+      bgfx::setVertexBuffer(4, mesh.weights.Get());
+      bgfx::setUniform(u_bones_.Get(), draw.palette->data(),
+                       static_cast<std::uint16_t>(draw.palette->size()));
+    }
     bgfx::setIndexBuffer(mesh.indices.Get(), submesh.first_index,
                          submesh.index_count);
     // Primitives without a glTF material draw the default (white, untextured)

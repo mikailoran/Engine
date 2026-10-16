@@ -57,6 +57,10 @@ class ShadowSystem {
 
  private:
   UniqueHandle<bgfx::ProgramHandle> program_;
+  // program_'s skinned twin, for entities with a SkinPose.
+  UniqueHandle<bgfx::ProgramHandle> skinned_program_;
+  // Per-draw skinning palette, kMaxJoints Mat4s.
+  UniqueHandle<bgfx::UniformHandle> u_bones_;
 
   // Owns the depth texture it renders into.
   UniqueHandle<bgfx::FrameBufferHandle> framebuffer_;

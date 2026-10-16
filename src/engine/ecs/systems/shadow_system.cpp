@@ -12,6 +12,7 @@
 #include "engine/ecs/components/camera.h"
 #include "engine/ecs/components/directional_light.h"
 #include "engine/ecs/components/renderable.h"
+#include "engine/ecs/components/skin_pose.h"
 #include "engine/ecs/components/transform.h"
 #include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
@@ -20,6 +21,7 @@
 #include "engine/render_views.h"
 #include "engine/resource/asset_registry.h"
 #include "engine/resource/gpu_mesh.h"
+#include "engine/resource/skeleton.h"
 #include "engine/resource/unique_handle.h"
 
 namespace engine {
@@ -56,6 +58,9 @@ auto CreateShadowMap() -> UniqueHandle<bgfx::FrameBufferHandle> {
 
 ShadowSystem::ShadowSystem()
     : program_(loadProgram("vs_shadow.sc", "fs_shadow.sc")),
+      skinned_program_(loadProgram("vs_shadow_skinned.sc", "fs_shadow.sc")),
+      u_bones_(bgfx::createUniform("u_bones", bgfx::UniformType::Mat4,
+                                   static_cast<std::uint16_t>(kMaxJoints))),
       framebuffer_(CreateShadowMap()),
       u_shadow_mtx_(bgfx::createUniform("u_shadowMtx", bgfx::UniformFreq::Frame,
                                         bgfx::UniformType::Mat4)),
@@ -65,6 +70,10 @@ ShadowSystem::ShadowSystem()
   // Members are built, so throwing here still releases them
   if (!program_) {
     throw std::runtime_error("failed to link vs_shadow/fs_shadow program");
+  }
+  if (!skinned_program_) {
+    throw std::runtime_error(
+        "failed to link vs_shadow_skinned/fs_shadow program");
   }
   if ((bgfx::getCaps()->supported & BGFX_CAPS_TEXTURE_COMPARE_LEQUAL) == 0) {
     throw std::runtime_error("renderer cannot sample shadow maps (no compare)");
@@ -123,16 +132,27 @@ void ShadowSystem::Update(Ecs& ecs, const AssetRegistry& assets,
   bgfx::touch(kShadowView);
 
   ecs.View<Transform, Renderable>().ForEach(
-      [&assets, this](Entity, const Transform& transform,
-                      const Renderable& renderable) -> void {
+      [&assets, &ecs, this](Entity entity, const Transform& transform,
+                            const Renderable& renderable) -> void {
         const GpuMesh& mesh = assets.GetMesh(renderable.mesh_handle);
         const auto model = ModelMatrix(transform);
         bgfx::setTransform(model.data());
         bgfx::setVertexBuffer(0, mesh.positions.Get());
+        // Posed meshes cast their pose, others their bind pose
+        const auto* pose = ecs.TryGetComponent<SkinPose>(entity);
+        const bool skinned =
+            pose != nullptr && !pose->palette.empty() && mesh.rig.IsValid();
+        if (skinned) {
+          bgfx::setVertexBuffer(1, mesh.joints.Get());
+          bgfx::setVertexBuffer(2, mesh.weights.Get());
+          bgfx::setUniform(u_bones_.Get(), pose->palette.data(),
+                           static_cast<std::uint16_t>(pose->palette.size()));
+        }
         // Every submesh in one draw: depth ignores materials
         bgfx::setIndexBuffer(mesh.indices.Get());
         bgfx::setState(kCasterState);
-        bgfx::submit(kShadowView, program_.Get());
+        bgfx::submit(kShadowView,
+                     skinned ? skinned_program_.Get() : program_.Get());
       });
 }
 

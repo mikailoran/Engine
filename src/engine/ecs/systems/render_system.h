@@ -14,7 +14,8 @@ class AssetRegistry;
 struct FrameContext;
 
 /**
- * @brief Draws every entity carrying {Transform, Renderable}.
+ * @brief Draws every entity carrying {Transform, Renderable}; a skinned mesh
+ * whose entity has a SkinPose is drawn posed, otherwise in bind pose.
  *
  * Owns kSceneView and the resources shared across entities (shader program,
  * uniforms and the fallback white texture). Releases them on destruction,
@@ -28,7 +29,7 @@ class RenderSystem {
    * Requires bgfx::init to have completed, and the asset root to be set via
    * SetAssetRoot, since loadProgram resolves its paths against it.
    *
-   * @throws std::runtime_error If the default program fails to link.
+   * @throws std::runtime_error If a default program fails to link.
    */
   RenderSystem();
 
@@ -57,6 +58,12 @@ class RenderSystem {
  private:
   // Used when a Renderable leaves its own program handle invalid.
   UniqueHandle<bgfx::ProgramHandle> default_program_;
+
+  // The default program's skinned twin, for entities with a SkinPose.
+  UniqueHandle<bgfx::ProgramHandle> skinned_program_;
+
+  // Per-draw skinning palette, kMaxJoints Mat4s.
+  UniqueHandle<bgfx::UniformHandle> u_bones_;
 
   UniqueHandle<bgfx::UniformHandle> u_time_;
 

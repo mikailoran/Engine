@@ -3,12 +3,16 @@
   "components": {
     "transform": {},
     "renderable": {
-      "mesh": "assets/meshes/characters/Male_Casual.glb"
+      "mesh": "assets/meshes/characters/Superhero_Male.glb"
+    },
+    "animator": {
+      "clips": "assets/animations/UAL1.glb",
+      "play": "Idle_Loop"
     },
     "character_body": {
-      "height": 1.7,
+      "height": 1.8,
       "radius": 0.3,
-      "hitbox": "assets/meshes/characters/Male_Casual.glb"
+      "hitbox": "assets/meshes/characters/Superhero_Male.glb"
     },
     "health": {
       "max": 100,
