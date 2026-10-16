@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "engine/resource/animation_clip.h"
 #include "engine/resource/skeleton.h"
@@ -38,6 +39,7 @@ class Rig {
  private:
   friend class Clip;
   friend class Evaluator;
+  friend void RestPose(const Rig& rig, std::vector<Mat4>& model);
   struct State;
   std::unique_ptr<State> state_;
 };

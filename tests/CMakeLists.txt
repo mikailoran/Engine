@@ -77,7 +77,8 @@ set_target_properties(asset_tests PROPERTIES
 
 # The animation runtime on the real rigs and clips; no bgfx or ECS
 add_executable(animation_tests
-  animation/rig_test.cpp)
+  animation/rig_test.cpp
+  animation/evaluate_test.cpp)
 
 target_link_libraries(animation_tests PRIVATE engine_animation GTest::gtest_main)
 target_compile_definitions(animation_tests PRIVATE

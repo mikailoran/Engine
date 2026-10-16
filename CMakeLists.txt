@@ -207,12 +207,17 @@ set_target_properties(engine_assets PROPERTIES
 add_library(engine_animation STATIC
   src/engine/animation/rig.h
   src/engine/animation/rig.cpp
+  src/engine/animation/evaluate.h
+  src/engine/animation/evaluate.cpp
   src/engine/animation/ozz_state.h)
 
 target_include_directories(engine_animation PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(engine_animation PUBLIC engine_assets
   PRIVATE ozz_animation_offline ozz_animation ozz_base)
-target_compile_options(engine_animation PRIVATE -Wall -Wextra -Wpedantic)
+# ozz's SIMD types as template arguments lose attributes GCC warns about;
+# ozz builds itself with the same suppression
+target_compile_options(engine_animation PRIVATE -Wall -Wextra -Wpedantic
+  -Wno-ignored-attributes)
 
 set_target_properties(engine_animation PROPERTIES
   CXX_STANDARD 20
