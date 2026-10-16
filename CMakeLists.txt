@@ -399,7 +399,7 @@ endforeach()
 add_custom_target(shaders DEPENDS ${VS_OUTPUTS} ${FS_OUTPUTS})
 add_dependencies(launcher shaders)
 
-# --- Meshes and levels ------------------------------------------------------
+# --- Meshes, levels and animations ------------------------------------------
 # glTF loads as authored (ADR 0010), so the files are only copied beside the
 # executable; edits recopy on build.
 set(ENGINE_GLTF_ASSETS
@@ -413,6 +413,11 @@ set(ENGINE_GLTF_ASSETS
   meshes/bunny.glb
   meshes/uv_cube.glb
   meshes/characters/Male_Casual.glb
+  meshes/characters/Superhero_Male.glb
+  meshes/characters/hair/Hair_SimpleParted.glb
+  meshes/weapons/Pistol_1.glb
+  meshes/weapons/AssaultRifle_1.glb
+  animations/UAL1.glb
   levels/level01.glb
   levels/level02.glb
   levels/kenney_prototype_01.glb
