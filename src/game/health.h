@@ -6,7 +6,7 @@ namespace game {
 
 /**
  * @brief How much damage an entity can still take. Shots lower `current`;
- * nothing happens yet when it reaches 0.
+ * at 0 the entity dies (see HandleShots).
  */
 struct Health {
   /// Full health; positive.
@@ -23,5 +23,8 @@ inline auto ApplyDamage(Health& health, int damage) -> int {
   health.current = std::max(0, health.current - damage);
   return health.current;
 }
+
+/** @brief Whether @p health has run out. */
+inline auto IsDead(const Health& health) -> bool { return health.current <= 0; }
 
 }  // namespace game

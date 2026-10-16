@@ -30,10 +30,12 @@
         "bind_space": true
       }
     ],
+    "ragdoll": {
+      "file": "assets/ragdolls/ual_humanoid.json"
+    },
     "character_body": {
       "height": 1.8,
-      "radius": 0.3,
-      "hitbox": "assets/meshes/characters/Superhero_Male.glb"
+      "radius": 0.3
     },
     "health": {
       "max": 100,

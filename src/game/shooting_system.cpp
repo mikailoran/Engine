@@ -10,28 +10,36 @@
 #include <string>
 #include <vector>
 
+#include "engine/ecs/components/character_body.h"
 #include "engine/ecs/components/lifetime.h"
 #include "engine/ecs/components/name.h"
+#include "engine/ecs/components/ragdoll.h"
 #include "engine/ecs/components/renderable.h"
 #include "engine/ecs/components/transform.h"
 #include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
 #include "engine/engine.h"
 #include "game/aim.h"
+#include "game/enemy.h"
 #include "game/health.h"
 #include "game/weapon.h"
 
+using engine::CharacterBody;
 using engine::Ecs;
 using engine::Engine;
 using engine::Entity;
 using engine::Lifetime;
 using engine::Name;
+using engine::Ragdoll;
 using engine::Renderable;
 using engine::Transform;
 
 namespace game {
 
 namespace {
+
+/// How long a ragdolled body lies before it's removed, in s.
+constexpr float kCorpseSeconds = 15.0F;
 
 /** @brief One shot fired this frame, kept until its beam is spawned. */
 struct Shot {
@@ -63,10 +71,41 @@ auto AlongSegment(const bx::Vec3& from, const bx::Vec3& to) -> bx::Quaternion {
   return {dir.z * inv_norm, 0.0F, -dir.x * inv_norm, (1.0F + dir.y) * inv_norm};
 }
 
+/** @brief Removes @p entity's Component if it has one. */
+template <class Component>
+void RemoveIfPresent(Ecs& ecs, Entity entity) {
+  if (ecs.HasComponent<Component>(entity)) {
+    ecs.RemoveComponent<Component>(entity);
+  }
+}
+
+/**
+ * @brief Kills @p entity: a character with a ragdoll goes limp and stays for
+ * kCorpseSeconds, anything else is destroyed.
+ * @pre Not inside a ForEach: it removes components.
+ */
+void Die(Ecs& ecs, Entity entity) {
+  auto* ragdoll = ecs.TryGetComponent<Ragdoll>(entity);
+  if (ragdoll == nullptr) {
+    ecs.DestroyEntity(entity);
+    return;
+  }
+  ragdoll->simulate = true;
+  // A body no longer walks, chases, shoots or takes damage
+  RemoveIfPresent<CharacterBody>(ecs, entity);
+  RemoveIfPresent<Enemy>(ecs, entity);
+  RemoveIfPresent<Weapon>(ecs, entity);
+  RemoveIfPresent<Aim>(ecs, entity);
+  RemoveIfPresent<Health>(ecs, entity);
+  ecs.AddComponent(entity, Lifetime{kCorpseSeconds});
+}
+
 }  // namespace
 
 auto HandleShots(Engine& engine) -> void {
   std::vector<Shot> shots;
+  // Dying removes viewed components, so it waits for the loop to end
+  std::vector<Entity> deaths;
   engine.World().View<Aim, Weapon>().ForEach(
       [&](Entity entity, const Aim& aim, Weapon& weapon) -> void {
         // Fire only on a trigger pull with the weapon ready
@@ -102,15 +141,18 @@ auto HandleShots(Engine& engine) -> void {
                            remaining_health)
                     << "\n";
 
-          // TODO: Use a death system
-          if (remaining_health <= 0) {
-            ecs.DestroyEntity(hit->entity);
+          if (IsDead(*health)) {
+            deaths.push_back(hit->entity);
           }
         }
       });
 
-  // Make the projectile beam
   auto& ecs = engine.World();
+  for (const Entity entity : deaths) {
+    Die(ecs, entity);
+  }
+
+  // Make the projectile beam
   auto beam_mesh_handle = engine.Assets().LoadMesh("assets/meshes/beam.glb");
   for (const auto& shot : shots) {
     auto beam = ecs.CreateEntity();

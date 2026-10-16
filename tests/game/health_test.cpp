@@ -25,6 +25,11 @@ TEST(Health, ZeroStaysZero) {
   EXPECT_EQ(ApplyDamage(health, 25), 0);
 }
 
+TEST(Health, DeadOnlyAtZero) {
+  EXPECT_FALSE(IsDead(Health{.max = 100, .current = 1}));
+  EXPECT_TRUE(IsDead(Health{.max = 100, .current = 0}));
+}
+
 }  // namespace
 
 }  // namespace game
