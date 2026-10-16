@@ -1,5 +1,9 @@
 #pragma once
 
+#include <cstdint>
+#include <map>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include "engine/animation/evaluate.h"
@@ -25,7 +29,17 @@ class AnimationSystem {
   void Update(Ecs& ecs, const AssetRegistry& assets, const FrameContext& ctx);
 
  private:
+  /**
+   * @brief The per-joint weights of the mask named @p root on rig
+   * @p rig_value, computed on first use.
+   */
+  auto Mask(const AssetRegistry& assets, std::uint16_t rig_value,
+            const std::string& root) -> const std::vector<float>&;
+
   animation::Evaluator evaluator_;
+  /// Masks by RigHandle::Value and root joint name; map nodes stay put, so
+  /// samples can point at them.
+  std::map<std::pair<std::uint16_t, std::string>, std::vector<float>> masks_;
   /// This entity's evaluation layers, rebuilt per entity.
   std::vector<animation::LayerSample> samples_;
 };

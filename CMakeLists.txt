@@ -211,6 +211,8 @@ add_library(engine_animation STATIC
   src/engine/animation/evaluate.h
   src/engine/animation/evaluate.cpp
   src/engine/animation/playback.h
+  src/engine/animation/mask.h
+  src/engine/animation/mask.cpp
   src/engine/animation/ozz_state.h)
 
 target_include_directories(engine_animation PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)

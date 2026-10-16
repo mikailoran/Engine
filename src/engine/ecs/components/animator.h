@@ -2,6 +2,8 @@
 
 #include <array>
 #include <cstddef>
+#include <string>
+#include <utility>
 
 #include "engine/animation/playback.h"
 #include "engine/resource/animation_handles.h"
@@ -75,6 +77,22 @@ inline void PlayBlend(Animator& animator, std::size_t layer, ClipHandle from,
                          .speed = options.speed,
                          .loop = options.loop},
                         options.fade_s);
+}
+
+/** @brief How a layer stacks over the ones below it. */
+struct LayerSettings {
+  /// 0..1: how much the layer overrides the layers below.
+  float weight{1.0F};
+  /// The joint whose subtree the layer covers; empty: the whole skeleton.
+  std::string mask;
+};
+
+/** @brief Sets how @p layer stacks over the layers below it. */
+inline void SetLayer(Animator& animator, std::size_t layer,
+                     LayerSettings settings) {
+  animation::LayerState& state = animator.layers.at(layer);
+  state.weight = settings.weight;
+  state.mask = std::move(settings.mask);
 }
 
 /** @brief Fades @p layer out to nothing over @p fade_s seconds. */

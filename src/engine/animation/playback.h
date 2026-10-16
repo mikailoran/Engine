@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <string>
 
 #include "engine/resource/animation_handles.h"
 
@@ -42,6 +43,9 @@ struct LayerState {
   float fade_elapsed_s{0.0F};
   /// 0..1: how much the layer overrides the layers below it.
   float weight{1.0F};
+  /// Name of the joint whose subtree the layer covers (e.g. "spine_01"
+  /// for the upper body); empty covers the whole skeleton.
+  std::string mask;
 };
 
 /**

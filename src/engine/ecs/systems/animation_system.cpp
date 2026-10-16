@@ -1,8 +1,12 @@
 #include "engine/ecs/systems/animation_system.h"
 
+#include <cstdint>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include "engine/animation/evaluate.h"
+#include "engine/animation/mask.h"
 #include "engine/animation/playback.h"
 #include "engine/animation/rig.h"
 #include "engine/ecs/components/animator.h"
@@ -32,24 +36,26 @@ auto TrackDuration(const animation::Track& track, const AssetRegistry& assets)
   return first + ((second - first) * track.blend);
 }
 
-/** @brief @p track as an evaluation layer of @p weight. */
+/** @brief @p track as an evaluation layer of @p weight under @p mask. */
 auto Sample(const animation::Track& track, float weight,
-            const AssetRegistry& assets) -> animation::LayerSample {
+            const std::vector<float>* mask, const AssetRegistry& assets)
+    -> animation::LayerSample {
   return {.clip = &assets.GetClip(track.clip),
           .blend_with = track.blend_with.IsValid()
                             ? &assets.GetClip(track.blend_with)
                             : nullptr,
           .blend = track.blend,
           .phase = track.phase,
-          .weight = weight};
+          .weight = weight,
+          .joint_weights = mask};
 }
 
 /**
- * @brief Steps @p layer by @p dt and appends its evaluation layers: what is
- * fading out under what fades in.
+ * @brief Steps @p layer by @p dt and appends its evaluation layers, under
+ * @p mask (null: whole body): what is fading out under what fades in.
  */
 void StepLayer(animation::LayerState& layer, float dt,
-               const AssetRegistry& assets,
+               const std::vector<float>* mask, const AssetRegistry& assets,
                std::vector<animation::LayerSample>& samples) {
   animation::AdvanceFade(layer, dt);
   const bool fading = layer.previous.clip.IsValid();
@@ -67,11 +73,11 @@ void StepLayer(animation::LayerState& layer, float dt,
   if (fading) {
     samples.push_back(Sample(layer.previous,
                              layer.weight * (playing ? 1.0F : 1.0F - alpha),
-                             assets));
+                             mask, assets));
   }
   if (playing) {
-    samples.push_back(
-        Sample(layer.current, layer.weight * (fading ? alpha : 1.0F), assets));
+    samples.push_back(Sample(
+        layer.current, layer.weight * (fading ? alpha : 1.0F), mask, assets));
   }
 }
 
@@ -104,7 +110,11 @@ void AnimationSystem::Update(Ecs& ecs, const AssetRegistry& assets,
 
         samples_.clear();
         for (animation::LayerState& layer : animator.layers) {
-          StepLayer(layer, ctx.dt, assets, samples_);
+          const auto* mask =
+              layer.mask.empty()
+                  ? nullptr
+                  : &Mask(assets, rig_handle.Value(), layer.mask);
+          StepLayer(layer, ctx.dt, mask, assets, samples_);
         }
         if (samples_.empty()) {
           animation::RestPose(rig, pose.model);
@@ -113,6 +123,18 @@ void AnimationSystem::Update(Ecs& ecs, const AssetRegistry& assets,
         }
         animation::Palette(rig.Source(), pose.model, pose.palette);
       });
+}
+
+auto AnimationSystem::Mask(const AssetRegistry& assets, std::uint16_t rig_value,
+                           const std::string& root)
+    -> const std::vector<float>& {
+  auto key = std::make_pair(rig_value, root);
+  if (auto it = masks_.find(key); it != masks_.end()) {
+    return it->second;
+  }
+  const auto& skeleton = assets.GetRig(RigHandle(rig_value)).Source();
+  return masks_.emplace(std::move(key), animation::JointMask(skeleton, root))
+      .first->second;
 }
 
 }  // namespace engine
