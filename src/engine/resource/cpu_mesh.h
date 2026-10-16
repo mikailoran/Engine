@@ -27,19 +27,31 @@ struct Submesh {
 };
 
 /**
- * @brief How a submesh looks: glTF's base color, the only part drawn so far.
- * Shared by CpuMesh and GpuMesh.
+ * @brief How a submesh looks: glTF's base color, metallic-roughness factors
+ * and emission. Shared by CpuMesh and GpuMesh.
+ *
+ * Defaults are a white dielectric, used for primitives without a glTF
+ * material (glTF's own defaults would make them fully metallic).
  */
 struct MeshMaterial {
   /// Linear RGBA, multiplied with the image's color.
   std::array<float, 4> base_color{1.0F, 1.0F, 1.0F, 1.0F};
   /// Index into the mesh's images (textures on the GPU); empty for none.
   std::optional<std::uint32_t> base_color_image;
+  /// 0 dielectric to 1 metal.
+  float metallic{0.0F};
+  /// Perceptual roughness, 0 mirror-smooth to 1 fully rough.
+  float roughness{0.5F};
+  /// Linear RGB light the surface gives off, unlit and unshadowed; may
+  /// exceed 1 (KHR_emissive_strength). Multiplied with the image's color.
+  std::array<float, 3> emissive{0.0F, 0.0F, 0.0F};
+  /// Index into the mesh's images for the emissive color; empty for none.
+  std::optional<std::uint32_t> emissive_image;
 };
 
 /**
  * @brief An image decoded to RGBA8 with its full mip chain, ready to upload.
- * Its colors are sRGB, as glTF base color images are.
+ * Its colors are sRGB, as glTF base color and emissive images are.
  */
 struct CpuImage {
   std::uint16_t width{0};
@@ -75,7 +87,7 @@ struct CpuMesh {
   bx::Aabb bounds{.min = bx::InitZero, .max = bx::InitZero};
   /// Indexed by Submesh::material.
   std::vector<MeshMaterial> materials;
-  /// Indexed by MeshMaterial::base_color_image; each decoded once.
+  /// Indexed by MeshMaterial's *_image fields; each decoded once.
   std::vector<CpuImage> images;
 };
 

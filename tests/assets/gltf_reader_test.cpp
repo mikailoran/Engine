@@ -82,6 +82,13 @@ void ExpectWellFormed(const CpuMesh& mesh) {
     if (material.base_color_image) {
       EXPECT_LT(*material.base_color_image, mesh.images.size());
     }
+    EXPECT_GE(material.metallic, 0.0F);
+    EXPECT_LE(material.metallic, 1.0F);
+    EXPECT_GE(material.roughness, 0.0F);
+    EXPECT_LE(material.roughness, 1.0F);
+    if (material.emissive_image) {
+      EXPECT_LT(*material.emissive_image, mesh.images.size());
+    }
   }
   for (const CpuImage& image : mesh.images) {
     ExpectFullMipChain(image);
@@ -112,6 +119,31 @@ TEST(GltfReader, ReadsBaseColorTexture) {
   EXPECT_EQ(mesh.images.front().width, 512);
   EXPECT_EQ(mesh.images.front().height, 512);
   EXPECT_EQ(mesh.images.front().mip_count, 10);
+}
+
+TEST(GltfReader, ReadsMetallicRoughnessFactors) {
+  // Every material in the level is a dielectric at roughness 0.8
+  const CpuMesh mesh = ReadGltf(std::filesystem::path(ENGINE_ASSET_DIR) /
+                                "levels/level02.glb");
+
+  ASSERT_FALSE(mesh.materials.empty());
+  for (const MeshMaterial& material : mesh.materials) {
+    EXPECT_FLOAT_EQ(material.metallic, 0.0F);
+    EXPECT_FLOAT_EQ(material.roughness, 0.8F);
+  }
+}
+
+TEST(GltfReader, ScalesEmissiveByStrength) {
+  // The shot beam: emissive (1, 0.85, 0.3) at KHR_emissive_strength 4
+  const CpuMesh mesh =
+      ReadGltf(std::filesystem::path(ENGINE_ASSET_DIR) / "meshes/beam.glb");
+
+  ASSERT_EQ(mesh.materials.size(), 1U);
+  const MeshMaterial& material = mesh.materials.front();
+  EXPECT_FLOAT_EQ(material.emissive.at(0), 4.0F);
+  EXPECT_FLOAT_EQ(material.emissive.at(1), 3.4F);
+  EXPECT_FLOAT_EQ(material.emissive.at(2), 1.2F);
+  EXPECT_FALSE(material.emissive_image);
 }
 
 TEST(GltfReader, UnskinnedVerticesFollowTheirNode) {

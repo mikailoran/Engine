@@ -28,7 +28,7 @@ struct GpuMesh {
   bx::Aabb bounds{.min = bx::InitZero, .max = bx::InitZero};
   /// Indexed by Submesh::material.
   std::vector<MeshMaterial> materials;
-  /// Indexed by MeshMaterial::base_color_image: sRGB, mipmapped, repeating.
+  /// Indexed by MeshMaterial's *_image fields: sRGB, mipmapped, repeating.
   std::vector<UniqueHandle<bgfx::TextureHandle>> textures;
 };
 

@@ -6,6 +6,7 @@
 #include <bx/allocator.h>
 #include <cgltf/cgltf.h>
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <filesystem>
@@ -97,28 +98,21 @@ auto DecodeImage(std::span<const std::uint8_t> bytes) -> CpuImage {
 }
 
 /**
- * @brief Reads one glTF material's base color into @p mesh, decoding its
- * image unless an earlier material already did.
+ * @brief Index in mesh.images of the sRGB image @p view samples, decoding it
+ * unless an earlier texture already did; empty if @p view has no image.
  *
  * @param image_slots Index in mesh.images per glTF image, filled as decoded.
+ * @throws std::runtime_error For a second UV set or a texture transform.
  */
-auto ReadMaterial(const cgltf_data& data, const cgltf_material& source,
-                  const std::filesystem::path& gltf_path,
-                  std::vector<std::optional<std::uint32_t>>& image_slots,
-                  CpuMesh& mesh) -> MeshMaterial {
-  MeshMaterial material;
-  if (!source.has_pbr_metallic_roughness) {
-    return material;
-  }
-  const cgltf_pbr_metallic_roughness& pbr = source.pbr_metallic_roughness;
-  material.base_color = std::to_array(pbr.base_color_factor);
-
-  const cgltf_texture_view& view = pbr.base_color_texture;
+auto ReadImage(const cgltf_data& data, const cgltf_texture_view& view,
+               const std::filesystem::path& gltf_path,
+               std::vector<std::optional<std::uint32_t>>& image_slots,
+               CpuMesh& mesh) -> std::optional<std::uint32_t> {
   if (view.texture == nullptr || view.texture->image == nullptr) {
-    return material;
+    return std::nullopt;
   }
   if (view.texcoord != 0) {
-    throw std::runtime_error("base color texture must use TEXCOORD_0");
+    throw std::runtime_error("textures must use TEXCOORD_0");
   }
   if (view.has_transform) {
     throw std::runtime_error("texture transforms are unsupported");
@@ -130,7 +124,38 @@ auto ReadMaterial(const cgltf_data& data, const cgltf_material& source,
     slot = static_cast<std::uint32_t>(mesh.images.size());
     mesh.images.push_back(DecodeImage(ImageBytes(image, gltf_path)));
   }
-  material.base_color_image = slot;
+  return slot;
+}
+
+/**
+ * @brief Reads one glTF material's base color, metallic-roughness factors
+ * and emission into @p mesh, decoding images unless already decoded.
+ *
+ * @param image_slots Index in mesh.images per glTF image, filled as decoded.
+ */
+auto ReadMaterial(const cgltf_data& data, const cgltf_material& source,
+                  const std::filesystem::path& gltf_path,
+                  std::vector<std::optional<std::uint32_t>>& image_slots,
+                  CpuMesh& mesh) -> MeshMaterial {
+  MeshMaterial material;
+  // KHR_emissive_strength scales the factor past glTF's 0..1
+  const float strength = source.has_emissive_strength
+                             ? source.emissive_strength.emissive_strength
+                             : 1.0F;
+  std::ranges::transform(source.emissive_factor, material.emissive.begin(),
+                         [strength](float c) -> float { return c * strength; });
+  material.emissive_image = ReadImage(data, source.emissive_texture, gltf_path,
+                                      image_slots, mesh);
+
+  if (!source.has_pbr_metallic_roughness) {
+    return material;
+  }
+  const cgltf_pbr_metallic_roughness& pbr = source.pbr_metallic_roughness;
+  material.base_color = std::to_array(pbr.base_color_factor);
+  material.metallic = std::clamp(pbr.metallic_factor, 0.0F, 1.0F);
+  material.roughness = std::clamp(pbr.roughness_factor, 0.0F, 1.0F);
+  material.base_color_image = ReadImage(data, pbr.base_color_texture,
+                                        gltf_path, image_slots, mesh);
   return material;
 }
 

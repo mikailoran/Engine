@@ -63,6 +63,12 @@ class RenderSystem {
   // Per-draw surface color: the material's base color times the entity's tint.
   UniqueHandle<bgfx::UniformHandle> u_color_;
 
+  // Per-draw material factors: x metallic, y roughness.
+  UniqueHandle<bgfx::UniformHandle> u_material_;
+
+  // Per-draw linear RGB emission, multiplied with the emissive texture.
+  UniqueHandle<bgfx::UniformHandle> u_emissive_;
+
   // Per-frame camera world position.
   UniqueHandle<bgfx::UniformHandle> u_eye_pos_;
 
@@ -72,7 +78,10 @@ class RenderSystem {
   // Shadow map sampler, stage 1.
   UniqueHandle<bgfx::UniformHandle> s_shadow_map_;
 
-  // 1x1 white, bound for untextured submeshes so they keep their plain color.
+  // Emissive color sampler, stage 2.
+  UniqueHandle<bgfx::UniformHandle> s_emissive_;
+
+  // 1x1 white, bound for missing textures so their factor applies unchanged.
   UniqueHandle<bgfx::TextureHandle> default_texture_;
 
   // Entity supplying view and projection; empty until SetActiveCamera.
