@@ -80,6 +80,18 @@ void Engine::LoadScene(const std::filesystem::path& path) {
   scene_loader_.Load(path, ecs_, assets_, physics_world_);
 }
 
+auto Engine::SpawnPrefab(const std::filesystem::path& prefab,
+                         const Transform& pose) -> Entity {
+  const auto entity =
+      scene_loader_.Spawn(prefab, ecs_, assets_, physics_world_);
+  if (ecs_.HasComponent<Transform>(entity)) {
+    ecs_.GetComponent<Transform>(entity) = pose;
+  } else {
+    ecs_.AddComponent(entity, pose);
+  }
+  return entity;
+}
+
 void Engine::ClearWorld() {
   // Dead ids are ignored, so every possible id can be queued
   for (Entity entity = 0; entity < kMaxEntities; ++entity) {

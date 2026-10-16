@@ -126,8 +126,9 @@ state.
 `Name` is the one engine component without a component block: a scene
 entity's `"name"`, beside its `"components"`, becomes its `Name`. It is a
 label for tools, not an identifier, so names need not be unique. Entities
-the hosts spawn at runtime (their cameras) have none, and the editor's
-entity list shows only named entities.
+the hosts create in code (their cameras) have none, and the editor's entity
+list shows only named entities. A prefab spawned at runtime is named after
+its file (`enemy.json` gives `enemy`).
 
 **Prefabs** are reusable entity templates: a file under `assets/prefabs/`
 holding `{ "version": 1, "components": { ... } }`, the same component blocks
@@ -136,6 +137,23 @@ a scene entity has. A scene entity names one with `"prefab"`, and its own
 an override can set a single field (a `transform`'s `position` keeps the
 prefab's scale), and `null` removes a component. The loader flattens the two
 while loading, so once loaded a prefab instance is an ordinary entity.
+
+Gameplay can also instantiate a prefab at runtime with
+`Engine::SpawnPrefab(path, pose)`, which builds the entity through the same
+component loaders as a scene entry naming only that prefab, then sets its
+`Transform` to `pose` (scale included). Physics picks it up on the next
+`Update`. Two rules for callers:
+
+- Don't spawn inside a `ForEach`: adding a component the view iterates
+  asserts. Collect the spawns, then create them after the loop
+  (`HandleEnemySpawns` in `src/game/enemy_spawning.cpp` does this).
+- A prefab or asset that won't load throws, and mid-game that ends the run.
+
+The loader reads each prefab file once and caches it for its lifetime,
+shared by scene loads and spawns, so editing a prefab on disk needs a restart.
+A mesh is loaded on its first use, so spawning one no scene has loaded yet can
+hitch.
+
 Nothing records which prefab an entity came from yet; scene saving (M4d)
 needs that link to write an instance back as its prefab and overrides.
 

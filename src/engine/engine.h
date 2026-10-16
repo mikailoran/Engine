@@ -27,6 +27,7 @@
 namespace engine {
 
 struct FrameContext;
+struct Transform;
 
 /** @brief What Render draws this frame beyond the scene. */
 struct RenderOptions {
@@ -73,6 +74,20 @@ class Engine {
    * @throws std::runtime_error If the scene or an asset it names won't load.
    */
   void LoadScene(const std::filesystem::path& path);
+
+  /**
+   * @brief Creates one entity from a prefab file and places it at @p pose.
+   *
+   * @p pose replaces the prefab's whole Transform, scale included. Physics
+   * picks the entity up on the next Update. The first spawn of a mesh not yet
+   * loaded loads it then, which can hitch.
+   * @param prefab Relative to the asset root, e.g. "assets/prefabs/enemy.json".
+   * @pre Not inside an Ecs ForEach: collect spawns, create them after the loop.
+   * @throws std::runtime_error If the prefab or an asset it names won't load.
+   *         Mid-game that ends the run, so validate paths at load.
+   */
+  auto SpawnPrefab(const std::filesystem::path& prefab, const Transform& pose)
+      -> Entity;
 
   /**
    * @brief Destroys every entity now, the host's included, so a scene can be
