@@ -8,6 +8,8 @@
 #include <optional>
 #include <vector>
 
+#include "engine/resource/skeleton.h"
+
 namespace engine {
 
 /**
@@ -89,6 +91,8 @@ struct CpuMesh {
   std::vector<MeshMaterial> materials;
   /// Indexed by MeshMaterial's *_image fields; each decoded once.
   std::vector<CpuImage> images;
+  /// The file's skin; empty when it has none.
+  std::optional<Skeleton> skeleton;
 };
 
 }  // namespace engine

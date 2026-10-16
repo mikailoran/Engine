@@ -11,12 +11,13 @@ namespace engine {
  * transform baked in and one submesh per material.
  *
  * Walks the default scene, else the first one. Positions keep glTF's frame,
- * which is the engine's (metres, right-handed, +Y up).
+ * which is the engine's (metres, right-handed, +Y up). A file's skin, if
+ * any, becomes CpuMesh::skeleton.
  *
  * @param path A .glb or .gltf file.
  * @throws std::runtime_error Naming @p path, if the file can't be read or
  *         uses something unsupported: a required extension, non-triangle
- *         primitives, or primitives without normals.
+ *         primitives, primitives without normals, or more than one skin.
  */
 auto ReadGltf(const std::filesystem::path& path) -> CpuMesh;
 

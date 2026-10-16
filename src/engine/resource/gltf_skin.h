@@ -6,6 +6,8 @@
 #include <cstdint>
 #include <vector>
 
+#include "engine/resource/skeleton.h"
+
 namespace engine::gltf {
 
 // Internal to engine_assets: no public header includes this one.
@@ -22,5 +24,16 @@ namespace engine::gltf {
 auto VertexBones(const cgltf_data& data, const cgltf_node& node,
                  const cgltf_primitive& primitive, std::size_t vertex_count)
     -> std::vector<std::uint32_t>;
+
+/**
+ * @brief Reads @p skin's joints, in the skin's order, with their parents,
+ * rest poses and inverse bind matrices.
+ *
+ * A joint's parent is its nearest ancestor node that is also a joint.
+ * @throws std::runtime_error If the skin has no joints or more than
+ *         kMaxJoints, a joint has a matrix instead of TRS, or the root joints
+ *         hang under different nodes.
+ */
+auto ReadSkeleton(const cgltf_skin& skin) -> Skeleton;
 
 }  // namespace engine::gltf

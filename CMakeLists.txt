@@ -149,6 +149,7 @@ target_include_directories(engine_cgltf SYSTEM PUBLIC ${BGFX_DIR}/3rdparty)
 # every asset. cgltf stays PRIVATE: its types never leave the reader.
 add_library(engine_assets STATIC
   src/engine/resource/cpu_mesh.h
+  src/engine/resource/skeleton.h
   src/engine/resource/gltf_reader.h
   src/engine/resource/gltf_reader.cpp
   src/engine/resource/gltf_document.h

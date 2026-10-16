@@ -12,6 +12,7 @@
 #include "engine/resource/gltf_document.h"
 #include "engine/resource/gltf_geometry.h"
 #include "engine/resource/gltf_materials.h"
+#include "engine/resource/gltf_skin.h"
 
 namespace engine {
 
@@ -51,6 +52,13 @@ auto BuildMesh(const cgltf_data& data, const std::filesystem::path& gltf_path)
   }
   gltf::CutSubmeshes(builder);
   gltf::ReadMaterials(data, gltf_path, builder.mesh);
+  // One skin at most: an entity poses one skeleton
+  if (data.skins_count > 1) {
+    throw std::runtime_error("more than one skin");
+  }
+  if (data.skins_count == 1) {
+    builder.mesh.skeleton = gltf::ReadSkeleton(*data.skins);
+  }
   return std::move(builder.mesh);
 }
 
