@@ -14,6 +14,7 @@
 
 #include "engine/resource/cpu_mesh.h"
 #include "engine/resource/gltf_document.h"
+#include "engine/resource/gltf_skin.h"
 
 namespace engine::gltf {
 
@@ -31,10 +32,11 @@ auto IsMirror(const std::array<float, 16>& m) -> bool {
 }
 
 /**
- * @brief Appends one primitive's vertices, baked by @p world, and its
- * indices to its material's bucket.
+ * @brief Appends one primitive of @p node's mesh: its vertices baked by
+ * @p world, their bones, and its indices to its material's bucket.
  */
-void AppendPrimitive(const cgltf_data& data, const cgltf_primitive& primitive,
+void AppendPrimitive(const cgltf_data& data, const cgltf_node& node,
+                     const cgltf_primitive& primitive,
                      const std::array<float, 16>& world, MeshBuilder& builder) {
   if (primitive.type != cgltf_primitive_type_triangles) {
     throw std::runtime_error("only triangle primitives are supported");
@@ -80,6 +82,8 @@ void AppendPrimitive(const cgltf_data& data, const cgltf_primitive& primitive,
   } else {
     mesh.uvs.resize(mesh.positions.size(), {0.0F, 0.0F});
   }
+  const auto bones = VertexBones(data, node, primitive, position->count);
+  mesh.bones.insert(mesh.bones.end(), bones.begin(), bones.end());
 
   // Unindexed primitives list their vertices in order
   std::vector<std::uint32_t> indices;
@@ -140,7 +144,7 @@ void AppendScene(const cgltf_data& data, const cgltf_scene& scene,
       cgltf_node_transform_world(&node, world.data());
       for (const cgltf_primitive& primitive :
            std::span(node.mesh->primitives, node.mesh->primitives_count)) {
-        AppendPrimitive(data, primitive, world, builder);
+        AppendPrimitive(data, node, primitive, world, builder);
       }
     }
     for (const cgltf_node* child :

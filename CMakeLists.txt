@@ -155,7 +155,11 @@ add_library(engine_assets STATIC
   src/engine/resource/gltf_geometry.h
   src/engine/resource/gltf_geometry.cpp
   src/engine/resource/gltf_materials.h
-  src/engine/resource/gltf_materials.cpp)
+  src/engine/resource/gltf_materials.cpp
+  src/engine/resource/gltf_skin.h
+  src/engine/resource/gltf_skin.cpp
+  src/engine/resource/bone_parts.h
+  src/engine/resource/bone_parts.cpp)
 
 target_include_directories(engine_assets PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 # bimg decodes PNG/JPEG; bimg_encode only for imageGenerateMips

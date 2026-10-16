@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -57,6 +58,7 @@ void ExpectWellFormed(const CpuMesh& mesh) {
   EXPECT_EQ(mesh.indices.size() % 3, 0U);
   EXPECT_EQ(mesh.normals.size(), mesh.positions.size());
   EXPECT_EQ(mesh.uvs.size(), mesh.positions.size());
+  EXPECT_EQ(mesh.bones.size(), mesh.positions.size());
   for (const std::uint32_t index : mesh.indices) {
     ASSERT_LT(index, mesh.positions.size());
   }
@@ -110,6 +112,24 @@ TEST(GltfReader, ReadsBaseColorTexture) {
   EXPECT_EQ(mesh.images.front().width, 512);
   EXPECT_EQ(mesh.images.front().height, 512);
   EXPECT_EQ(mesh.images.front().mip_count, 10);
+}
+
+TEST(GltfReader, UnskinnedVerticesFollowTheirNode) {
+  const CpuMesh mesh =
+      ReadGltf(std::filesystem::path(ENGINE_ASSET_DIR) / "meshes/cube.glb");
+
+  const std::set<std::uint32_t> bones(mesh.bones.begin(), mesh.bones.end());
+  EXPECT_EQ(bones.size(), 1U);
+}
+
+TEST(GltfReader, SkinnedVerticesFollowTheirJoints) {
+  // Quaternius' T-posed character: 31 joints, one mesh node
+  const CpuMesh mesh = ReadGltf(std::filesystem::path(ENGINE_ASSET_DIR) /
+                                "meshes/characters/Male_Casual.glb");
+
+  const std::set<std::uint32_t> bones(mesh.bones.begin(), mesh.bones.end());
+  EXPECT_GT(bones.size(), 10U);
+  EXPECT_LE(bones.size(), 31U);
 }
 
 TEST(GltfReader, ErrorNamesTheFile) {
