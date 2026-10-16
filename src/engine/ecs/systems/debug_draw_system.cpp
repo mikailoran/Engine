@@ -7,21 +7,27 @@
 
 #include <algorithm>
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <iterator>
 
+#include "engine/animation/rig.h"
 #include "engine/ecs/components/camera.h"
 #include "engine/ecs/components/character_body.h"
 #include "engine/ecs/components/collider.h"
 #include "engine/ecs/components/renderable.h"
 #include "engine/ecs/components/rigid_body.h"
+#include "engine/ecs/components/skin_pose.h"
 #include "engine/ecs/components/transform.h"
 #include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
 #include "engine/physics/shape.h"
 #include "engine/platform/frame_context.h"
 #include "engine/render_views.h"
+#include "engine/resource/animation_handles.h"
 #include "engine/resource/asset_registry.h"
+#include "engine/resource/gpu_mesh.h"
+#include "engine/resource/skeleton.h"
 
 namespace engine {
 
@@ -31,6 +37,7 @@ constexpr std::uint32_t kGridColor = 0xff808080;       // ABGR
 constexpr std::uint32_t kColliderColor = 0xff00ff00;   // ABGR
 constexpr std::uint32_t kVelocityColor = 0xff00ffff;   // ABGR
 constexpr std::uint32_t kHighlightColor = 0xff0080ff;  // ABGR
+constexpr std::uint32_t kSkeletonColor = 0xffff00ff;   // ABGR
 // Grows highlight boxes past the mesh so they don't sit on its faces
 constexpr float kHighlightGrowth = 1.02F;
 constexpr std::uint32_t kGridSize = 20;
@@ -43,6 +50,26 @@ constexpr float kVelocityArrowScale = 0.25F;
 constexpr float kMinArrowSpeed = 0.05F;
 constexpr float kArrowHeadLength = 0.15F;
 constexpr float kArrowHeadRadius = 0.05F;
+
+/**
+ * @brief Draws a line from each joint of @p pose to its parent, placed by
+ * @p transform.
+ */
+void DrawSkeleton(DebugDrawEncoder& encoder, const Transform& transform,
+                  const Skeleton& skeleton, const SkinPose& pose) {
+  const auto model = ModelMatrix(transform);
+  const auto world = [&](std::size_t joint) -> bx::Vec3 {
+    const auto local = bx::load<bx::Vec3>(&pose.model.at(joint).at(12));
+    return bx::mul(local, model.data());
+  };
+  const std::size_t count = std::min(skeleton.joints.size(), pose.model.size());
+  for (std::size_t joint = 0; joint < count; ++joint) {
+    if (const auto parent = skeleton.joints.at(joint).parent) {
+      encoder.moveTo(world(*parent));
+      encoder.lineTo(world(joint));
+    }
+  }
+}
 
 /** @brief Draws @p collider's shape as a wireframe, placed by @p transform. */
 void DrawCollider(DebugDrawEncoder& encoder, const Transform& transform,
@@ -157,6 +184,21 @@ void DebugDrawSystem::Update(Ecs& ecs, const AssetRegistry& assets,
       [&encoder](Entity /*entity*/, const Transform& transform,
                  const CharacterBody& body) -> void {
         encoder.draw(CharacterCapsule(body, transform.position));
+      });
+  encoder.pop();
+
+  // Bones sit inside their mesh, so they ignore depth
+  encoder.push();
+  encoder.setState(false, false, false);
+  encoder.setColor(kSkeletonColor);
+  ecs.View<Transform, Renderable, SkinPose>().ForEach(
+      [&encoder, &assets](Entity /*entity*/, const Transform& transform,
+                          const Renderable& renderable,
+                          const SkinPose& pose) -> void {
+        const RigHandle rig = assets.GetMesh(renderable.mesh_handle).rig;
+        if (rig.IsValid()) {
+          DrawSkeleton(encoder, transform, assets.GetRig(rig).Source(), pose);
+        }
       });
   encoder.pop();
 
