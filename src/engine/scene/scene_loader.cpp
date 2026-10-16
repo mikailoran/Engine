@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <nlohmann/json.hpp>
 #include <nlohmann/json_fwd.hpp>
@@ -77,8 +78,9 @@ auto PrefabComponents(const std::string& path,
 
 void SceneLoader::Register(std::string key, ComponentLoader loader) {
   [[maybe_unused]] const auto [it, inserted] =
-      loaders_.emplace(std::move(key), std::move(loader));
+      loaders_.emplace(key, std::move(loader));
   assert(inserted && "component loader registered twice");
+  order_.push_back(std::move(key));
 }
 
 void SceneLoader::LoadEntities(const nlohmann::json& scene, Ecs& ecs,
@@ -147,19 +149,23 @@ auto SceneLoader::CreateEntity(const std::string& name,
   ecs.AddComponent(entity, Name{.value = name});
 
   for (const auto& component : components.items()) {
-    const std::string where =
-        "entity '" + name + "', component '" + component.key() + "': ";
-
-    const auto it = loaders_.find(component.key());
-    if (it == loaders_.end()) {
-      throw std::runtime_error(where + "unknown component");
+    if (!loaders_.contains(component.key())) {
+      throw std::runtime_error(
+          std::format("entity '{}', component '{}': unknown component", name,
+                      component.key()));
     }
+  }
 
+  // Registration order, so a loader can read components loaded before it
+  for (const std::string& key : order_) {
+    if (!components.contains(key)) {
+      continue;
+    }
     try {
-      const auto loader = it->second;
-      loader(component.value(), entity, ecs, assets, physics);
+      loaders_.at(key)(components.at(key), entity, ecs, assets, physics);
     } catch (const nlohmann::json::exception& e) {
-      throw std::runtime_error(where + e.what());
+      throw std::runtime_error(
+          std::format("entity '{}', component '{}': {}", name, key, e.what()));
     }
   }
   return entity;

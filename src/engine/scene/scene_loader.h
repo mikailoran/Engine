@@ -6,6 +6,7 @@
 #include <nlohmann/json_fwd.hpp>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "engine/ecs/core/types.h"
 
@@ -36,10 +37,17 @@ using ComponentLoader =
  * merged over them as a JSON merge patch (RFC 7386), so an override can set
  * single fields and null removes a component. Each prefab file is read once
  * per loader and cached, so edits to it on disk need a restart.
+ *
+ * An entity's loaders run in registration order, whatever the order of its
+ * JSON keys, so a loader may read components whose loaders were registered
+ * before it (an animator reads its entity's Renderable).
  */
 class SceneLoader {
  public:
-  /** @brief Registers the loader for a component key. @pre Key is unused. */
+  /**
+   * @brief Registers the loader for a component key; it runs after every
+   * loader registered before it. @pre Key is unused.
+   */
   void Register(std::string key, ComponentLoader loader);
 
   /**
@@ -74,7 +82,8 @@ class SceneLoader {
                     AssetRegistry& assets, physics::PhysicsWorld& physics);
 
   /**
-   * @brief Creates one named entity and runs each component's loader on it.
+   * @brief Creates one named entity and runs each component's loader on it,
+   * in registration order.
    *
    * @param components Merged component blocks (prefab and overrides), keyed
    *        by registered loader key.
@@ -86,6 +95,8 @@ class SceneLoader {
                     physics::PhysicsWorld& physics) const -> Entity;
 
   std::unordered_map<std::string, ComponentLoader> loaders_;
+  /// Registered keys, in registration order: the order loaders run in
+  std::vector<std::string> order_;
   /// Prefab path -> its "components" object, filled on first use
   std::unordered_map<std::string, nlohmann::json> prefabs_;
 };
