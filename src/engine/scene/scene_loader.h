@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <functional>
+#include <nlohmann/json.hpp>  // IWYU pragma: keep (prefabs_ holds values)
 #include <nlohmann/json_fwd.hpp>
 #include <string>
 #include <unordered_map>
@@ -33,7 +34,8 @@ using ComponentLoader =
  * component's data. An entity may also name a "prefab" file (relative to the
  * asset root) whose "components" it starts from; its own "components" are
  * merged over them as a JSON merge patch (RFC 7386), so an override can set
- * single fields and null removes a component.
+ * single fields and null removes a component. Each prefab file is read once
+ * per loader and cached, so edits to it on disk need a restart.
  */
 class SceneLoader {
  public:
@@ -52,13 +54,12 @@ class SceneLoader {
    *         field.
    */
   void Load(const std::filesystem::path& path, Ecs& ecs, AssetRegistry& assets,
-            physics::PhysicsWorld& physics) const;
+            physics::PhysicsWorld& physics);
 
  private:
   /** @brief Validates a parsed scene and creates its entities. */
   void LoadEntities(const nlohmann::json& scene, Ecs& ecs,
-                    AssetRegistry& assets,
-                    physics::PhysicsWorld& physics) const;
+                    AssetRegistry& assets, physics::PhysicsWorld& physics);
 
   /**
    * @brief Creates one named entity and runs each component's loader on it.
@@ -73,6 +74,8 @@ class SceneLoader {
                     physics::PhysicsWorld& physics) const -> Entity;
 
   std::unordered_map<std::string, ComponentLoader> loaders_;
+  /// Prefab path -> its "components" object, filled on first use
+  std::unordered_map<std::string, nlohmann::json> prefabs_;
 };
 
 }  // namespace engine

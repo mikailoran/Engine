@@ -24,9 +24,6 @@ constexpr int kSceneVersion = 1;
 // Prefab format version this loader reads.
 constexpr int kPrefabVersion = 1;
 
-// Prefab path -> its "components" object, parsed once per scene load
-using PrefabCache = std::unordered_map<std::string, nlohmann::json>;
-
 /**
  * @brief Opens and parses a JSON file.
  *
@@ -50,7 +47,8 @@ auto ReadJsonFile(const std::filesystem::path& full_path) -> nlohmann::json {
  * @throws std::runtime_error On an unreadable file, malformed JSON, a wrong
  *         version or an unknown top-level key.
  */
-auto PrefabComponents(const std::string& path, PrefabCache& cache)
+auto PrefabComponents(const std::string& path,
+                      std::unordered_map<std::string, nlohmann::json>& cache)
     -> const nlohmann::json& {
   if (const auto it = cache.find(path); it != cache.end()) {
     return it->second;
@@ -85,7 +83,7 @@ void SceneLoader::Register(std::string key, ComponentLoader loader) {
 
 void SceneLoader::LoadEntities(const nlohmann::json& scene, Ecs& ecs,
                                AssetRegistry& assets,
-                               physics::PhysicsWorld& physics) const {
+                               physics::PhysicsWorld& physics) {
   // Reject keys this version does not know, so typos fail loudly
   for (const auto& item : scene.items()) {
     if (item.key() != "version" && item.key() != "entities") {
@@ -96,8 +94,6 @@ void SceneLoader::LoadEntities(const nlohmann::json& scene, Ecs& ecs,
   if (scene.at("version").get<int>() != kSceneVersion) {
     throw std::runtime_error("unsupported scene version");
   }
-
-  PrefabCache prefabs;
 
   // One entity per entry, then one loader call per component block
   for (const auto& entry : scene.at("entities")) {
@@ -110,7 +106,7 @@ void SceneLoader::LoadEntities(const nlohmann::json& scene, Ecs& ecs,
     try {
       if (entry.contains("prefab")) {
         components =
-            PrefabComponents(entry.at("prefab").get<std::string>(), prefabs);
+            PrefabComponents(entry.at("prefab").get<std::string>(), prefabs_);
       }
       if (entry.contains("components")) {
         components.merge_patch(entry.at("components"));
@@ -158,7 +154,7 @@ auto SceneLoader::CreateEntity(const std::string& name,
 
 void SceneLoader::Load(const std::filesystem::path& path, Ecs& ecs,
                        AssetRegistry& assets,
-                       physics::PhysicsWorld& physics) const {
+                       physics::PhysicsWorld& physics) {
   // Read the file relative to the asset root
   const auto full_path = std::filesystem::path(AssetRoot()) / path;
 
