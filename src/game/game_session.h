@@ -32,8 +32,8 @@ class GameSession {
                   bool has_control);
 
   /**
-   * @brief Moves the view camera to the player's eyes and fires triggered
-   * weapons from there. After Engine::Update.
+   * @brief Moves the view camera to the player's eyes, fires triggered
+   * weapons from there and requests the crosshair. After Engine::Update.
    */
   void PostPhysics(engine::Engine& engine) const;
 
