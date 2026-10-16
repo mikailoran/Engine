@@ -56,6 +56,18 @@ class SceneLoader {
   void Load(const std::filesystem::path& path, Ecs& ecs, AssetRegistry& assets,
             physics::PhysicsWorld& physics);
 
+  /**
+   * @brief Creates one entity from a prefab file, as a scene entry naming
+   * only that prefab would.
+   *
+   * @param prefab Prefab file, relative to the asset root.
+   * @return The new entity, named after the file's stem ("enemy").
+   * @throws std::runtime_error On an unreadable or invalid prefab, an unknown
+   *         component key or an asset that won't load.
+   */
+  auto Spawn(const std::filesystem::path& prefab, Ecs& ecs,
+             AssetRegistry& assets, physics::PhysicsWorld& physics) -> Entity;
+
  private:
   /** @brief Validates a parsed scene and creates its entities. */
   void LoadEntities(const nlohmann::json& scene, Ecs& ecs,

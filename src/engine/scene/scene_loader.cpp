@@ -126,6 +126,19 @@ void SceneLoader::LoadEntities(const nlohmann::json& scene, Ecs& ecs,
   }
 }
 
+auto SceneLoader::Spawn(const std::filesystem::path& prefab, Ecs& ecs,
+                        AssetRegistry& assets, physics::PhysicsWorld& physics)
+    -> Entity {
+  const auto path = prefab.generic_string();
+  const auto& components = PrefabComponents(path, prefabs_);
+  if (!components.is_object()) {
+    throw std::runtime_error("prefab '" + path +
+                             "': components must be an object");
+  }
+  // TODO: record the prefab path, so scene saving writes only overrides
+  return CreateEntity(prefab.stem().string(), components, ecs, assets, physics);
+}
+
 auto SceneLoader::CreateEntity(const std::string& name,
                                const nlohmann::json& components, Ecs& ecs,
                                AssetRegistry& assets,
@@ -153,8 +166,7 @@ auto SceneLoader::CreateEntity(const std::string& name,
 }
 
 void SceneLoader::Load(const std::filesystem::path& path, Ecs& ecs,
-                       AssetRegistry& assets,
-                       physics::PhysicsWorld& physics) {
+                       AssetRegistry& assets, physics::PhysicsWorld& physics) {
   // Read the file relative to the asset root
   const auto full_path = std::filesystem::path(AssetRoot()) / path;
 
