@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <format>
 #include <iostream>
+#include <string>
 #include <vector>
 
 #include "engine/ecs/components/lifetime.h"
@@ -34,28 +35,13 @@ namespace {
 
 /** @brief One shot fired this frame, kept until its beam is spawned. */
 struct Shot {
-  /// Muzzle point the beam starts at; the ray itself starts at the eyes.
+  /// Muzzle point the beam starts at; the player's ray starts at the eyes.
   bx::Vec3 from{bx::InitZero};
   /// Hit point, or full range on a miss.
   bx::Vec3 to{bx::InitZero};
   /// How long the beam shows, in s.
   float beam_s{0.0F};
 };
-
-/// Muzzle offset from the eyes in m, right and down in the view.
-constexpr float kMuzzleRight = 0.2F;
-constexpr float kMuzzleDown = 0.15F;
-
-/**
- * @brief Where a beam fired along @p ray starts: below and right of its origin.
- * The ray must not be vertical (look pitch stays under 90°).
- */
-auto Muzzle(const bx::Ray& ray) -> bx::Vec3 {
-  const bx::Vec3 right = bx::normalize(bx::cross(ray.dir, {0.0F, 1.0F, 0.0F}));
-  const bx::Vec3 up = bx::cross(right, ray.dir);
-  return bx::add(
-      ray.pos, bx::sub(bx::mul(right, kMuzzleRight), bx::mul(up, kMuzzleDown)));
-}
 
 /**
  * @brief Rotation turning a mesh's +Y axis along the segment @p from → @p to.
@@ -87,7 +73,7 @@ auto HandleShots(Engine& engine) -> void {
         if (!aim.weapon_trigger || weapon.cooldown_left_s > 0.0F) {
           return;
         }
-        Shot shot{.from = Muzzle(aim.ray), .beam_s = weapon.beam_s};
+        Shot shot{.from = aim.muzzle, .beam_s = weapon.beam_s};
         // Start the cooldown
         weapon.cooldown_left_s = weapon.cooldown_s;
 
@@ -104,11 +90,15 @@ auto HandleShots(Engine& engine) -> void {
         auto& ecs = engine.World();
         if (auto* health = ecs.TryGetComponent<Health>(hit->entity)) {
           const auto remaining_health = ApplyDamage(*health, weapon.damage);
-          const auto* name = ecs.TryGetComponent<Name>(hit->entity);
+          // Enemies shoot too, and may hit each other
+          const auto name_of = [&ecs](Entity named) -> std::string {
+            const auto* name = ecs.TryGetComponent<Name>(named);
+            return name != nullptr ? name->value : "<unnamed>";
+          };
           std::cout << std::format(
-                           "Player shot entity {} for {} damage. Remaining "
+                           "{} shot {} for {} damage. Remaining "
                            "health: {}",
-                           name ? name->value : "<unnamed>", weapon.damage,
+                           name_of(entity), name_of(hit->entity), weapon.damage,
                            remaining_health)
                     << "\n";
 

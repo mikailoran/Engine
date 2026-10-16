@@ -91,14 +91,16 @@ auto FindClip(const nlohmann::json& data, const char* key,
 /**
  * @brief Adds an Enemy. Needs the entity's Animator; "clips" names the
  * idle, walk, run, hold, aim and fire clips in it. Speeds (m/s), ranges (m),
- * "fire_interval_s" and "upper_body_joint" (the upper layers' mask root,
- * default "spine_01") are optional.
+ * "fire_interval_s", "upper_body_joint" (the upper layers' mask root,
+ * default "spine_01"), "gun_attachment" (an index into its attachments) and
+ * "muzzle" (a point in the gun's frame) are optional.
  */
 void LoadEnemy(const nlohmann::json& data, engine::Entity entity,
                engine::Ecs& ecs, engine::AssetRegistry& assets,
                engine::physics::PhysicsWorld& /*physics*/) {
-  engine::CheckKeys(data, {"walk_speed", "run_speed", "engage_m", "run_m",
-                           "fire_interval_s", "upper_body_joint", "clips"});
+  engine::CheckKeys(
+      data, {"walk_speed", "run_speed", "engage_m", "run_m", "fire_interval_s",
+             "upper_body_joint", "gun_attachment", "muzzle", "clips"});
   // The engine's animator loader runs first, being registered first
   auto* animator = ecs.TryGetComponent<engine::Animator>(entity);
   if (animator == nullptr) {
@@ -111,6 +113,10 @@ void LoadEnemy(const nlohmann::json& data, engine::Entity entity,
   engine::ReadPositive(data, "engage_m", enemy.ranges.engage_m);
   engine::ReadPositive(data, "run_m", enemy.ranges.run_m);
   engine::ReadPositive(data, "fire_interval_s", enemy.fire_interval_s);
+  enemy.gun_attachment = data.value("gun_attachment", enemy.gun_attachment);
+  if (data.contains("muzzle")) {
+    enemy.muzzle = engine::ReadVec3(data.at("muzzle"));
+  }
 
   const auto& clips = data.at("clips");
   engine::CheckKeys(clips, {"idle", "walk", "run", "hold", "aim", "fire"});

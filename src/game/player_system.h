@@ -1,5 +1,7 @@
 #pragma once
 
+#include <bx/math.h>
+
 #include <optional>
 
 #include "engine/ecs/core/types.h"
@@ -11,6 +13,10 @@ struct FrameContext;
 }  // namespace engine
 
 namespace game {
+
+/// Where the view gun's muzzle sits in camera space (+X right, +Y up, -Z
+/// ahead), in m: low and to the right. Beams start there.
+inline constexpr bx::Vec3 kViewMuzzle{0.2F, -0.15F, -0.9F};
 
 /**
  * @brief Drives the Player's character from input and places the first-person
@@ -33,8 +39,9 @@ class PlayerSystem {
                bool has_control);
 
   /**
-   * @brief Moves the view camera to the player's eyes and points the player's
-   * Aim ray from them along the look. Run after physics.
+   * @brief Moves the view camera to the player's eyes, points the player's
+   * Aim ray from them along the look and puts its muzzle at kViewMuzzle.
+   * Run after physics.
    */
   void PlaceCamera(engine::Ecs& ecs) const;
 

@@ -130,6 +130,7 @@ void PlayerSystem::PlaceCamera(Ecs& ecs) const {
         if (auto* aim = ecs.TryGetComponent<Aim>(entity)) {
           aim->ray = {.pos = eyes,
                       .dir = bx::mul(bx::Vec3{0.0F, 0.0F, -1.0F}, look)};
+          aim->muzzle = bx::add(eyes, bx::mul(kViewMuzzle, look));
         }
       });
 }

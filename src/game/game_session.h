@@ -20,7 +20,11 @@ namespace game {
  */
 class GameSession {
  public:
-  /** @brief Starts a run: spawns the camera the player looks through. */
+  /**
+   * @brief Starts a run: spawns the camera the player looks through, with
+   * the view gun attached.
+   * @throws std::runtime_error If the gun's mesh won't load.
+   */
   explicit GameSession(engine::Engine& engine);
 
   /**
@@ -32,8 +36,9 @@ class GameSession {
                   bool has_control);
 
   /**
-   * @brief Moves the view camera to the player's eyes, fires triggered
-   * weapons from there and requests the crosshair. After Engine::Update.
+   * @brief Moves the view camera to the player's eyes, aims the enemies,
+   * fires triggered weapons and requests the crosshair. After
+   * Engine::Update.
    */
   void PostPhysics(engine::Engine& engine) const;
 

@@ -9,6 +9,27 @@
       "clips": "assets/animations/UAL1.glb",
       "play": "Idle_Loop"
     },
+    "attachments": [
+      {
+        "mesh": "assets/meshes/weapons/Pistol_1.glb",
+        "joint": "hand_r",
+        "position": [
+          -0.03,
+          0.07,
+          0.0
+        ],
+        "rotation_deg": [
+          -97.46,
+          -2.3,
+          0.0
+        ]
+      },
+      {
+        "mesh": "assets/meshes/characters/hair/Hair_SimpleParted.glb",
+        "joint": "Head",
+        "bind_space": true
+      }
+    ],
     "character_body": {
       "height": 1.8,
       "radius": 0.3,
@@ -17,6 +38,12 @@
     "health": {
       "max": 100,
       "current": 100
+    },
+    "weapon": {
+      "damage": 5,
+      "cooldown_s": 0.3,
+      "range_m": 60,
+      "beam_s": 0.08
     },
     "enemy": {
       "walk_speed": 1.5,
@@ -31,7 +58,13 @@
         "hold": "Pistol_Idle_Loop",
         "aim": "Pistol_Aim_Neutral",
         "fire": "Pistol_Shoot"
-      }
+      },
+      "gun_attachment": 0,
+      "muzzle": [
+        0.0,
+        0.067,
+        -0.1705
+      ]
     }
   }
 }

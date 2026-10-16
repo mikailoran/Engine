@@ -1,5 +1,7 @@
 #pragma once
 
+#include <bx/math.h>
+
 #include <cstddef>
 
 #include "engine/resource/animation_handles.h"
@@ -31,7 +33,8 @@ struct EnemyClips {
 /**
  * @brief Makes a character chase the player in a straight line and shoot
  * once in range. Needs a Transform, a CharacterBody and an Animator, whose
- * upper layers it masks; loaded from a scene's "enemy" block.
+ * upper layers it masks; with a Weapon and a gun among its AttachedMeshes,
+ * its shots fire from the muzzle. Loaded from a scene's "enemy" block.
  */
 struct Enemy {
   EnemyRanges ranges;
@@ -41,6 +44,10 @@ struct Enemy {
   float run_speed{3.5F};
   /// Seconds between shots while engaging.
   float fire_interval_s{1.0F};
+  /// Which of the entity's AttachedMeshes is its gun.
+  std::size_t gun_attachment{0};
+  /// The gun's muzzle in the gun mesh's frame, in m.
+  bx::Vec3 muzzle{0.0F};
   EnemyClips clips;
   /// Runtime: s until the next shot while engaging.
   float fire_cooldown_s{0.0F};
