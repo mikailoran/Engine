@@ -8,6 +8,7 @@
 #include <array>
 #include <cstdint>
 #include <functional>
+#include <optional>
 #include <stdexcept>
 #include <vector>
 
@@ -83,11 +84,14 @@ RenderSystem::RenderSystem()
                                   bgfx::UniformType::Vec4)),
       u_color_(bgfx::createUniform("u_color", bgfx::UniformType::Vec4)),
       u_material_(bgfx::createUniform("u_material", bgfx::UniformType::Vec4)),
+      u_emissive_(bgfx::createUniform("u_emissive", bgfx::UniformType::Vec4)),
       u_eye_pos_(bgfx::createUniform("u_eyePos", bgfx::UniformFreq::Frame,
                                      bgfx::UniformType::Vec4)),
       s_albedo_(bgfx::createUniform("s_albedo", bgfx::UniformType::Sampler)),
       s_shadow_map_(
           bgfx::createUniform("s_shadowMap", bgfx::UniformType::Sampler)),
+      s_emissive_(
+          bgfx::createUniform("s_emissive", bgfx::UniformType::Sampler)),
       default_texture_(CreateWhiteTexture()) {
   // Members are built, so throwing here still releases them
   if (!default_program_) {
@@ -145,18 +149,26 @@ void RenderSystem::Update(Ecs& ecs, const AssetRegistry& assets,
     const MeshMaterial material = submesh.material
                                       ? mesh.materials.at(*submesh.material)
                                       : MeshMaterial{};
-    const auto texture =
-        material.base_color_image
-            ? mesh.textures.at(*material.base_color_image).Get()
-            : default_texture_.Get();
+    // Missing textures bind white, leaving their factor as the color
+    const auto texture_or_white =
+        [&](const std::optional<std::uint32_t>& image) -> bgfx::TextureHandle {
+      return image ? mesh.textures.at(*image).Get() : default_texture_.Get();
+    };
     const auto color = Modulate(material.base_color, renderable.color);
     const std::array<float, 4> factors{material.metallic, material.roughness,
                                        0.0F, 0.0F};
+    const auto [emissive_r, emissive_g, emissive_b] = material.emissive;
+    const std::array<float, 4> emissive{emissive_r, emissive_g, emissive_b,
+                                        0.0F};
 
     bgfx::setUniform(u_color_.Get(), color.data());
     bgfx::setUniform(u_material_.Get(), factors.data());
-    bgfx::setTexture(0, s_albedo_.Get(), texture);
+    bgfx::setUniform(u_emissive_.Get(), emissive.data());
+    bgfx::setTexture(0, s_albedo_.Get(),
+                     texture_or_white(material.base_color_image));
     bgfx::setTexture(1, s_shadow_map_.Get(), shadow_map);
+    bgfx::setTexture(2, s_emissive_.Get(),
+                     texture_or_white(material.emissive_image));
     bgfx::setState(renderable.state);
     bgfx::submit(renderable.view, program);
   }

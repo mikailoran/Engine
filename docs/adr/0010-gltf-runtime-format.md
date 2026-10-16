@@ -1,7 +1,7 @@
 # 0010: glTF as the runtime asset format
 
 **Status:** accepted; materials amended 2026-10-16 (metallic-roughness
-factors)
+factors, emission)
 
 ## Context
 
@@ -34,8 +34,10 @@ format of our own.
   `bimg::imageGenerateMips` at load.
 - Materials carry base color and the metallic and roughness factors, lit
   with GGX (amended 2026-10-16: the scene's materials are factor-only, and a
-  shared Blinn-Phong highlight made every surface the same plastic). The
-  metallic-roughness texture and the other maps wait for an asset using them.
+  shared Blinn-Phong highlight made every surface the same plastic), and
+  emission: factor × `KHR_materials_emissive_strength` × emissive texture,
+  added unlit. The metallic-roughness, occlusion and normal textures wait for
+  an asset using them.
 - Render materials live only in the glTF: Blender owns visuals, and the
   editor never assigns them.
 - Blender sits in front of every asset, so the loader assumes a clean export

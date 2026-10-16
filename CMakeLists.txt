@@ -407,6 +407,7 @@ set(ENGINE_GLTF_ASSETS
   meshes/cube.glb
   meshes/sphere.glb
   meshes/cylinder.glb
+  meshes/beam.glb
   meshes/cone.glb
   meshes/torus.glb
   meshes/bunny.glb

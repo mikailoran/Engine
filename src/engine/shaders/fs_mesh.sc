@@ -11,6 +11,8 @@ uniform vec4 u_time;
 uniform vec4 u_color;
 // x: metallic, y: perceptual roughness, both 0 to 1.
 uniform vec4 u_material;
+// Linear RGB light given off, may exceed 1; w unused.
+uniform vec4 u_emissive;
 // Camera world position.
 uniform vec4 u_eyePos;
 // World direction toward the sun, normalized.
@@ -23,6 +25,8 @@ uniform vec4 u_groundColor;
 
 // sRGB base color texture; 1x1 white for untextured submeshes.
 SAMPLER2D(s_albedo, 0);
+// sRGB emissive texture; 1x1 white when the material has none.
+SAMPLER2D(s_emissive, 2);
 
 /** @brief Ambient light arriving from around unit world direction @p dir. */
 vec3 hemisphere(vec3 dir)
@@ -96,7 +100,8 @@ void main()
 		+ ambientSpecular(f0, roughness, ndotv) * hemisphere(env_dir);
 
 	float sun = shadowVisibility(v_wpos, n);
-	vec3 lit = ambient + direct * sun;
+	vec3 emission = u_emissive.xyz * texture2D(s_emissive, v_texcoord0).xyz;
+	vec3 lit = ambient + direct * sun + emission;
 
 	gl_FragColor.xyz = toDisplay(lit);
 	gl_FragColor.w = 1.0;
