@@ -296,6 +296,7 @@ add_library(engine_runtime STATIC
   src/engine/ecs/components/animator.h
   src/engine/ecs/components/skin_pose.h
   src/engine/ecs/components/attached_meshes.h
+  src/engine/ecs/components/components.cpp
   src/engine/ecs/components/ragdoll.h
   src/engine/ecs/components/ragdoll_link.h
   src/engine/ecs/systems/attachments.h
