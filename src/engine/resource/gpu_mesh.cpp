@@ -3,7 +3,10 @@
 #include <bgfx/bgfx.h>
 #include <bgfx/defines.h>
 
+#include <array>
+#include <cassert>
 #include <cstdint>
+#include <limits>
 #include <vector>
 
 #include "engine/resource/cpu_mesh.h"
@@ -28,6 +31,34 @@ auto CreateStream(const std::vector<T>& elements, bgfx::Attrib::Enum attrib)
   const auto size = static_cast<std::uint32_t>(elements.size() * sizeof(T));
   return UniqueHandle(
       bgfx::createVertexBuffer(bgfx::copy(elements.data(), size), layout));
+}
+
+/**
+ * @brief Uploads joint indices as 8-bit integers, four per vertex; an
+ * invalid handle for none.
+ */
+auto CreateJointStream(const std::vector<std::array<std::uint16_t, 4>>& joints)
+    -> UniqueHandle<bgfx::VertexBufferHandle> {
+  if (joints.empty()) {
+    return {};
+  }
+  std::vector<std::uint8_t> bytes;
+  bytes.reserve(joints.size() * 4);
+  for (const auto& vertex : joints) {
+    for (const std::uint16_t joint : vertex) {
+      assert(joint <= std::numeric_limits<std::uint8_t>::max() &&
+             "joint index too large for 8 bits");
+      bytes.push_back(static_cast<std::uint8_t>(joint));
+    }
+  }
+  bgfx::VertexLayout layout;
+  // Integers, not normalized: the shader indexes its palette with them
+  layout.begin()
+      .add(bgfx::Attrib::Indices, 4, bgfx::AttribType::Uint8, false, true)
+      .end();
+  const auto size = static_cast<std::uint32_t>(bytes.size());
+  return UniqueHandle(
+      bgfx::createVertexBuffer(bgfx::copy(bytes.data(), size), layout));
 }
 
 /** @brief Uploads @p indices as a 32-bit index buffer. */
@@ -58,11 +89,16 @@ auto UploadMesh(const CpuMesh& mesh) -> GpuMesh {
   GpuMesh gpu{.positions = CreateStream(mesh.positions, bgfx::Attrib::Position),
               .normals = CreateStream(mesh.normals, bgfx::Attrib::Normal),
               .uvs = CreateStream(mesh.uvs, bgfx::Attrib::TexCoord0),
+              .joints = CreateJointStream(mesh.joints),
+              .weights = mesh.weights.empty()
+                             ? UniqueHandle<bgfx::VertexBufferHandle>()
+                             : CreateStream(mesh.weights, bgfx::Attrib::Weight),
               .indices = CreateIndices(mesh.indices),
               .submeshes = mesh.submeshes,
               .bounds = mesh.bounds,
               .materials = mesh.materials,
-              .textures = {}};
+              .textures = {},
+              .rig = {}};
   gpu.textures.reserve(mesh.images.size());
   for (const CpuImage& image : mesh.images) {
     gpu.textures.push_back(CreateTexture(image));

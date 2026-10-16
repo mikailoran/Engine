@@ -2,12 +2,19 @@
 
 #include <bx/bounds.h>
 
+#include <cstdint>
 #include <filesystem>
+#include <map>
+#include <string>
+#include <string_view>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
+#include "engine/animation/rig.h"
 #include "engine/physics/collision_mesh_handle.h"
 #include "engine/physics/hitbox_handle.h"
+#include "engine/resource/animation_handles.h"
 #include "engine/resource/gpu_mesh.h"
 #include "engine/resource/mesh_handle.h"
 
@@ -18,8 +25,8 @@ class PhysicsWorld;
 }  // namespace physics
 
 /**
- * @brief Single owner of every loaded mesh, collision mesh and hitbox, keyed
- * by file path.
+ * @brief Single owner of every loaded mesh, collision mesh, hitbox, rig and
+ * clip, keyed by file path.
  *
  * Loads each path at most once and hands out non-owning handles, so any
  * number of entities can share one asset without sharing responsibility for
@@ -39,7 +46,8 @@ class AssetRegistry {
    * against it.
    *
    * @param path glTF file, e.g. "assets/meshes/bunny.glb", flattened into
-   *        one mesh with ReadGltf.
+   *        one mesh with ReadGltf. A skinned file also gets a rig
+   *        (GpuMesh::rig).
    * @return Handle to the mesh.
    * @throws std::runtime_error If the file cannot be read as a mesh.
    */
@@ -91,7 +99,41 @@ class AssetRegistry {
   auto LoadHitbox(const std::filesystem::path& path,
                   physics::PhysicsWorld& physics) -> physics::HitboxHandle;
 
+  /**
+   * @brief Resolves a skinned mesh's rig.
+   * @param handle GpuMesh::rig of a loaded mesh; must be valid.
+   */
+  [[nodiscard]] auto GetRig(RigHandle handle) const -> const animation::Rig&;
+
+  /**
+   * @brief Loads a glTF file's clips retargeted onto @p rig (RetargetClip),
+   * or returns the set already loaded for that file and rig.
+   *
+   * Reads keys only, no geometry or images. Same preconditions as LoadMesh.
+   * @param path glTF file, e.g. "assets/animations/UAL1.glb".
+   * @param rig A loaded mesh's rig; must be valid.
+   * @throws std::runtime_error If the file can't be read as clips, or a clip
+   *         shares no joint name with the rig.
+   */
+  auto LoadClips(const std::filesystem::path& path, RigHandle rig)
+      -> ClipSetHandle;
+
+  /**
+   * @brief The clip named @p name in @p set.
+   * @return Invalid if the set has no clip of that name.
+   */
+  [[nodiscard]] auto FindClip(ClipSetHandle set, std::string_view name) const
+      -> ClipHandle;
+
+  /** @brief Resolves a clip handle; it must be valid. */
+  [[nodiscard]] auto GetClip(ClipHandle handle) const -> const animation::Clip&;
+
  private:
+  /** @brief One clip file's clips built for one rig, by name. */
+  struct ClipSet {
+    std::unordered_map<std::string, ClipHandle> by_name;
+  };
+
   // TODO: figure out optimized key and also cross platform compatibility
   std::unordered_map<std::filesystem::path, MeshHandle> mesh_by_path_;
   std::vector<GpuMesh> meshes_;
@@ -100,6 +142,13 @@ class AssetRegistry {
       collision_mesh_by_path_;
   std::unordered_map<std::filesystem::path, physics::HitboxHandle>
       hitbox_by_path_;
+
+  std::vector<animation::Rig> rigs_;
+  std::vector<animation::Clip> clips_;
+  std::vector<ClipSet> clip_sets_;
+  /// Keyed by clip file and RigHandle::Value.
+  std::map<std::pair<std::filesystem::path, std::uint16_t>, ClipSetHandle>
+      clip_set_by_key_;
 };
 
 }  // namespace engine

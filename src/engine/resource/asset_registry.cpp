@@ -6,19 +6,25 @@
 #include <cstdint>
 #include <filesystem>
 #include <stdexcept>
+#include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
+#include "engine/animation/rig.h"
 #include "engine/physics/collision_mesh_handle.h"
 #include "engine/physics/hitbox_handle.h"
 #include "engine/physics/physics_world.h"
 #include "engine/physics/shape.h"
 #include "engine/platform/asset_root.h"
+#include "engine/resource/animation_clip.h"
+#include "engine/resource/animation_handles.h"
 #include "engine/resource/bone_parts.h"
 #include "engine/resource/cpu_mesh.h"
 #include "engine/resource/gltf_reader.h"
 #include "engine/resource/gpu_mesh.h"
 #include "engine/resource/mesh_handle.h"
+#include "engine/resource/retarget.h"
 
 namespace engine {
 
@@ -38,8 +44,13 @@ auto AssetRegistry::LoadMesh(const std::filesystem::path& path) -> MeshHandle {
   }
 
   const auto cpu_mesh = ReadAsset(path);
+  GpuMesh gpu = UploadMesh(cpu_mesh);
+  if (cpu_mesh.skeleton) {
+    gpu.rig = RigHandle(static_cast<std::uint16_t>(rigs_.size()));
+    rigs_.emplace_back(*cpu_mesh.skeleton);
+  }
   const MeshHandle handle(static_cast<std::uint16_t>(meshes_.size()));
-  meshes_.push_back(UploadMesh(cpu_mesh));
+  meshes_.push_back(std::move(gpu));
   mesh_by_path_.emplace(path, handle);
   return handle;
 }
@@ -98,6 +109,49 @@ auto AssetRegistry::LoadHitbox(const std::filesystem::path& path,
 
   hitbox_by_path_.emplace(path, handle);
   return handle;
+}
+
+auto AssetRegistry::GetRig(RigHandle handle) const -> const animation::Rig& {
+  assert(handle.IsValid() && "invalid rig handle");
+  return rigs_.at(handle.Value());
+}
+
+auto AssetRegistry::LoadClips(const std::filesystem::path& path, RigHandle rig)
+    -> ClipSetHandle {
+  const auto key = std::make_pair(path, rig.Value());
+  if (auto it = clip_set_by_key_.find(key); it != clip_set_by_key_.end()) {
+    return it->second;
+  }
+
+  const ClipFile file =
+      ReadGltfClips(std::filesystem::path(AssetRoot()) / path);
+  const animation::Rig& target = GetRig(rig);
+  ClipSet set;
+  for (const AnimationClip& clip : file.clips) {
+    const AnimationClip mapped =
+        RetargetClip(clip, file.skeleton, target.Source());
+    const ClipHandle handle(static_cast<std::uint32_t>(clips_.size()));
+    clips_.emplace_back(mapped, target);
+    set.by_name.emplace(clip.name, handle);
+  }
+
+  const ClipSetHandle handle(static_cast<std::uint16_t>(clip_sets_.size()));
+  clip_sets_.push_back(std::move(set));
+  clip_set_by_key_.emplace(key, handle);
+  return handle;
+}
+
+auto AssetRegistry::FindClip(ClipSetHandle set, std::string_view name) const
+    -> ClipHandle {
+  assert(set.IsValid() && "invalid clip set handle");
+  const auto& by_name = clip_sets_.at(set.Value()).by_name;
+  const auto it = by_name.find(std::string(name));
+  return it != by_name.end() ? it->second : ClipHandle{};
+}
+
+auto AssetRegistry::GetClip(ClipHandle handle) const -> const animation::Clip& {
+  assert(handle.IsValid() && "invalid clip handle");
+  return clips_.at(handle.Value());
 }
 
 }  // namespace engine

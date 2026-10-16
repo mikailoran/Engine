@@ -298,6 +298,7 @@ add_library(engine_runtime STATIC
   src/engine/resource/gpu_mesh.h
   src/engine/resource/gpu_mesh.cpp
   src/engine/resource/mesh_handle.h
+  src/engine/resource/animation_handles.h
   src/engine/resource/asset_registry.h
   src/engine/resource/asset_registry.cpp
   src/engine/platform/asset_root.h
@@ -319,7 +320,7 @@ add_library(engine_runtime STATIC
 # bgfx_helpers publicly carries bgfx, bx and bimg with their include
 # directories, which engine headers need.
 target_link_libraries(engine_runtime PUBLIC bgfx_helpers ecs_core engine_math
-  engine_physics engine_physics_system engine_assets
+  engine_physics engine_physics_system engine_assets engine_animation
   nlohmann_json::nlohmann_json)
 
 target_compile_options(engine_runtime PRIVATE -Wall -Wextra -Wpedantic)
