@@ -24,8 +24,8 @@ class GameSession {
   explicit GameSession(engine::Engine& engine);
 
   /**
-   * @brief Turns this frame's input into the player's velocity and facing.
-   * Before Engine::Update.
+   * @brief Turns this frame's input into the player's velocity and facing,
+   * and steers the enemies. Before Engine::Update.
    * @param has_control False stops the player where it stands.
    */
   void PrePhysics(engine::Engine& engine, const engine::FrameContext& ctx,

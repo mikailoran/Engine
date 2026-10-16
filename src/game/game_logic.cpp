@@ -2,14 +2,18 @@
 
 #include <nlohmann/json.hpp>
 #include <stdexcept>
+#include <string>
 
+#include "engine/ecs/components/animator.h"
 #include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
 #include "engine/engine.h"
 #include "engine/physics/physics_world.h"
+#include "engine/resource/animation_handles.h"
 #include "engine/resource/asset_registry.h"
 #include "engine/scene/json_read.h"
 #include "game/aim.h"
+#include "game/enemy.h"
 #include "game/health.h"
 #include "game/player.h"
 #include "game/weapon.h"
@@ -72,6 +76,58 @@ void LoadWeapon(const nlohmann::json& data, engine::Entity entity,
   ecs.AddComponent(entity, Aim{});
 }
 
+/** @brief The clip named by @p data's @p key in @p set; throws if absent. */
+auto FindClip(const nlohmann::json& data, const char* key,
+              const engine::AssetRegistry& assets, engine::ClipSetHandle set)
+    -> engine::ClipHandle {
+  const auto name = data.at(key).get<std::string>();
+  const engine::ClipHandle clip = assets.FindClip(set, name);
+  if (!clip.IsValid()) {
+    throw std::runtime_error("enemy: no clip named '" + name + "'");
+  }
+  return clip;
+}
+
+/**
+ * @brief Adds an Enemy. Needs the entity's Animator; "clips" names the
+ * idle, walk, run, hold, aim and fire clips in it. Speeds (m/s), ranges (m),
+ * "fire_interval_s" and "upper_body_joint" (the upper layers' mask root,
+ * default "spine_01") are optional.
+ */
+void LoadEnemy(const nlohmann::json& data, engine::Entity entity,
+               engine::Ecs& ecs, engine::AssetRegistry& assets,
+               engine::physics::PhysicsWorld& /*physics*/) {
+  engine::CheckKeys(data, {"walk_speed", "run_speed", "engage_m", "run_m",
+                           "fire_interval_s", "upper_body_joint", "clips"});
+  // The engine's animator loader runs first, being registered first
+  auto* animator = ecs.TryGetComponent<engine::Animator>(entity);
+  if (animator == nullptr) {
+    throw std::runtime_error("enemy needs an animator");
+  }
+
+  Enemy enemy{};
+  engine::ReadPositive(data, "walk_speed", enemy.walk_speed);
+  engine::ReadPositive(data, "run_speed", enemy.run_speed);
+  engine::ReadPositive(data, "engage_m", enemy.ranges.engage_m);
+  engine::ReadPositive(data, "run_m", enemy.ranges.run_m);
+  engine::ReadPositive(data, "fire_interval_s", enemy.fire_interval_s);
+
+  const auto& clips = data.at("clips");
+  engine::CheckKeys(clips, {"idle", "walk", "run", "hold", "aim", "fire"});
+  enemy.clips = {.idle = FindClip(clips, "idle", assets, animator->clips),
+                 .walk = FindClip(clips, "walk", assets, animator->clips),
+                 .run = FindClip(clips, "run", assets, animator->clips),
+                 .hold = FindClip(clips, "hold", assets, animator->clips),
+                 .aim = FindClip(clips, "aim", assets, animator->clips),
+                 .fire = FindClip(clips, "fire", assets, animator->clips)};
+
+  // Stance and shots play over the upper body only
+  const auto upper = data.value("upper_body_joint", std::string("spine_01"));
+  SetLayer(*animator, kUpperLayer, {.weight = 1.0F, .mask = upper});
+  SetLayer(*animator, kShotLayer, {.weight = 1.0F, .mask = upper});
+  ecs.AddComponent(entity, enemy);
+}
+
 }  // namespace
 
 void RegisterGameLogic(engine::Engine& engine) {
@@ -79,9 +135,11 @@ void RegisterGameLogic(engine::Engine& engine) {
   engine.World().RegisterComponent<Health>();
   engine.World().RegisterComponent<Weapon>();
   engine.World().RegisterComponent<Aim>();
+  engine.World().RegisterComponent<Enemy>();
   engine.RegisterSceneLoader("player", LoadPlayer);
   engine.RegisterSceneLoader("health", LoadHealth);
   engine.RegisterSceneLoader("weapon", LoadWeapon);
+  engine.RegisterSceneLoader("enemy", LoadEnemy);
 }
 
 }  // namespace game

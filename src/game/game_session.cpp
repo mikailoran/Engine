@@ -8,6 +8,7 @@
 #include "engine/hud/crosshair.h"
 #include "engine/platform/frame_context.h"
 #include "game/enemy_spawning.h"
+#include "game/enemy_system.h"
 #include "game/shooting_system.h"
 
 using engine::Camera;
@@ -39,6 +40,7 @@ GameSession::GameSession(Engine& engine) {
 void GameSession::PrePhysics(Engine& engine, const FrameContext& ctx,
                              bool has_control) {
   player_.Control(engine.World(), ctx, has_control);
+  DriveEnemies(engine.World(), ctx.dt, has_control);
   // Game time stands still without control (F1), as physics does
   if (has_control) {
     UpdateCooldowns(engine.World(), ctx.dt);

@@ -355,7 +355,11 @@ add_library(game_logic STATIC
   src/game/shooting_system.h
   src/game/shooting_system.cpp
   src/game/enemy_spawning.h
-  src/game/enemy_spawning.cpp)
+  src/game/enemy_spawning.cpp
+  src/game/enemy.h
+  src/game/enemy_rules.h
+  src/game/enemy_system.h
+  src/game/enemy_system.cpp)
 
 target_link_libraries(game_logic PUBLIC engine_runtime)
 

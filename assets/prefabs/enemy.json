@@ -17,6 +17,21 @@
     "health": {
       "max": 100,
       "current": 100
+    },
+    "enemy": {
+      "walk_speed": 1.5,
+      "run_speed": 3.5,
+      "engage_m": 8,
+      "run_m": 15,
+      "fire_interval_s": 1.2,
+      "clips": {
+        "idle": "Idle_Loop",
+        "walk": "Walk_Loop",
+        "run": "Jog_Fwd_Loop",
+        "hold": "Pistol_Idle_Loop",
+        "aim": "Pistol_Aim_Neutral",
+        "fire": "Pistol_Shoot"
+      }
     }
   }
 }

@@ -60,9 +60,11 @@ add_executable(asset_tests
   assets/bone_parts_test.cpp
   assets/skeleton_test.cpp
   assets/animation_clip_test.cpp
-  assets/retarget_test.cpp)
+  assets/retarget_test.cpp
+  assets/prefab_clips_test.cpp)
 
-target_link_libraries(asset_tests PRIVATE engine_assets GTest::gtest_main)
+target_link_libraries(asset_tests PRIVATE engine_assets nlohmann_json::nlohmann_json
+  GTest::gtest_main)
 # Reads the source tree's assets, not the copies beside the executable
 target_compile_definitions(asset_tests PRIVATE
   ENGINE_ASSET_DIR="${PROJECT_SOURCE_DIR}/assets")
@@ -96,7 +98,8 @@ set_target_properties(animation_tests PROPERTIES
 
 # Gameplay rules that need no engine: header-only, so only src/ is needed
 add_executable(game_tests
-  game/health_test.cpp)
+  game/health_test.cpp
+  game/enemy_rules_test.cpp)
 
 target_include_directories(game_tests PRIVATE ${PROJECT_SOURCE_DIR}/src)
 target_link_libraries(game_tests PRIVATE GTest::gtest_main)
