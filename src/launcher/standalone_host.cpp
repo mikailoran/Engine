@@ -96,8 +96,8 @@ auto StandaloneHost::Run() -> int {
     session_.PostPhysics(engine_);
 
     // Playing shows the game alone, without wireframes or the inspector
-    const RenderOptions render_options{.debug_draw =
-                                           !play && ui_.DebugDrawEnabled()};
+    const RenderOptions render_options{
+        .debug_draw = !play && ui_.DebugDrawEnabled(), .hud = play};
     if (render_options.debug_draw) {
       // Selection is devtools policy; the engine only draws what it's asked
       engine_.World().View<Selected>().ForEach(

@@ -5,11 +5,13 @@
 #include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
 #include "engine/engine.h"
+#include "engine/hud/crosshair.h"
 #include "engine/platform/frame_context.h"
 #include "game/enemy_spawning.h"
 #include "game/shooting_system.h"
 
 using engine::Camera;
+using engine::CrosshairStyle;
 using engine::Ecs;
 using engine::Engine;
 using engine::Entity;
@@ -17,6 +19,13 @@ using engine::FrameContext;
 using engine::Transform;
 
 namespace game {
+
+namespace {
+
+/// The player's crosshair; the engine's default style for now.
+constexpr CrosshairStyle kCrosshair{};
+
+}  // namespace
 
 GameSession::GameSession(Engine& engine) {
   Ecs& ecs = engine.World();
@@ -40,6 +49,7 @@ void GameSession::PostPhysics(Engine& engine) const {
   player_.PlaceCamera(engine.World());
   HandleEnemySpawns(engine);
   HandleShots(engine);
+  engine.DrawCrosshair(kCrosshair);
 }
 
 auto GameSession::ViewCamera() const -> Entity { return camera_; }

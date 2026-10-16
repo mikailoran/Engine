@@ -12,5 +12,7 @@ inline constexpr bgfx::ViewId kShadowView = 0;
 inline constexpr bgfx::ViewId kSceneView = 1;
 /// Debug lines over the scene, against its depth.
 inline constexpr bgfx::ViewId kDebugView = 2;
+/// Screen-space overlays (the crosshair), over everything, no depth.
+inline constexpr bgfx::ViewId kHudView = 3;
 
 }  // namespace engine
