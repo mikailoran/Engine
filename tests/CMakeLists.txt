@@ -56,7 +56,8 @@ set_target_properties(physics_tests PROPERTIES
 )
 
 add_executable(asset_tests
-  assets/gltf_reader_test.cpp)
+  assets/gltf_reader_test.cpp
+  assets/bone_parts_test.cpp)
 
 target_link_libraries(asset_tests PRIVATE engine_assets GTest::gtest_main)
 # Reads the source tree's assets, not the copies beside the executable

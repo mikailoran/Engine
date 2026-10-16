@@ -100,6 +100,7 @@ add_library(engine_physics STATIC
   src/engine/physics/body_handle.h
   src/engine/physics/character_handle.h
   src/engine/physics/collision_mesh_handle.h
+  src/engine/physics/hitbox_handle.h
   src/engine/physics/jolt_runtime.h
   src/engine/physics/jolt_runtime.cpp
   src/engine/physics/layers.h
@@ -149,7 +150,17 @@ target_include_directories(engine_cgltf SYSTEM PUBLIC ${BGFX_DIR}/3rdparty)
 add_library(engine_assets STATIC
   src/engine/resource/cpu_mesh.h
   src/engine/resource/gltf_reader.h
-  src/engine/resource/gltf_reader.cpp)
+  src/engine/resource/gltf_reader.cpp
+  src/engine/resource/gltf_document.h
+  src/engine/resource/gltf_document.cpp
+  src/engine/resource/gltf_geometry.h
+  src/engine/resource/gltf_geometry.cpp
+  src/engine/resource/gltf_materials.h
+  src/engine/resource/gltf_materials.cpp
+  src/engine/resource/gltf_skin.h
+  src/engine/resource/gltf_skin.cpp
+  src/engine/resource/bone_parts.h
+  src/engine/resource/bone_parts.cpp)
 
 target_include_directories(engine_assets PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 # bimg decodes PNG/JPEG; bimg_encode only for imageGenerateMips

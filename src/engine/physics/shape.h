@@ -26,6 +26,14 @@ struct TriangleMesh {
 };
 
 /**
+ * @brief Points to wrap in one convex hull, in the hitbox's space. Fewer than
+ * four points, or points with no volume, make no hull.
+ */
+struct ConvexPart {
+  std::vector<bx::Vec3> points;
+};
+
+/**
  * @brief A shape in body space, before the body's scale. The defaults fit the
  * engine's unit primitive meshes (cube, cylinder, cone, sphere), which all
  * span [-0.5, 0.5].

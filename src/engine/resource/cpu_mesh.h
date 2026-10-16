@@ -64,6 +64,9 @@ struct CpuMesh {
   std::vector<bx::Vec3> normals;
   /// One per position; zeros when the source has no UVs.
   std::vector<std::array<float, 2>> uvs;
+  /// One per position: the glTF node that moves it most, i.e. its heaviest
+  /// joint, or the node holding its mesh when unskinned.
+  std::vector<std::uint32_t> bones;
   /// Three per triangle, counter-clockwise seen from the front.
   std::vector<std::uint32_t> indices;
   /// Cover indices exactly, in order, one per material.

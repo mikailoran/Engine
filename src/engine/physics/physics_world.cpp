@@ -2,6 +2,7 @@
 
 // The header brings no Jolt, and every other Jolt header needs it first
 #include <Jolt/Jolt.h>  // IWYU pragma: keep
+#include <Jolt/Core/Array.h>
 #include <Jolt/Core/Core.h>
 #include <Jolt/Core/JobSystemThreadPool.h>
 #include <Jolt/Core/Reference.h>
@@ -33,11 +34,13 @@
 #include <Jolt/Physics/Collision/RayCast.h>
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
 #include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
+#include <Jolt/Physics/Collision/Shape/ConvexHullShape.h>
 #include <Jolt/Physics/Collision/Shape/MeshShape.h>
 #include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
 #include <Jolt/Physics/Collision/Shape/ScaledShape.h>
 #include <Jolt/Physics/Collision/Shape/Shape.h>
 #include <Jolt/Physics/Collision/Shape/SphereShape.h>
+#include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
 #include <Jolt/Physics/Collision/ShapeFilter.h>
 #include <Jolt/Physics/Collision/TransformedShape.h>
 #include <Jolt/Physics/EActivation.h>
@@ -61,6 +64,7 @@
 #include "engine/physics/body_handle.h"
 #include "engine/physics/character_handle.h"
 #include "engine/physics/collision_mesh_handle.h"
+#include "engine/physics/hitbox_handle.h"
 #include "engine/physics/jolt_runtime.h"
 #include "engine/physics/layers.h"
 #include "engine/physics/shape.h"
@@ -136,15 +140,66 @@ auto MakeMeshShape(const TriangleMesh& mesh)
 /// Built collision meshes, indexed by CollisionMeshHandle::Value.
 using MeshShapes = std::vector<JPH::RefConst<JPH::Shape>>;
 
+/** @brief A character and the shape rays hit instead of its capsule. */
+struct CharacterSlot {
+  JPH::Ref<JPH::CharacterVirtual> character;
+  /// Null: rays hit the capsule.
+  JPH::RefConst<JPH::Shape> hitbox{nullptr};
+  /// Turns the hitbox about the feet.
+  JPH::Quat hitbox_rotation{JPH::Quat::sIdentity()};
+  JPH::Vec3 hitbox_scale{JPH::Vec3::sOne()};
+};
+
 /// Characters by CharacterHandle::Value.
-using CharacterMap =
-    std::unordered_map<std::uint32_t, JPH::Ref<JPH::CharacterVirtual>>;
+using CharacterMap = std::unordered_map<std::uint32_t, CharacterSlot>;
+
+/** @brief The slot of the character @p handle names. @pre It exists. */
+auto FindSlot(CharacterMap& characters, CharacterHandle handle)
+    -> CharacterSlot& {
+  assert(characters.contains(handle.Value()) && "unknown character");
+  return characters.at(handle.Value());
+}
 
 /** @brief The character @p handle names. @pre It exists. */
 auto FindCharacter(const CharacterMap& characters, CharacterHandle handle)
     -> JPH::CharacterVirtual& {
   assert(characters.contains(handle.Value()) && "unknown character");
-  return *characters.at(handle.Value());
+  return *characters.at(handle.Value()).character;
+}
+
+/**
+ * @brief Builds a convex hull around @p part's points.
+ * @return The hull, or null if the points span no volume.
+ */
+auto MakeHull(const ConvexPart& part) -> JPH::RefConst<JPH::Shape> {
+  // Fewer points can't enclose a volume
+  if (part.points.size() < 4) {
+    return nullptr;
+  }
+  JPH::Array<JPH::Vec3> points;
+  points.reserve(part.points.size());
+  for (const bx::Vec3& point : part.points) {
+    points.push_back(ToJolt(point));
+  }
+  // Flat or degenerate point sets are input, not a programmer error
+  const JPH::ShapeSettings::ShapeResult result =
+      JPH::ConvexHullShapeSettings(points).Create();
+  return result.IsValid() ? result.Get() : nullptr;
+}
+
+/**
+ * @brief Where @p slot's hitbox stands: placed at the character's feet,
+ * turned and scaled by the slot's pose.
+ */
+auto HitboxShape(const CharacterSlot& slot) -> JPH::TransformedShape {
+  // Jolt places shapes by their centre of mass, not their origin
+  const JPH::Vec3 centre_of_mass =
+      slot.hitbox_rotation *
+      (slot.hitbox_scale * slot.hitbox->GetCenterOfMass());
+  JPH::TransformedShape shape(slot.character->GetPosition() + centre_of_mass,
+                              slot.hitbox_rotation, slot.hitbox, JPH::BodyID{});
+  shape.SetShapeScale(slot.hitbox_scale);
+  return shape;
 }
 
 /** @brief The shape in @p result, or null if Jolt rejected it. */
@@ -295,6 +350,8 @@ struct PhysicsWorld::Impl {
   std::unordered_map<std::uint32_t, bx::Vec3> accelerations;
   /// Collision meshes, shared by every body that uses one.
   MeshShapes meshes;
+  /// Hitboxes by HitboxHandle::Value, shared by every character using one.
+  std::vector<JPH::RefConst<JPH::Shape>> hitboxes;
   /// Characters point at the system, so they follow it and die first.
   CharacterMap characters;
   /// The next CharacterHandle value; never reused.
@@ -357,6 +414,31 @@ auto PhysicsWorld::CreateCollisionMesh(const TriangleMesh& mesh)
   impl_->meshes.emplace_back(result.Get());
   return CollisionMeshHandle(
       static_cast<std::uint32_t>(impl_->meshes.size() - 1));
+}
+
+auto PhysicsWorld::CreateHitbox(const std::vector<ConvexPart>& parts)
+    -> HitboxHandle {
+  std::vector<JPH::RefConst<JPH::Shape>> hulls;
+  for (const ConvexPart& part : parts) {
+    if (JPH::RefConst<JPH::Shape> hull = MakeHull(part)) {
+      hulls.push_back(std::move(hull));
+    }
+  }
+  if (hulls.empty()) {
+    return {};
+  }
+
+  // Hull points are in hitbox space, so each part sits at the origin
+  JPH::RefConst<JPH::Shape> hitbox = hulls.front();
+  if (hulls.size() > 1) {
+    JPH::StaticCompoundShapeSettings compound;
+    for (const auto& hull : hulls) {
+      compound.AddShape(JPH::Vec3::sZero(), JPH::Quat::sIdentity(), hull);
+    }
+    hitbox = Built(compound.Create());
+  }
+  impl_->hitboxes.push_back(std::move(hitbox));
+  return HitboxHandle(static_cast<std::uint32_t>(impl_->hitboxes.size() - 1));
 }
 
 void PhysicsWorld::DestroyBody(BodyHandle body) {
@@ -501,7 +583,12 @@ auto PhysicsWorld::CreateCharacter(const CharacterDesc& desc)
       &settings, ToJolt(desc.feet), JPH::Quat::sIdentity(), desc.user_data,
       &impl_->system);
   const CharacterHandle handle(impl_->next_character++);
-  impl_->characters.emplace(handle.Value(), std::move(character));
+  CharacterSlot slot{.character = std::move(character)};
+  if (desc.hitbox.IsValid()) {
+    assert(desc.hitbox.Value() < impl_->hitboxes.size() && "unknown hitbox");
+    slot.hitbox = impl_->hitboxes.at(desc.hitbox.Value());
+  }
+  impl_->characters.emplace(handle.Value(), std::move(slot));
   return handle;
 }
 
@@ -511,7 +598,7 @@ auto PhysicsWorld::UserData(CharacterHandle character) const
   if (it == impl_->characters.end()) {
     return std::nullopt;
   }
-  return it->second->GetUserData();
+  return it->second.character->GetUserData();
 }
 
 void PhysicsWorld::DestroyCharacter(CharacterHandle character) {
@@ -529,6 +616,16 @@ void PhysicsWorld::SetCharacterVelocity(CharacterHandle character,
       .SetLinearVelocity(ToJolt(velocity));
 }
 
+void PhysicsWorld::SetHitboxPose(CharacterHandle character,
+                                 const bx::Quaternion& rotation,
+                                 const bx::Vec3& scale) {
+  assert(scale.x != 0.0F && scale.y != 0.0F && scale.z != 0.0F &&
+         "a zero scale flattens the hitbox");
+  CharacterSlot& slot = FindSlot(impl_->characters, character);
+  slot.hitbox_rotation = ToJolt(rotation).Normalized();
+  slot.hitbox_scale = ToJolt(scale);
+}
+
 auto PhysicsWorld::GetCharacter(CharacterHandle character) const
     -> CharacterState {
   const JPH::CharacterVirtual& found =
@@ -542,9 +639,9 @@ auto PhysicsWorld::GetCharacter(CharacterHandle character) const
 auto PhysicsWorld::Characters() const -> std::vector<CharacterEntry> {
   std::vector<CharacterEntry> characters;
   characters.reserve(impl_->characters.size());
-  for (const auto& [value, character] : impl_->characters) {
+  for (const auto& [value, slot] : impl_->characters) {
     characters.push_back({.character = CharacterHandle(value),
-                          .user_data = character->GetUserData()});
+                          .user_data = slot.character->GetUserData()});
   }
   return characters;
 }
@@ -575,13 +672,16 @@ auto PhysicsWorld::CastRay(const bx::Ray& ray, float max_distance) const
     hits.push_back(hit);
   }
 
-  // Characters aren't in Jolt's world, so their capsules are tested apart
-  for (const auto& [value, character] : impl_->characters) {
+  // Characters aren't in Jolt's world, so their shapes are tested apart
+  for (const auto& [value, slot] : impl_->characters) {
+    const JPH::TransformedShape shape =
+        slot.hitbox != nullptr ? HitboxShape(slot)
+                               : slot.character->GetTransformedShape();
     JPH::RayCastResult result;
-    if (character->GetTransformedShape().CastRay(jolt_ray, result)) {
+    if (shape.CastRay(jolt_ray, result)) {
       RayHit hit = hit_at(result.mFraction);
       hit.character = CharacterHandle(value);
-      hit.user_data = character->GetUserData();
+      hit.user_data = slot.character->GetUserData();
       hits.push_back(hit);
     }
   }
@@ -592,8 +692,8 @@ auto PhysicsWorld::CastRay(const bx::Ray& ray, float max_distance) const
 
 void PhysicsWorld::Step(float dt) {
   // Characters move first, so their pushes take effect in this step
-  for (const auto& [value, character] : impl_->characters) {
-    MoveCharacter(*character, dt, impl_->system, impl_->temp_allocator);
+  for (const auto& [value, slot] : impl_->characters) {
+    MoveCharacter(*slot.character, dt, impl_->system, impl_->temp_allocator);
   }
 
   JPH::BodyInterface& body_interface = impl_->system.GetBodyInterface();

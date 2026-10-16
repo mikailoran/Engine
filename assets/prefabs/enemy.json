@@ -7,7 +7,8 @@
     },
     "character_body": {
       "height": 1.7,
-      "radius": 0.3
+      "radius": 0.3,
+      "hitbox": "assets/meshes/characters/Male_Casual.glb"
     },
     "health": {
       "max": 100,
