@@ -17,7 +17,8 @@ namespace engine {
  * @param path A .glb or .gltf file.
  * @throws std::runtime_error Naming @p path, if the file can't be read or
  *         uses something unsupported: a required extension, non-triangle
- *         primitives, primitives without normals, or more than one skin.
+ *         primitives, primitives without normals, more than one skin, or
+ *         skinned and static primitives in one file.
  */
 auto ReadGltf(const std::filesystem::path& path) -> CpuMesh;
 

@@ -67,22 +67,27 @@ auto ParentJoint(
   return std::nullopt;
 }
 
-}  // namespace
+/** @brief A skinned primitive's JOINTS_0 and WEIGHTS_0 accessors. */
+struct SkinAttributes {
+  /// Never null.
+  const cgltf_accessor* joints{nullptr};
+  /// Never null.
+  const cgltf_accessor* weights{nullptr};
+};
 
-auto VertexBones(const cgltf_data& data, const cgltf_node& node,
-                 const cgltf_primitive& primitive, std::size_t vertex_count)
-    -> std::vector<std::uint32_t> {
+/**
+ * @brief @p primitive's JOINTS_0 and WEIGHTS_0, checked against each other
+ * and @p vertex_count.
+ * @pre @p primitive has JOINTS_0.
+ * @throws std::runtime_error If WEIGHTS_0 is missing, a count differs or
+ *         JOINTS_0 isn't four components.
+ */
+auto CheckedSkinAttributes(const cgltf_primitive& primitive,
+                           std::size_t vertex_count) -> SkinAttributes {
   const cgltf_accessor* joints =
       cgltf_find_accessor(&primitive, cgltf_attribute_type_joints, 0);
   const cgltf_accessor* weights =
       cgltf_find_accessor(&primitive, cgltf_attribute_type_weights, 0);
-
-  // Unskinned vertices move with the node holding the mesh
-  if (node.skin == nullptr || joints == nullptr) {
-    return std::vector<std::uint32_t>(
-        vertex_count,
-        static_cast<std::uint32_t>(cgltf_node_index(&data, &node)));
-  }
   if (weights == nullptr) {
     throw std::runtime_error("JOINTS_0 without WEIGHTS_0");
   }
@@ -92,6 +97,64 @@ auto VertexBones(const cgltf_data& data, const cgltf_node& node,
   if (cgltf_num_components(joints->type) != 4) {
     throw std::runtime_error("JOINTS_0 has the wrong element type");
   }
+  return {.joints = joints, .weights = weights};
+}
+
+}  // namespace
+
+auto IsSkinned(const cgltf_node& node, const cgltf_primitive& primitive)
+    -> bool {
+  return node.skin != nullptr &&
+         cgltf_find_accessor(&primitive, cgltf_attribute_type_joints, 0) !=
+             nullptr;
+}
+
+auto VertexInfluences(const cgltf_node& node, const cgltf_primitive& primitive,
+                      std::size_t vertex_count) -> Influences {
+  const auto [joints, weights] = CheckedSkinAttributes(primitive, vertex_count);
+  const auto weight_values = UnpackFloats(*weights, 4, "WEIGHTS_0");
+  const std::size_t joint_count = node.skin->joints_count;
+
+  Influences influences;
+  influences.joints.reserve(vertex_count);
+  influences.weights.reserve(vertex_count);
+  for (std::size_t i = 0; i < vertex_count; ++i) {
+    std::array<cgltf_uint, 4> vertex_joints{};
+    cgltf_accessor_read_uint(joints, i, vertex_joints.data(), 4);
+    std::array<std::uint16_t, 4> indices{};
+    std::array<float, 4> vertex_weights{};
+    float sum = 0.0F;
+    for (std::size_t k = 0; k < 4; ++k) {
+      if (vertex_joints.at(k) >= joint_count) {
+        throw std::runtime_error("joint index out of range");
+      }
+      indices.at(k) = static_cast<std::uint16_t>(vertex_joints.at(k));
+      vertex_weights.at(k) = weight_values.at((i * 4) + k);
+      sum += vertex_weights.at(k);
+    }
+    if (sum <= 0.0F) {
+      throw std::runtime_error("vertex with no joint weight");
+    }
+    // Exporters round weights; skinning wants them to sum to 1
+    for (float& weight : vertex_weights) {
+      weight /= sum;
+    }
+    influences.joints.push_back(indices);
+    influences.weights.push_back(vertex_weights);
+  }
+  return influences;
+}
+
+auto VertexBones(const cgltf_data& data, const cgltf_node& node,
+                 const cgltf_primitive& primitive, std::size_t vertex_count)
+    -> std::vector<std::uint32_t> {
+  // Unskinned vertices move with the node holding the mesh
+  if (!IsSkinned(node, primitive)) {
+    return std::vector<std::uint32_t>(
+        vertex_count,
+        static_cast<std::uint32_t>(cgltf_node_index(&data, &node)));
+  }
+  const auto [joints, weights] = CheckedSkinAttributes(primitive, vertex_count);
 
   // The node index of each of the skin's joints
   std::vector<std::uint32_t> joint_nodes;

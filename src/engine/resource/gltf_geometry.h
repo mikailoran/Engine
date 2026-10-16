@@ -2,6 +2,7 @@
 
 #include <cgltf/cgltf.h>
 
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <vector>
@@ -23,11 +24,15 @@ struct MeshBuilder {
   CpuMesh mesh;
   /// Index 0 holds primitives without a material, i + 1 material i.
   std::vector<MaterialBucket> buckets;
+  /// Primitives appended with and without joint influences.
+  std::size_t skinned_primitives{0};
+  std::size_t static_primitives{0};
 };
 
 /**
  * @brief Appends the meshes of @p scene's nodes and all their descendants,
- * with node transforms baked in and mirrored nodes rewound.
+ * with node transforms baked in and mirrored nodes rewound. Skinned
+ * primitives stay in bind space and bring their joint influences.
  *
  * Requires @p builder's buckets sized to the file's materials + 1.
  * @throws std::runtime_error On a primitive that isn't triangles, lacks

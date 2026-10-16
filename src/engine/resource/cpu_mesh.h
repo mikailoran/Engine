@@ -72,7 +72,8 @@ struct CpuImage {
  * AssetRegistry builds collision meshes from its positions and indices.
  */
 struct CpuMesh {
-  /// In mesh space, in metres: right-handed, +Y up.
+  /// In mesh space, in metres: right-handed, +Y up. Skinned meshes are in
+  /// bind pose.
   std::vector<bx::Vec3> positions;
   /// Unit length, one per position.
   std::vector<bx::Vec3> normals;
@@ -81,6 +82,12 @@ struct CpuMesh {
   /// One per position: the glTF node that moves it most, i.e. its heaviest
   /// joint, or the node holding its mesh when unskinned.
   std::vector<std::uint32_t> bones;
+  /// One per position when skinned, else empty: four indices into
+  /// skeleton's joints.
+  std::vector<std::array<std::uint16_t, 4>> joints;
+  /// One per position when skinned, else empty: the matching weights,
+  /// summing to 1.
+  std::vector<std::array<float, 4>> weights;
   /// Three per triangle, counter-clockwise seen from the front.
   std::vector<std::uint32_t> indices;
   /// Cover indices exactly, in order, one per material.

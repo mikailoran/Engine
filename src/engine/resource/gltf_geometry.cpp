@@ -31,13 +31,20 @@ auto IsMirror(const std::array<float, 16>& m) -> bool {
   return bx::dot(bx::cross(x, y), z) < 0.0F;
 }
 
+/** @brief The 4x4 identity, column-major. */
+constexpr std::array<float, 16> kIdentity{1.0F, 0.0F, 0.0F, 0.0F, 0.0F, 1.0F,
+                                          0.0F, 0.0F, 0.0F, 0.0F, 1.0F, 0.0F,
+                                          0.0F, 0.0F, 0.0F, 1.0F};
+
 /**
  * @brief Appends one primitive of @p node's mesh: its vertices baked by
- * @p world, their bones, and its indices to its material's bucket.
+ * @p node_world (identity when skinned), their bones and joint influences,
+ * and its indices to its material's bucket.
  */
 void AppendPrimitive(const cgltf_data& data, const cgltf_node& node,
                      const cgltf_primitive& primitive,
-                     const std::array<float, 16>& world, MeshBuilder& builder) {
+                     const std::array<float, 16>& node_world,
+                     MeshBuilder& builder) {
   if (primitive.type != cgltf_primitive_type_triangles) {
     throw std::runtime_error("only triangle primitives are supported");
   }
@@ -57,6 +64,11 @@ void AppendPrimitive(const cgltf_data& data, const cgltf_node& node,
       (uv != nullptr && uv->count != position->count)) {
     throw std::runtime_error("attribute counts differ within a primitive");
   }
+
+  // Skinned vertices are in bind space: glTF ignores their node's transform
+  const bool skinned = IsSkinned(node, primitive);
+  const std::array<float, 16>& world = skinned ? kIdentity : node_world;
+  ++(skinned ? builder.skinned_primitives : builder.static_primitives);
 
   // Normals transform by the inverse transpose
   std::array<float, 16> inverse{};
@@ -84,6 +96,13 @@ void AppendPrimitive(const cgltf_data& data, const cgltf_node& node,
   }
   const auto bones = VertexBones(data, node, primitive, position->count);
   mesh.bones.insert(mesh.bones.end(), bones.begin(), bones.end());
+  if (skinned) {
+    const auto influences = VertexInfluences(node, primitive, position->count);
+    mesh.joints.insert(mesh.joints.end(), influences.joints.begin(),
+                       influences.joints.end());
+    mesh.weights.insert(mesh.weights.end(), influences.weights.begin(),
+                        influences.weights.end());
+  }
 
   // Unindexed primitives list their vertices in order
   std::vector<std::uint32_t> indices;

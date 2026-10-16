@@ -128,9 +128,35 @@ TEST(Skeleton, RestPoseIsTheBindPose) {
   }
 }
 
+TEST(Skeleton, SkinnedVerticesHaveNormalizedInfluences) {
+  for (const char* path : {"meshes/characters/Male_Casual.glb",
+                           "meshes/characters/Superhero_Male.glb"}) {
+    SCOPED_TRACE(path);
+    const CpuMesh mesh = Read(path);
+    const std::size_t joint_count =
+        mesh.skeleton.value_or(Skeleton{}).joints.size();
+    ASSERT_GT(joint_count, 0U);
+    ASSERT_EQ(mesh.joints.size(), mesh.positions.size());
+    ASSERT_EQ(mesh.weights.size(), mesh.positions.size());
+    for (std::size_t i = 0; i < mesh.positions.size(); ++i) {
+      float sum = 0.0F;
+      for (std::size_t k = 0; k < 4; ++k) {
+        ASSERT_LT(mesh.joints.at(i).at(k), joint_count);
+        ASSERT_GE(mesh.weights.at(i).at(k), 0.0F);
+        sum += mesh.weights.at(i).at(k);
+      }
+      ASSERT_NEAR(sum, 1.0F, 1e-4F) << "vertex " << i;
+    }
+  }
+}
+
 TEST(Skeleton, StaticMeshHasNone) {
-  EXPECT_FALSE(Read("meshes/cube.glb").skeleton);
-  EXPECT_FALSE(Read("levels/level02.glb").skeleton);
+  for (const char* path : {"meshes/cube.glb", "levels/level02.glb"}) {
+    const CpuMesh mesh = Read(path);
+    EXPECT_FALSE(mesh.skeleton) << path;
+    EXPECT_TRUE(mesh.joints.empty()) << path;
+    EXPECT_TRUE(mesh.weights.empty()) << path;
+  }
 }
 
 }  // namespace

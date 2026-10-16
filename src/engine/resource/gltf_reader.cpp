@@ -50,6 +50,10 @@ auto BuildMesh(const cgltf_data& data, const std::filesystem::path& gltf_path)
   if (!has_triangles) {
     throw std::runtime_error("no triangles");
   }
+  // Static parts would need a joint of their own to follow the skeleton
+  if (builder.skinned_primitives > 0 && builder.static_primitives > 0) {
+    throw std::runtime_error("mixed skinned and static meshes");
+  }
   gltf::CutSubmeshes(builder);
   gltf::ReadMaterials(data, gltf_path, builder.mesh);
   // One skin at most: an entity poses one skeleton

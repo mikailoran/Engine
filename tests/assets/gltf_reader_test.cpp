@@ -68,6 +68,10 @@ void ExpectWellFormed(const CpuMesh& mesh) {
   EXPECT_EQ(mesh.normals.size(), mesh.positions.size());
   EXPECT_EQ(mesh.uvs.size(), mesh.positions.size());
   EXPECT_EQ(mesh.bones.size(), mesh.positions.size());
+  // Influences cover every vertex of a skinned mesh, none of a static one
+  const std::size_t influenced = mesh.skeleton ? mesh.positions.size() : 0;
+  EXPECT_EQ(mesh.joints.size(), influenced);
+  EXPECT_EQ(mesh.weights.size(), influenced);
   for (const std::uint32_t index : mesh.indices) {
     ASSERT_LT(index, mesh.positions.size());
   }
