@@ -75,6 +75,22 @@ set_target_properties(asset_tests PROPERTIES
   CXX_EXTENSIONS OFF
 )
 
+# The animation runtime on the real rigs and clips; no bgfx or ECS
+add_executable(animation_tests
+  animation/rig_test.cpp)
+
+target_link_libraries(animation_tests PRIVATE engine_animation GTest::gtest_main)
+target_compile_definitions(animation_tests PRIVATE
+  ENGINE_ASSET_DIR="${PROJECT_SOURCE_DIR}/assets")
+
+target_compile_options(animation_tests PRIVATE -Wall -Wextra -Wpedantic)
+
+set_target_properties(animation_tests PROPERTIES
+  CXX_STANDARD 20
+  CXX_STANDARD_REQUIRED ON
+  CXX_EXTENSIONS OFF
+)
+
 # Gameplay rules that need no engine: header-only, so only src/ is needed
 add_executable(game_tests
   game/health_test.cpp)
@@ -95,4 +111,5 @@ gtest_discover_tests(ecs_tests)
 gtest_discover_tests(math_tests)
 gtest_discover_tests(physics_tests)
 gtest_discover_tests(asset_tests)
+gtest_discover_tests(animation_tests)
 gtest_discover_tests(game_tests)

@@ -201,6 +201,25 @@ set_target_properties(engine_assets PROPERTIES
   CXX_EXTENSIONS OFF
 )
 
+# --- Animation --------------------------------------------------------------
+# Poses skeletons from clips. ozz stays PRIVATE: its headers never leave
+# src/engine/animation/. Needs no bgfx or ECS, so animation_tests stay cheap.
+add_library(engine_animation STATIC
+  src/engine/animation/rig.h
+  src/engine/animation/rig.cpp
+  src/engine/animation/ozz_state.h)
+
+target_include_directories(engine_animation PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(engine_animation PUBLIC engine_assets
+  PRIVATE ozz_animation_offline ozz_animation ozz_base)
+target_compile_options(engine_animation PRIVATE -Wall -Wextra -Wpedantic)
+
+set_target_properties(engine_animation PROPERTIES
+  CXX_STANDARD 20
+  CXX_STANDARD_REQUIRED ON
+  CXX_EXTENSIONS OFF
+)
+
 # --- Runtime layout ---------------------------------------------------------
 # Everything loaded at runtime is generated, and it is emitted here, beside the
 # executable. The app then derives its asset root from its own location
