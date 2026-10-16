@@ -12,7 +12,9 @@ color materials and textures, and a level shell collides through a
 triangle-mesh collider (the first version of the static shell below). The
 game library (`src/game/`) holds the first gameplay: a
 first-person `Player` on a kinematic character (`CharacterBody`), walking a
-level built in Blender from Kenney's CC0 Prototype Kit. The game starts in play mode; F1 switches to
+level built in Blender from Kenney's CC0 Prototype Kit. Enemies are skinned
+characters animated from CC0 clip packs ([animation.md](animation.md)): they
+chase, aim and fire a pistol, and fall as ragdolls when shot. The game starts in play mode; F1 switches to
 the devtools. The Qt editor (`src/editor/`) renders the engine into an
 embedded viewport, lists the named entities in a dock and shows the selected
 one's position in a read-only inspector.
@@ -217,6 +219,11 @@ saves, then starts `launcher --scene <path>`.
   file places it (an ordinary entity with a renderable and a mesh collider on
   the `.glb`) and holds what the editor placed and tuned. Re-exporting never
   wipes editor work.
+- **Packs come in through `tools/assets/`.** `pack_gltf.py` embeds a
+  pack's files into one `.glb`, prunes clips and downscales textures without
+  touching nodes, skins or animations; `export_glb.py` exports a `.blend`
+  prop at real scale. Clip packs are retargeted onto characters by joint
+  name at load ([animation.md](animation.md)).
 - **Prefabs are templates for repeated entities** (an enemy, a crate).
   They reference `.glb` files like scenes do, and the build copies them
   beside the executable with the scenes.

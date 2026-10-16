@@ -80,8 +80,7 @@ velocity you give it (Jolt's `CharacterVirtual`; see ADR 0009). Its
   "radius": 0.3,
   "max_slope_deg": 45,   // steepest walkable slope
   "mass": 70,            // kg: how hard it presses and pushes
-  "push_force": 200,     // strongest push on a body, N
-  "hitbox": "assets/meshes/characters/Male_Casual.glb"  // optional; see below
+  "push_force": 200      // strongest push on a body, N
 }
 ```
 
@@ -98,24 +97,39 @@ velocity you give it (Jolt's `CharacterVirtual`; see ADR 0009). Its
 - A `Collider` on a character entity is ignored, so no body overlaps it.
 - Picking and highlighting use its capsule, since it may have no mesh.
 
-#### Hitboxes
+### Ragdolls
 
-Shots test a character's capsule unless it has a **hitbox**: one convex hull
-per bone of a `.glb`, built when the scene loads (ADR 0015). For a T-posed
-enemy that means shots hit the arms and miss the gap under them.
+A `Ragdoll` gives a skinned, animated entity one capsule per major bone
+(ADR 0017). The same capsules are its **hitboxes** while it lives and its
+**death ragdoll** after.
 
-- **Only ray casts see it.** Movement, pushing and the slope limit still
-  use the capsule.
-- **It follows the `Transform`:** its origin is the feet, and it turns and
-  scales with the entity's rotation and scale. Mesh space is the hitbox's
-  space, so it lines up with the rendered mesh.
-- **Bones come from skin weights:** each vertex belongs to its heaviest
-  joint, and each joint's vertices make one hull. An unskinned file gives one
-  hull per Blender object. A bone with too few vertices to enclose a volume
-  is skipped.
-- **Bind pose only.** The hulls don't animate yet.
-- Like collision meshes, each file is built once and shared, and the
-  `PhysicsWorld` owns it.
+```jsonc
+"ragdoll": {
+  "file": "assets/ragdolls/ual_humanoid.json",  // the rig's parts
+  "simulate": false                             // true starts it limp
+}
+```
+
+A ragdoll file lists a rig's parts by joint name: each capsule runs from its
+joint to an `end` joint (or a `length` along the bone), with a `radius`,
+`mass_kg`, `parent` part and `swing_deg`/`twist_deg` limits about the parent.
+`FitRagdoll` fits it to the rig's rest pose and the `PhysicsWorld` builds it
+once per rig. Turn on debug draw to see the capsules over the mesh.
+
+- **Alive, it's kinematic.** After animation, `PhysicsSystem::PoseRagdolls`
+  teleports each part to its joint, so rays hit the limbs where they're drawn.
+  A `CharacterBody` on the same entity still does the moving, but rays pass
+  through its capsule.
+- **Dead, it's simulated.** Set `Ragdoll::simulate` and the parts turn
+  dynamic, keeping the velocity they last moved at; after each step the
+  `RagdollLink` holds where they put their joints, and `AnimationSystem`
+  poses the skeleton around them. The game does this when `Health` runs out,
+  and removes the `CharacterBody` so the capsule stops walking.
+- **Characters walk through ragdolls,** their own and dead ones: parts live
+  on their own object layer, which characters ignore. A ragdoll's parts never
+  collide with each other; they do collide with the level and props.
+- It needs a `SkinPose` (an `Animator` gives one) and is created the frame
+  after that appears. It assumes the entity's scale is 1.
 
 ### Mesh colliders
 
@@ -158,20 +172,21 @@ if (hit) {
   caster's own capsule, and Jolt treats convex shapes as solid, so without it
   every ray hits the caster at 0 m. The same holds for any shape a ray starts
   inside.
-- **It sees colliders and characters, not meshes you draw.** Bodies are found
-  by Jolt's narrow phase, against their real shapes. Characters aren't in
-  Jolt's world, so they're tested one by one, against their hitbox if they
-  have one, otherwise their capsule. An entity without a
-  `Collider` or `CharacterBody` can't be hit; use `Engine::Pick`, which tests
-  mesh bounds, to select those.
-- **Poses are those of the last physics step.** Gameplay runs before
-  physics, so an entity created or teleported this frame is found where
-  physics last put it, or not at all. A body whose entity was destroyed but
+- **It sees colliders, ragdolls and characters, not meshes you draw.**
+  Bodies and ragdoll parts are found by Jolt's narrow phase, against their
+  real shapes. Characters aren't in Jolt's world, so they're tested one by
+  one against their capsule, unless a ragdoll stands in for it. An entity
+  without a `Collider`, `Ragdoll` or `CharacterBody` can't be hit; use
+  `Engine::Pick`, which tests mesh bounds, to select those.
+- **Poses are those of the last physics step**, and kinematic ragdolls this
+  frame's animation. Gameplay runs before physics, so an entity created or
+  teleported this frame is found where physics last put it, or not at all. A body whose entity was destroyed but
   not yet swept is skipped.
 - **Meshes are one-sided** here too: a ray from behind a level wall passes
   through it.
 - Under the hood, `PhysicsWorld::CastRay` returns every hit, nearest first,
-  at most one per body or character, tagged with its user data. The free
+  at most one per body or character, tagged with its user data; a ragdoll hit
+  also names the part (`RayHit::part`). The free
   function `CastRay` (`ecs/systems/physics_query.h`) takes the first that
   still belongs to a live entity, and `Engine::CastRay` calls it.
 
@@ -234,13 +249,20 @@ There are three layers, and each one only knows about the one below it.
    5. **The same four for characters**, between `CharacterBody` +
       `Transform` and `CharacterLink`. A size edit rebuilds the character,
       keeping its velocity.
-   6. **Step.** Advance the world in fixed 1/60 s steps, carrying any leftover
+   6. **Sweep, detach and push for ragdolls**, between `Ragdoll` and
+      `RagdollLink`; the push hands a ragdoll to the simulation or back.
+      Ragdolls attach later, in `PoseRagdolls`, once animation has posed
+      them.
+   7. **Step.** Advance the world in fixed 1/60 s steps, carrying any leftover
       time to the next frame (capped at 0.25 s so a long hitch can't queue
       hundreds of steps). Each step moves the characters, then the bodies.
-   7. **Pull results.** Copy dynamic bodies' new position, rotation and
-      velocity back into `Transform` and `RigidBody`, and characters' feet,
+   8. **Pull results.** Copy dynamic bodies' new position, rotation and
+      velocity back into `Transform` and `RigidBody`, characters' feet,
       velocity and ground state into `Transform`, `CharacterBody` and
-      `CharacterLink`.
+      `CharacterLink`, and simulated ragdolls' joints into `RagdollLink`.
+
+   After animation, `Engine::Update` calls `PhysicsSystem::PoseRagdolls`:
+   it attaches new ragdolls and moves kinematic ones to this frame's pose.
 
 3. **`PhysicsWorld`** (`src/engine/physics/physics_world.*`) is the simulation, behind
    an API that uses only engine types: `BodyHandle`, `Pose`, `ShapeDesc`,
@@ -298,10 +320,13 @@ per case, and each fails if its wake-up is removed.
 ### Layers
 
 Jolt filters collisions in two stages. Every body has an **object layer**
-(ours: `kMoving`, `kNonMoving`), and object layers map to **broad-phase layers**
-(separate acceleration trees, so the static tree rarely needs rebuilding). We
-use Jolt's ready-made table classes (`src/engine/physics/layers.*`): moving bodies
-collide with everything, static bodies never test against each other.
+(ours: `kMoving`, `kNonMoving`, `kRagdoll`), and object layers map to
+**broad-phase layers** (separate acceleration trees, so the static tree rarely
+needs rebuilding). We use Jolt's ready-made table classes
+(`src/engine/physics/layers.*`): moving bodies and ragdoll parts collide with
+everything, static bodies never test against each other. Characters move
+with a filter that skips `kRagdoll`, and each ragdoll's parts share a
+collision group whose filter table disables every pair among them.
 
 ### Global setup
 
@@ -395,10 +420,13 @@ leaks), the simulation (bouncing, friction, walls, rolling spheres) and every
 wake-up rule. `character_test.cpp` drives characters through the facade alone
 (standing, falling, walls, the slope limit, jumping, pushing), and the
 harness covers their ECS sync. `ray_cast_test.cpp` covers the facade's ray
-casts (order, range, characters, hitboxes and their pose, one-sided meshes,
-starting inside a shape), and the harness covers which entity a ray returns
-(the ignored caster, destroyed entities not yet swept, a hitbox turned by
-its `Transform`). The most important one is `RampContactMatchesTheRenderedTilt`: it
+casts (order, range, characters, one-sided meshes, starting inside a shape),
+and the harness covers which entity a ray returns (the ignored caster,
+destroyed entities not yet swept). `ragdoll_test.cpp` drives ragdolls through
+the facade (posing, ray hits on parts, falling and resting, keeping their
+motion when let go, characters walking through), and the harness covers
+their ECS sync (following the entity, simulating, standing in for a
+character's capsule, sweeping). The most important one is `RampContactMatchesTheRenderedTilt`: it
 drops a box on the tilted ramp and checks it lands on the surface as the
 renderer draws it. It fails if the rotation convention between rendering and
 physics ever drifts apart.
@@ -430,8 +458,10 @@ Most of what's written here can quietly break on a Jolt upgrade. Checklist:
   density aren't configurable yet.
 - **Bodies pass through characters.** Jolt's inner body for the character
   would fix it; see ADR 0009.
-- **Hitboxes stay in bind pose and aren't drawn.** A hit names the character,
-  not the bone. See ADR 0015 for when each changes.
+- **Hands and feet have no ragdoll part,** so shots there miss, and a hit
+  names the part only inside physics: `Engine::CastRay` returns the entity.
+- **Kinematic ragdoll parts are teleported,** so props they touch are pushed
+  out but get no momentum from a swinging limb. See ADR 0017.
 
 - **Boxes are at least 10 cm thick.** `PhysicsWorld` grows each half-extent to
   cover Jolt's 5 cm rounded edges instead of shrinking the rounding for thin
