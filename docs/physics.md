@@ -80,7 +80,8 @@ velocity you give it (Jolt's `CharacterVirtual`; see ADR 0009). Its
   "radius": 0.3,
   "max_slope_deg": 45,   // steepest walkable slope
   "mass": 70,            // kg: how hard it presses and pushes
-  "push_force": 200      // strongest push on a body, N
+  "push_force": 200,     // strongest push on a body, N
+  "hitbox": "assets/meshes/characters/Male_Casual.glb"  // optional; see below
 }
 ```
 
@@ -96,6 +97,25 @@ velocity you give it (Jolt's `CharacterVirtual`; see ADR 0009). Its
 - No stair stepping; it sticks to the floor walking down slopes.
 - A `Collider` on a character entity is ignored, so no body overlaps it.
 - Picking and highlighting use its capsule, since it may have no mesh.
+
+#### Hitboxes
+
+Shots test a character's capsule unless it has a **hitbox**: one convex hull
+per bone of a `.glb`, built when the scene loads (ADR 0015). For a T-posed
+enemy that means shots hit the arms and miss the gap under them.
+
+- **Only ray casts see it.** Movement, pushing and the slope limit still
+  use the capsule.
+- **It follows the `Transform`:** its origin is the feet, and it turns and
+  scales with the entity's rotation and scale. Mesh space is the hitbox's
+  space, so it lines up with the rendered mesh.
+- **Bones come from skin weights:** each vertex belongs to its heaviest
+  joint, and each joint's vertices make one hull. An unskinned file gives one
+  hull per Blender object. A bone with too few vertices to enclose a volume
+  is skipped.
+- **Bind pose only.** The hulls don't animate yet.
+- Like collision meshes, each file is built once and shared, and the
+  `PhysicsWorld` owns it.
 
 ### Mesh colliders
 
@@ -140,7 +160,8 @@ if (hit) {
   inside.
 - **It sees colliders and characters, not meshes you draw.** Bodies are found
   by Jolt's narrow phase, against their real shapes. Characters aren't in
-  Jolt's world, so their capsules are tested one by one. An entity without a
+  Jolt's world, so they're tested one by one, against their hitbox if they
+  have one, otherwise their capsule. An entity without a
   `Collider` or `CharacterBody` can't be hit; use `Engine::Pick`, which tests
   mesh bounds, to select those.
 - **Poses are those of the last physics step.** Gameplay runs before
@@ -374,9 +395,10 @@ leaks), the simulation (bouncing, friction, walls, rolling spheres) and every
 wake-up rule. `character_test.cpp` drives characters through the facade alone
 (standing, falling, walls, the slope limit, jumping, pushing), and the
 harness covers their ECS sync. `ray_cast_test.cpp` covers the facade's ray
-casts (order, range, characters, one-sided meshes, starting inside a shape),
-and the harness covers which entity a ray returns (the ignored caster,
-destroyed entities not yet swept). The most important one is `RampContactMatchesTheRenderedTilt`: it
+casts (order, range, characters, hitboxes and their pose, one-sided meshes,
+starting inside a shape), and the harness covers which entity a ray returns
+(the ignored caster, destroyed entities not yet swept, a hitbox turned by
+its `Transform`). The most important one is `RampContactMatchesTheRenderedTilt`: it
 drops a box on the tilted ramp and checks it lands on the surface as the
 renderer draws it. It fails if the rotation convention between rendering and
 physics ever drifts apart.
@@ -408,6 +430,8 @@ Most of what's written here can quietly break on a Jolt upgrade. Checklist:
   density aren't configurable yet.
 - **Bodies pass through characters.** Jolt's inner body for the character
   would fix it; see ADR 0009.
+- **Hitboxes stay in bind pose and aren't drawn.** A hit names the character,
+  not the bone. See ADR 0015 for when each changes.
 
 - **Boxes are at least 10 cm thick.** `PhysicsWorld` grows each half-extent to
   cover Jolt's 5 cm rounded edges instead of shrinking the rounding for thin
