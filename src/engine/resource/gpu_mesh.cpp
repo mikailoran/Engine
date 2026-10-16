@@ -5,7 +5,9 @@
 
 #include <array>
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <limits>
 #include <vector>
 
@@ -34,28 +36,36 @@ auto CreateStream(const std::vector<T>& elements, bgfx::Attrib::Enum attrib)
 }
 
 /**
- * @brief Uploads joint indices as 8-bit integers, four per vertex; an
- * invalid handle for none.
+ * @brief Uploads each vertex's four joint indices (8-bit integers) and four
+ * weights (floats), interleaved in one stream; an invalid handle for a
+ * static mesh.
  */
-auto CreateJointStream(const std::vector<std::array<std::uint16_t, 4>>& joints)
+auto CreateSkinStream(const CpuMesh& mesh)
     -> UniqueHandle<bgfx::VertexBufferHandle> {
-  if (joints.empty()) {
+  if (mesh.joints.empty()) {
     return {};
   }
-  std::vector<std::uint8_t> bytes;
-  bytes.reserve(joints.size() * 4);
-  for (const auto& vertex : joints) {
-    for (const std::uint16_t joint : vertex) {
-      assert(joint <= std::numeric_limits<std::uint8_t>::max() &&
-             "joint index too large for 8 bits");
-      bytes.push_back(static_cast<std::uint8_t>(joint));
-    }
-  }
-  bgfx::VertexLayout layout;
   // Integers, not normalized: the shader indexes its palette with them
+  bgfx::VertexLayout layout;
   layout.begin()
       .add(bgfx::Attrib::Indices, 4, bgfx::AttribType::Uint8, false, true)
+      .add(bgfx::Attrib::Weight, 4, bgfx::AttribType::Float)
       .end();
+  const std::uint16_t stride = layout.getStride();
+
+  std::vector<std::uint8_t> bytes(mesh.joints.size() * stride);
+  for (std::size_t v = 0; v < mesh.joints.size(); ++v) {
+    const std::size_t base = v * stride;
+    for (std::size_t k = 0; k < 4; ++k) {
+      const std::uint16_t joint = mesh.joints.at(v).at(k);
+      assert(joint <= std::numeric_limits<std::uint8_t>::max() &&
+             "joint index too large for 8 bits");
+      bytes.at(base + k) = static_cast<std::uint8_t>(joint);
+    }
+    // The weights follow the four index bytes
+    const auto& weights = mesh.weights.at(v);
+    std::memcpy(&bytes.at(base + 4), weights.data(), sizeof(weights));
+  }
   const auto size = static_cast<std::uint32_t>(bytes.size());
   return UniqueHandle(
       bgfx::createVertexBuffer(bgfx::copy(bytes.data(), size), layout));
@@ -89,10 +99,7 @@ auto UploadMesh(const CpuMesh& mesh) -> GpuMesh {
   GpuMesh gpu{.positions = CreateStream(mesh.positions, bgfx::Attrib::Position),
               .normals = CreateStream(mesh.normals, bgfx::Attrib::Normal),
               .uvs = CreateStream(mesh.uvs, bgfx::Attrib::TexCoord0),
-              .joints = CreateJointStream(mesh.joints),
-              .weights = mesh.weights.empty()
-                             ? UniqueHandle<bgfx::VertexBufferHandle>()
-                             : CreateStream(mesh.weights, bgfx::Attrib::Weight),
+              .skin = CreateSkinStream(mesh),
               .indices = CreateIndices(mesh.indices),
               .submeshes = mesh.submeshes,
               .bounds = mesh.bounds,

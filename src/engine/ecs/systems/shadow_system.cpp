@@ -145,8 +145,7 @@ void ShadowSystem::Update(Ecs& ecs, const AssetRegistry& assets,
         const bool skinned =
             pose != nullptr && !pose->palette.empty() && mesh.rig.IsValid();
         if (skinned) {
-          bgfx::setVertexBuffer(1, mesh.joints.Get());
-          bgfx::setVertexBuffer(2, mesh.weights.Get());
+          bgfx::setVertexBuffer(1, mesh.skin.Get());
           bgfx::setUniform(u_bones_.Get(), pose->palette.data(),
                            static_cast<std::uint16_t>(pose->palette.size()));
         }

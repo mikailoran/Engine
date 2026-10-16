@@ -194,8 +194,7 @@ void RenderSystem::Update(Ecs& ecs, const AssetRegistry& assets,
     bgfx::setVertexBuffer(1, mesh.normals.Get());
     bgfx::setVertexBuffer(2, mesh.uvs.Get());
     if (skinned) {
-      bgfx::setVertexBuffer(3, mesh.joints.Get());
-      bgfx::setVertexBuffer(4, mesh.weights.Get());
+      bgfx::setVertexBuffer(3, mesh.skin.Get());
       bgfx::setUniform(u_bones_.Get(), draw.palette->data(),
                        static_cast<std::uint16_t>(draw.palette->size()));
     }

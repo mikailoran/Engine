@@ -17,17 +17,17 @@ namespace engine {
  * draws it. Made by UploadMesh from a CpuMesh.
  *
  * One vertex stream per attribute, bound as streams 0 (position), 1 (normal)
- * and 2 (UV), plus 3 (joint indices) and 4 (weights) when skinned, and
- * 32-bit indices. Must be destroyed before bgfx::shutdown.
+ * and 2 (UV), plus 3 (joint indices and weights, interleaved) when skinned,
+ * and 32-bit indices: bgfx allows four streams. Must be destroyed before
+ * bgfx::shutdown.
  */
 struct GpuMesh {
   UniqueHandle<bgfx::VertexBufferHandle> positions;
   UniqueHandle<bgfx::VertexBufferHandle> normals;
   UniqueHandle<bgfx::VertexBufferHandle> uvs;
-  /// Four 8-bit joint indices per vertex; invalid for a static mesh.
-  UniqueHandle<bgfx::VertexBufferHandle> joints;
-  /// Four float weights per vertex; invalid for a static mesh.
-  UniqueHandle<bgfx::VertexBufferHandle> weights;
+  /// Per vertex, four 8-bit joint indices then their four float weights;
+  /// invalid for a static mesh.
+  UniqueHandle<bgfx::VertexBufferHandle> skin;
   UniqueHandle<bgfx::IndexBufferHandle> indices;
   std::vector<Submesh> submeshes;
   /// Box around every submesh, in mesh space.

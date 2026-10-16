@@ -162,8 +162,8 @@ that follow the pose (its hitboxes) and fall limp when the game sets
   ragdoll replaces the clips as the pose's source.
 - **The renderer** draws an entity with a `SkinPose` on a skinned mesh with
   `vs_mesh_skinned` (and `vs_shadow_skinned` for the shadow map), uploading
-  the palette as `u_bones`. Joint indices are a fourth vertex stream of 8-bit
-  integers, weights a fifth.
+  the palette as `u_bones`. Joint indices (four 8-bit integers) and weights
+  share a fourth vertex stream: bgfx allows four.
 - Debug draw shows each posed skeleton through its mesh.
 
 ---
