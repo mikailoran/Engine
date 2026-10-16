@@ -2,6 +2,7 @@
 
 #include <filesystem>
 
+#include "engine/resource/animation_clip.h"
 #include "engine/resource/cpu_mesh.h"
 
 namespace engine {
@@ -21,5 +22,18 @@ namespace engine {
  *         skinned and static primitives in one file.
  */
 auto ReadGltf(const std::filesystem::path& path) -> CpuMesh;
+
+/**
+ * @brief Reads a glTF file's animations as clips on its skin's skeleton.
+ *
+ * Reads no geometry or images, so a clip pack with a preview mesh loads as
+ * fast as one without. Clips animate the file's own skeleton; RetargetClip
+ * maps them onto a mesh's.
+ * @param path A .glb or .gltf file with exactly one skin.
+ * @throws std::runtime_error Naming @p path, if the file can't be read, has
+ *         no skin or several, or an animation is unsupported (see ReadGltf;
+ *         also CUBICSPLINE keys).
+ */
+auto ReadGltfClips(const std::filesystem::path& path) -> ClipFile;
 
 }  // namespace engine

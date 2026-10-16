@@ -8,7 +8,9 @@
 #include <stdexcept>
 #include <utility>
 
+#include "engine/resource/animation_clip.h"
 #include "engine/resource/cpu_mesh.h"
+#include "engine/resource/gltf_animation.h"
 #include "engine/resource/gltf_document.h"
 #include "engine/resource/gltf_geometry.h"
 #include "engine/resource/gltf_materials.h"
@@ -67,6 +69,20 @@ auto BuildMesh(const cgltf_data& data, const std::filesystem::path& gltf_path)
 }
 
 }  // namespace
+
+auto ReadGltfClips(const std::filesystem::path& path) -> ClipFile {
+  // Tag every error with the file
+  try {
+    const gltf::CgltfData data = gltf::Parse(path);
+    if (data->skins_count != 1) {
+      throw std::runtime_error("clips need exactly one skin");
+    }
+    return {.skeleton = gltf::ReadSkeleton(*data->skins),
+            .clips = gltf::ReadClips(*data, *data->skins)};
+  } catch (const std::runtime_error& e) {
+    throw std::runtime_error(path.string() + ": " + e.what());
+  }
+}
 
 auto ReadGltf(const std::filesystem::path& path) -> CpuMesh {
   // Tag every error with the file
