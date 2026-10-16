@@ -12,6 +12,7 @@
 
 #include "engine/ecs/components/name.h"
 #include "engine/ecs/core/ecs.h"
+#include "engine/ecs/core/types.h"
 #include "engine/platform/asset_root.h"
 
 namespace engine {
@@ -124,27 +125,35 @@ void SceneLoader::LoadEntities(const nlohmann::json& scene, Ecs& ecs,
       throw std::runtime_error("entity '" + name + "': " + e.what());
     }
 
-    const auto entity = ecs.CreateEntity();
-    ecs.AddComponent(entity, Name{.value = name});
     // TODO: record the prefab path, so scene saving writes only overrides
+    CreateEntity(name, components, ecs, assets, physics);
+  }
+}
 
-    for (const auto& component : components.items()) {
-      const std::string where =
-          "entity '" + name + "', component '" + component.key() + "': ";
+auto SceneLoader::CreateEntity(const std::string& name,
+                               const nlohmann::json& components, Ecs& ecs,
+                               AssetRegistry& assets,
+                               physics::PhysicsWorld& physics) const -> Entity {
+  const auto entity = ecs.CreateEntity();
+  ecs.AddComponent(entity, Name{.value = name});
 
-      const auto it = loaders_.find(component.key());
-      if (it == loaders_.end()) {
-        throw std::runtime_error(where + "unknown component");
-      }
+  for (const auto& component : components.items()) {
+    const std::string where =
+        "entity '" + name + "', component '" + component.key() + "': ";
 
-      try {
-        const auto loader = it->second;
-        loader(component.value(), entity, ecs, assets, physics);
-      } catch (const nlohmann::json::exception& e) {
-        throw std::runtime_error(where + e.what());
-      }
+    const auto it = loaders_.find(component.key());
+    if (it == loaders_.end()) {
+      throw std::runtime_error(where + "unknown component");
+    }
+
+    try {
+      const auto loader = it->second;
+      loader(component.value(), entity, ecs, assets, physics);
+    } catch (const nlohmann::json::exception& e) {
+      throw std::runtime_error(where + e.what());
     }
   }
+  return entity;
 }
 
 void SceneLoader::Load(const std::filesystem::path& path, Ecs& ecs,

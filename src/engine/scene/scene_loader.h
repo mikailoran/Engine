@@ -60,6 +60,18 @@ class SceneLoader {
                     AssetRegistry& assets,
                     physics::PhysicsWorld& physics) const;
 
+  /**
+   * @brief Creates one named entity and runs each component's loader on it.
+   *
+   * @param components Merged component blocks (prefab and overrides), keyed
+   *        by registered loader key.
+   * @throws std::runtime_error On an unknown key or a loader's JSON error,
+   *         tagged with the entity and component.
+   */
+  auto CreateEntity(const std::string& name, const nlohmann::json& components,
+                    Ecs& ecs, AssetRegistry& assets,
+                    physics::PhysicsWorld& physics) const -> Entity;
+
   std::unordered_map<std::string, ComponentLoader> loaders_;
 };
 
