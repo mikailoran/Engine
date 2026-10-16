@@ -1,6 +1,7 @@
 $input v_ndc
 
 #include <bgfx_shader.sh>
+#include "tonemap.sh"
 
 // Linear RGB sky straight up, at the horizon, and below it.
 uniform vec4 u_skyZenith;
@@ -46,5 +47,5 @@ void main()
 	vec3 dir = normalize(ray_end.xyz / ray_end.w - ray_start.xyz / ray_start.w);
 
 	vec3 color = skyRadiance(dir);
-	gl_FragColor = vec4(pow(color, vec3_splat(1.0/2.2) ), 1.0);
+	gl_FragColor = vec4(toDisplay(color), 1.0);
 }

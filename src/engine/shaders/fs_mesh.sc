@@ -2,6 +2,7 @@ $input v_wpos, v_normal, v_texcoord0
 
 #include <bgfx_shader.sh>
 #include "shadow.sh"
+#include "tonemap.sh"
 
 uniform vec4 u_time;
 // Linear RGBA: the material's base color times the entity's tint.
@@ -37,6 +38,6 @@ void main()
 	float sun = shadowVisibility(v_wpos, n);
 	vec3 lit = ambient + (diffuse + spec) * sun;
 
-	gl_FragColor.xyz = pow(lit, vec3_splat(1.0/2.2) );
+	gl_FragColor.xyz = toDisplay(lit);
 	gl_FragColor.w = 1.0;
 }

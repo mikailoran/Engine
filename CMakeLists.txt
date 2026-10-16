@@ -383,12 +383,16 @@ bgfx_compile_shaders(
 )
 
 # add_custom_command outputs are only built when a target depends on them.
-# bgfx_compile_shaders tracks only each source, so add the shadow include
+# bgfx_compile_shaders tracks only each source, so add the includes
 foreach(SHADER_OUTPUT IN LISTS FS_OUTPUTS)
   # The first profile's output names each shader's command
   if(SHADER_OUTPUT MATCHES "/spirv/fs_mesh\\.sc\\.bin$")
     add_custom_command(OUTPUT ${SHADER_OUTPUT} APPEND
-      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/shadow.sh)
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/shadow.sh
+      ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/tonemap.sh)
+  elseif(SHADER_OUTPUT MATCHES "/spirv/fs_sky\\.sc\\.bin$")
+    add_custom_command(OUTPUT ${SHADER_OUTPUT} APPEND
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/engine/shaders/tonemap.sh)
   endif()
 endforeach()
 
