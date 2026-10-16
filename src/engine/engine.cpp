@@ -8,6 +8,7 @@
 #include <utility>
 
 #include "engine/ecs/components/animator.h"
+#include "engine/ecs/components/attached_meshes.h"
 #include "engine/ecs/components/camera.h"
 #include "engine/ecs/components/character_body.h"
 #include "engine/ecs/components/character_link.h"
@@ -51,6 +52,7 @@ Engine::Engine(const NativeSurface& surface) : bgfx_context_(surface) {
   ecs_.RegisterComponent<Lifetime>();
   ecs_.RegisterComponent<Animator>();
   ecs_.RegisterComponent<SkinPose>();
+  ecs_.RegisterComponent<AttachedMeshes>();
 
   RegisterBuiltinLoaders(scene_loader_);
 }

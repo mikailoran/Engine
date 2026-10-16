@@ -288,6 +288,9 @@ add_library(engine_runtime STATIC
   src/engine/ecs/systems/debug_draw_system.cpp
   src/engine/ecs/components/animator.h
   src/engine/ecs/components/skin_pose.h
+  src/engine/ecs/components/attached_meshes.h
+  src/engine/ecs/systems/attachments.h
+  src/engine/ecs/systems/attachments.cpp
   src/engine/ecs/systems/animation_system.h
   src/engine/ecs/systems/animation_system.cpp
   src/engine/ecs/systems/hud_system.h

@@ -2,12 +2,18 @@
 
 #include <bx/math.h>
 
+#include <algorithm>
+#include <cstdint>
 #include <nlohmann/json.hpp>
 #include <nlohmann/json_fwd.hpp>
+#include <optional>
 #include <stdexcept>
 #include <string>
+#include <utility>
 
+#include "engine/animation/rig.h"
 #include "engine/ecs/components/animator.h"
+#include "engine/ecs/components/attached_meshes.h"
 #include "engine/ecs/components/character_body.h"
 #include "engine/ecs/components/collider.h"
 #include "engine/ecs/components/directional_light.h"
@@ -22,6 +28,7 @@
 #include "engine/physics/shape.h"
 #include "engine/resource/animation_handles.h"
 #include "engine/resource/asset_registry.h"
+#include "engine/resource/skeleton.h"
 #include "engine/scene/json_read.h"
 #include "engine/scene/scene_loader.h"
 
@@ -31,12 +38,11 @@ namespace {
 
 using nlohmann::json;
 
-/** @brief Adds a Transform; every field is optional. Rotation is in degrees. */
-void LoadTransform(const json& data, Entity entity, Ecs& ecs,
-                   AssetRegistry& /*assets*/,
-                   physics::PhysicsWorld& /*physics*/) {
-  CheckKeys(data, {"position", "rotation_deg", "scale"});
-
+/**
+ * @brief Reads a transform's optional "position", "rotation_deg" (degrees)
+ * and "scale" from @p data; other keys are left for the caller to check.
+ */
+auto ReadTransform(const json& data) -> Transform {
   Transform transform{};
   if (data.contains("position")) {
     transform.position = ReadVec3(data.at("position"));
@@ -49,7 +55,15 @@ void LoadTransform(const json& data, Entity entity, Ecs& ecs,
   if (data.contains("scale")) {
     transform.scale = ReadVec3(data.at("scale"));
   }
-  ecs.AddComponent(entity, transform);
+  return transform;
+}
+
+/** @brief Adds a Transform; every field is optional. Rotation is in degrees. */
+void LoadTransform(const json& data, Entity entity, Ecs& ecs,
+                   AssetRegistry& /*assets*/,
+                   physics::PhysicsWorld& /*physics*/) {
+  CheckKeys(data, {"position", "rotation_deg", "scale"});
+  ecs.AddComponent(entity, ReadTransform(data));
 }
 
 /**
@@ -66,6 +80,28 @@ void LoadRenderable(const json& data, Entity entity, Ecs& ecs,
     renderable.color = ReadFloats<4>(data.at("color"));
   }
   ecs.AddComponent(entity, renderable);
+}
+
+/**
+ * @brief Index of the joint named @p name in @p entity's skinned mesh.
+ * @throws std::runtime_error If there is no skinned Renderable or no joint
+ *         of that name.
+ */
+auto FindJoint(Ecs& ecs, const AssetRegistry& assets, Entity entity,
+               const std::string& name) -> std::uint32_t {
+  const auto* renderable = ecs.TryGetComponent<Renderable>(entity);
+  const RigHandle rig = renderable != nullptr
+                            ? assets.GetMesh(renderable->mesh_handle).rig
+                            : RigHandle{};
+  if (!rig.IsValid()) {
+    throw std::runtime_error("joint '" + name + "' needs a skinned mesh");
+  }
+  const auto& joints = assets.GetRig(rig).Source().joints;
+  const auto it = std::ranges::find(joints, name, &Joint::name);
+  if (it == joints.end()) {
+    throw std::runtime_error("no joint named '" + name + "'");
+  }
+  return static_cast<std::uint32_t>(it - joints.begin());
 }
 
 /**
@@ -101,6 +137,34 @@ void LoadAnimator(const json& data, Entity entity, Ecs& ecs,
          {.fade_s = 0.0F, .speed = data.value("speed", 1.0F)});
   }
   ecs.AddComponent(entity, animator);
+}
+
+/**
+ * @brief Adds AttachedMeshes from an array of {"mesh", "joint", "position",
+ * "rotation_deg", "scale", "bind_space"}; only "mesh" is required. A "joint"
+ * is looked up by name in the entity's skinned Renderable.
+ * @throws std::runtime_error If a joint is named without a skinned
+ *         Renderable, or the skeleton has no such joint.
+ */
+void LoadAttachments(const json& data, Entity entity, Ecs& ecs,
+                     AssetRegistry& assets,
+                     physics::PhysicsWorld& /*physics*/) {
+  AttachedMeshes attached;
+  for (const json& item : data) {
+    CheckKeys(item, {"mesh", "joint", "position", "rotation_deg", "scale",
+                     "bind_space"});
+    AttachedMesh mesh{
+        .mesh = assets.LoadMesh(item.at("mesh").get<std::string>()),
+        .joint = std::nullopt,
+        .offset = ModelMatrix(ReadTransform(item)),
+        .bind_space = item.value("bind_space", false)};
+    if (item.contains("joint")) {
+      mesh.joint =
+          FindJoint(ecs, assets, entity, item.at("joint").get<std::string>());
+    }
+    attached.meshes.push_back(mesh);
+  }
+  ecs.AddComponent(entity, std::move(attached));
 }
 
 /** @brief Adds a DirectionalLight; every field is optional. */
@@ -282,6 +346,7 @@ void RegisterBuiltinLoaders(SceneLoader& loader) {
   loader.Register("transform", LoadTransform);
   loader.Register("renderable", LoadRenderable);
   loader.Register("animator", LoadAnimator);
+  loader.Register("attachments", LoadAttachments);
   loader.Register("directional_light", LoadDirectionalLight);
   loader.Register("collider", LoadCollider);
   loader.Register("rigid_body", LoadRigidBody);

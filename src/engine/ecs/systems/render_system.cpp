@@ -12,12 +12,14 @@
 #include <stdexcept>
 #include <vector>
 
+#include "engine/ecs/components/attached_meshes.h"
 #include "engine/ecs/components/camera.h"
 #include "engine/ecs/components/renderable.h"
 #include "engine/ecs/components/skin_pose.h"
 #include "engine/ecs/components/transform.h"
 #include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
+#include "engine/ecs/systems/attachments.h"
 #include "engine/math/vector.h"
 #include "engine/platform/frame_context.h"
 #include "engine/render_views.h"
@@ -61,7 +63,7 @@ auto PaletteOf(Ecs& ecs, Entity entity, const GpuMesh& mesh)
 
 /**
  * @brief One draw item per submesh of every entity with a Transform and a
- * Renderable, in view order.
+ * Renderable, in view order, then of every attached mesh.
  */
 auto GatherDraws(Ecs& ecs, const AssetRegistry& assets)
     -> std::vector<DrawItem> {
@@ -77,6 +79,22 @@ auto GatherDraws(Ecs& ecs, const AssetRegistry& assets)
                            .renderable = renderable,
                            .submesh = i,
                            .palette = palette});
+        }
+      });
+  // Attached meshes draw like Renderables, placed on their joint
+  ecs.View<Transform, AttachedMeshes>().ForEach(
+      [&draws, &assets, &ecs](Entity entity, const Transform& /*transform*/,
+                              const AttachedMeshes& attached) -> void {
+        for (const AttachedMesh& item : attached.meshes) {
+          const auto model = AttachmentMatrix(ecs, assets, entity, item);
+          const GpuMesh& mesh = assets.GetMesh(item.mesh);
+          const Renderable renderable{.mesh_handle = item.mesh};
+          for (std::uint32_t i = 0; i < mesh.submeshes.size(); ++i) {
+            draws.push_back({.model = model,
+                             .renderable = renderable,
+                             .submesh = i,
+                             .palette = nullptr});
+          }
         }
       });
   return draws;

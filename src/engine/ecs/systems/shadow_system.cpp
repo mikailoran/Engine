@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <stdexcept>
 
+#include "engine/ecs/components/attached_meshes.h"
 #include "engine/ecs/components/camera.h"
 #include "engine/ecs/components/directional_light.h"
 #include "engine/ecs/components/renderable.h"
@@ -16,6 +17,7 @@
 #include "engine/ecs/components/transform.h"
 #include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
+#include "engine/ecs/systems/attachments.h"
 #include "engine/math/shadow_fit.h"
 #include "engine/platform/frame_context.h"
 #include "engine/render_views.h"
@@ -153,6 +155,21 @@ void ShadowSystem::Update(Ecs& ecs, const AssetRegistry& assets,
         bgfx::setState(kCasterState);
         bgfx::submit(kShadowView,
                      skinned ? skinned_program_.Get() : program_.Get());
+      });
+
+  // Attached meshes cast too, placed on their joint
+  ecs.View<Transform, AttachedMeshes>().ForEach(
+      [&assets, &ecs, this](Entity entity, const Transform& /*transform*/,
+                            const AttachedMeshes& attached) -> void {
+        for (const AttachedMesh& item : attached.meshes) {
+          const GpuMesh& mesh = assets.GetMesh(item.mesh);
+          const auto model = AttachmentMatrix(ecs, assets, entity, item);
+          bgfx::setTransform(model.data());
+          bgfx::setVertexBuffer(0, mesh.positions.Get());
+          bgfx::setIndexBuffer(mesh.indices.Get());
+          bgfx::setState(kCasterState);
+          bgfx::submit(kShadowView, program_.Get());
+        }
       });
 }
 
