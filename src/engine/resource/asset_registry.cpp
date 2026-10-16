@@ -14,14 +14,12 @@
 #include "engine/animation/evaluate.h"
 #include "engine/animation/rig.h"
 #include "engine/physics/collision_mesh_handle.h"
-#include "engine/physics/hitbox_handle.h"
 #include "engine/physics/physics_world.h"
 #include "engine/physics/ragdoll.h"
 #include "engine/physics/shape.h"
 #include "engine/platform/asset_root.h"
 #include "engine/resource/animation_clip.h"
 #include "engine/resource/animation_handles.h"
-#include "engine/resource/bone_parts.h"
 #include "engine/resource/cpu_mesh.h"
 #include "engine/resource/gltf_reader.h"
 #include "engine/resource/gpu_mesh.h"
@@ -91,27 +89,6 @@ auto AssetRegistry::LoadCollisionMesh(const std::filesystem::path& path,
   }
 
   collision_mesh_by_path_.emplace(path, handle);
-  return handle;
-}
-
-auto AssetRegistry::LoadHitbox(const std::filesystem::path& path,
-                               physics::PhysicsWorld& physics)
-    -> physics::HitboxHandle {
-  if (auto it = hitbox_by_path_.find(path); it != hitbox_by_path_.end()) {
-    return it->second;
-  }
-
-  // One hull per bone, in the mesh's bind pose
-  std::vector<physics::ConvexPart> parts;
-  for (BonePart& part : SplitByBone(ReadAsset(path))) {
-    parts.push_back({.points = std::move(part.points)});
-  }
-  const physics::HitboxHandle handle = physics.CreateHitbox(parts);
-  if (!handle.IsValid()) {
-    throw std::runtime_error("cannot build hitbox: " + path.string());
-  }
-
-  hitbox_by_path_.emplace(path, handle);
   return handle;
 }
 

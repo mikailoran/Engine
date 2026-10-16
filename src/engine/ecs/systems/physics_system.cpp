@@ -22,7 +22,6 @@
 #include "engine/math/rotation.h"
 #include "engine/physics/body_handle.h"
 #include "engine/physics/character_handle.h"
-#include "engine/physics/hitbox_handle.h"
 #include "engine/physics/physics_world.h"
 #include "engine/physics/pose.h"
 #include "engine/physics/ragdoll.h"
@@ -61,12 +60,11 @@ auto Tag(Entity entity) -> std::uint64_t {
   return static_cast<std::uint64_t>(entity);
 }
 
-/** @brief Tests whether two characters have the same capsule, limits and
- * hitbox. */
+/** @brief Tests whether two characters have the same capsule and limits. */
 auto SameShape(const CharacterBody& a, const CharacterBody& b) -> bool {
   return a.height == b.height && a.radius == b.radius &&
          a.max_slope_deg == b.max_slope_deg && a.mass == b.mass &&
-         a.push_force == b.push_force && a.hitbox == b.hitbox;
+         a.push_force == b.push_force;
 }
 
 /**
@@ -82,7 +80,6 @@ auto CharacterDescOf(const Ecs& ecs, const CharacterBody& body,
           .max_slope_deg = body.max_slope_deg,
           .mass = body.mass,
           .push_force = body.push_force,
-          .hitbox = body.hitbox,
           .ray_target = !ecs.HasComponent<Ragdoll>(entity),
           .user_data = Tag(entity)};
 }
@@ -104,15 +101,6 @@ auto JointWorldPoses(const Transform& transform, const SkinPose& pose)
                       .rotation = RotationOf(world)});
   }
   return joints;
-}
-
-/** @brief Turns and scales @p character's hitbox, if any, as @p transform. */
-void PushHitboxPose(physics::PhysicsWorld& world,
-                    physics::CharacterHandle character,
-                    const CharacterBody& body, const Transform& transform) {
-  if (body.hitbox.IsValid()) {
-    world.SetHitboxPose(character, transform.rotation, transform.scale);
-  }
 }
 
 }  // namespace
@@ -302,7 +290,6 @@ void PhysicsSystem::AttachCharacters(Ecs& ecs, physics::PhysicsWorld& world) {
     const physics::CharacterHandle character =
         world.CreateCharacter(CharacterDescOf(ecs, body, feet, entity));
     world.SetCharacterVelocity(character, body.velocity);
-    PushHitboxPose(world, character, body, transform);
     ecs.AddComponent(entity, CharacterLink(character, feet, body));
   }
 }
@@ -325,8 +312,6 @@ void PhysicsSystem::PushCharacterEdits(Ecs& ecs, physics::PhysicsWorld& world) {
             world.SetCharacterVelocity(link.character_, body.velocity);
           }
         }
-        // Only a stored pose: cheaper to push than to compare
-        PushHitboxPose(world, link.character_, body, transform);
         link.feet_ = transform.position;
         link.body_ = body;
       });

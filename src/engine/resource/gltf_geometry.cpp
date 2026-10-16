@@ -38,8 +38,8 @@ constexpr std::array<float, 16> kIdentity{1.0F, 0.0F, 0.0F, 0.0F, 0.0F, 1.0F,
 
 /**
  * @brief Appends one primitive of @p node's mesh: its vertices baked by
- * @p node_world (identity when skinned), their bones and joint influences,
- * and its indices to its material's bucket.
+ * @p node_world (identity when skinned), their joint influences, and its
+ * indices to its material's bucket.
  */
 void AppendPrimitive(const cgltf_data& data, const cgltf_node& node,
                      const cgltf_primitive& primitive,
@@ -94,8 +94,6 @@ void AppendPrimitive(const cgltf_data& data, const cgltf_node& node,
   } else {
     mesh.uvs.resize(mesh.positions.size(), {0.0F, 0.0F});
   }
-  const auto bones = VertexBones(data, node, primitive, position->count);
-  mesh.bones.insert(mesh.bones.end(), bones.begin(), bones.end());
   if (skinned) {
     const auto influences = VertexInfluences(node, primitive, position->count);
     mesh.joints.insert(mesh.joints.end(), influences.joints.begin(),

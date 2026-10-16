@@ -67,7 +67,6 @@ void ExpectWellFormed(const CpuMesh& mesh) {
   EXPECT_EQ(mesh.indices.size() % 3, 0U);
   EXPECT_EQ(mesh.normals.size(), mesh.positions.size());
   EXPECT_EQ(mesh.uvs.size(), mesh.positions.size());
-  EXPECT_EQ(mesh.bones.size(), mesh.positions.size());
   // Influences cover every vertex of a skinned mesh, none of a static one
   const std::size_t influenced = mesh.skeleton ? mesh.positions.size() : 0;
   EXPECT_EQ(mesh.joints.size(), influenced);
@@ -159,22 +158,17 @@ TEST(GltfReader, ScalesEmissiveByStrength) {
   EXPECT_FALSE(material.emissive_image);
 }
 
-TEST(GltfReader, UnskinnedVerticesFollowTheirNode) {
-  const CpuMesh mesh =
-      ReadGltf(std::filesystem::path(ENGINE_ASSET_DIR) / "meshes/cube.glb");
-
-  const std::set<std::uint32_t> bones(mesh.bones.begin(), mesh.bones.end());
-  EXPECT_EQ(bones.size(), 1U);
-}
-
 TEST(GltfReader, SkinnedVerticesFollowTheirJoints) {
   // Quaternius' T-posed character: 31 joints, one mesh node
   const CpuMesh mesh = ReadGltf(std::filesystem::path(ENGINE_ASSET_DIR) /
                                 "meshes/characters/Male_Casual.glb");
 
-  const std::set<std::uint32_t> bones(mesh.bones.begin(), mesh.bones.end());
-  EXPECT_GT(bones.size(), 10U);
-  EXPECT_LE(bones.size(), 31U);
+  std::set<std::uint16_t> joints;
+  for (const auto& vertex : mesh.joints) {
+    joints.insert(vertex.begin(), vertex.end());
+  }
+  EXPECT_GT(joints.size(), 10U);
+  EXPECT_LE(joints.size(), 31U);
 }
 
 TEST(GltfReader, ErrorNamesTheFile) {

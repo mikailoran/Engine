@@ -58,7 +58,6 @@ set_target_properties(physics_tests PROPERTIES
 
 add_executable(asset_tests
   assets/gltf_reader_test.cpp
-  assets/bone_parts_test.cpp
   assets/skeleton_test.cpp
   assets/animation_clip_test.cpp
   assets/retarget_test.cpp

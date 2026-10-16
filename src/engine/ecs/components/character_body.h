@@ -3,8 +3,6 @@
 #include <bx/bounds.h>
 #include <bx/math.h>
 
-#include "engine/physics/hitbox_handle.h"
-
 namespace engine {
 
 /**
@@ -13,8 +11,8 @@ namespace engine {
  * dynamic bodies. Needs a Transform, whose position is the capsule's feet.
  *
  * Physics owns the Transform's position, but never its rotation. A Collider
- * on the same entity is ignored. Ray casts hit its hitbox, turned and scaled
- * with the Transform, or the capsule if it has none.
+ * on the same entity is ignored. Ray casts hit the capsule, unless the
+ * entity's Ragdoll stands in for it.
  */
 struct CharacterBody {
   /// Capsule height from feet to head, in m; more than twice the radius.
@@ -27,8 +25,6 @@ struct CharacterBody {
   float mass{70.0F};
   /// Strongest push it gives a body, in N.
   float push_force{200.0F};
-  /// What ray casts hit instead of the capsule; invalid: the capsule.
-  physics::HitboxHandle hitbox{physics::HitboxHandle::kInvalid};
 
   /// World-space velocity in m/s. Gameplay sets it; physics adds gravity and
   /// writes it back every frame.

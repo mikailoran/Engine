@@ -122,7 +122,6 @@ add_library(engine_physics STATIC
   src/engine/physics/body_handle.h
   src/engine/physics/character_handle.h
   src/engine/physics/collision_mesh_handle.h
-  src/engine/physics/hitbox_handle.h
   src/engine/physics/jolt_runtime.h
   src/engine/physics/jolt_runtime.cpp
   src/engine/physics/layers.h
@@ -192,9 +191,7 @@ add_library(engine_assets STATIC
   src/engine/resource/retarget.h
   src/engine/resource/retarget.cpp
   src/engine/resource/ragdoll_fit.h
-  src/engine/resource/ragdoll_fit.cpp
-  src/engine/resource/bone_parts.h
-  src/engine/resource/bone_parts.cpp)
+  src/engine/resource/ragdoll_fit.cpp)
 
 target_include_directories(engine_assets PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 # bimg decodes PNG/JPEG; bimg_encode only for imageGenerateMips

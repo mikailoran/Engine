@@ -13,7 +13,6 @@
 
 #include "engine/animation/rig.h"
 #include "engine/physics/collision_mesh_handle.h"
-#include "engine/physics/hitbox_handle.h"
 #include "engine/physics/ragdoll.h"
 #include "engine/resource/animation_handles.h"
 #include "engine/resource/gpu_mesh.h"
@@ -26,8 +25,8 @@ class PhysicsWorld;
 }  // namespace physics
 
 /**
- * @brief Single owner of every loaded mesh, collision mesh, hitbox, rig and
- * clip, keyed by file path.
+ * @brief Single owner of every loaded mesh, collision mesh, rig, clip and
+ * ragdoll, keyed by file path.
  *
  * Loads each path at most once and hands out non-owning handles, so any
  * number of entities can share one asset without sharing responsibility for
@@ -83,22 +82,6 @@ class AssetRegistry {
   auto LoadCollisionMesh(const std::filesystem::path& path,
                          physics::PhysicsWorld& physics)
       -> physics::CollisionMeshHandle;
-
-  /**
-   * @brief Builds a hitbox from a glTF file, one convex hull per bone in bind
-   * pose, or returns the handle of the one already built from that path.
-   *
-   * Reads the file on the CPU only, like LoadCollisionMesh, with the same
-   * preconditions. An unskinned file gives one hull per mesh node.
-   *
-   * @param path glTF file, e.g. "assets/meshes/characters/Male_Casual.glb".
-   * @param physics World to build the hitbox in; every call must pass the
-   *        same.
-   * @throws std::runtime_error If the file cannot be read as a mesh or no
-   *         bone's vertices enclose a volume.
-   */
-  auto LoadHitbox(const std::filesystem::path& path,
-                  physics::PhysicsWorld& physics) -> physics::HitboxHandle;
 
   /**
    * @brief Resolves a skinned mesh's rig.
@@ -158,8 +141,6 @@ class AssetRegistry {
 
   std::unordered_map<std::filesystem::path, physics::CollisionMeshHandle>
       collision_mesh_by_path_;
-  std::unordered_map<std::filesystem::path, physics::HitboxHandle>
-      hitbox_by_path_;
 
   std::vector<animation::Rig> rigs_;
   std::vector<animation::Clip> clips_;

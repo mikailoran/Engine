@@ -330,23 +330,18 @@ void LoadRigidBody(const json& data, Entity entity, Ecs& ecs,
 
 /**
  * @brief Adds a CharacterBody; every field is optional. Sizes in m, the slope
- * limit in degrees, "mass" in kg and "push_force" in N. "hitbox" is a glTF
- * path whose bones become the hitbox.
+ * limit in degrees, "mass" in kg and "push_force" in N.
  */
 void LoadCharacterBody(const json& data, Entity entity, Ecs& ecs,
-                       AssetRegistry& assets, physics::PhysicsWorld& physics) {
-  CheckKeys(data, {"height", "radius", "max_slope_deg", "mass", "push_force",
-                   "hitbox"});
+                       AssetRegistry& /*assets*/,
+                       physics::PhysicsWorld& /*physics*/) {
+  CheckKeys(data, {"height", "radius", "max_slope_deg", "mass", "push_force"});
   CharacterBody body{};
   ReadPositive(data, "height", body.height);
   ReadPositive(data, "radius", body.radius);
   ReadPositive(data, "max_slope_deg", body.max_slope_deg);
   ReadPositive(data, "mass", body.mass);
   ReadPositive(data, "push_force", body.push_force);
-  if (data.contains("hitbox")) {
-    body.hitbox =
-        assets.LoadHitbox(data.at("hitbox").get<std::string>(), physics);
-  }
   // The capsule's two rounded ends must fit in its height
   if (body.height <= 2.0F * body.radius) {
     throw std::runtime_error("height must be more than twice the radius");

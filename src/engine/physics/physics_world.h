@@ -11,7 +11,6 @@
 #include "engine/physics/body_handle.h"
 #include "engine/physics/character_handle.h"
 #include "engine/physics/collision_mesh_handle.h"
-#include "engine/physics/hitbox_handle.h"
 #include "engine/physics/pose.h"  // IWYU pragma: export
 #include "engine/physics/ragdoll.h"
 #include "engine/physics/shape.h"
@@ -65,8 +64,6 @@ struct CharacterDesc {
   float mass{70.0F};
   /// Strongest push it gives a body, in N.
   float push_force{200.0F};
-  /// What rays hit instead of the capsule; invalid: the capsule.
-  HitboxHandle hitbox{HitboxHandle::kInvalid};
   /// Whether CastRay hits it at all; false when something else stands in
   /// for it, such as its ragdoll's parts.
   bool ray_target{true};
@@ -148,16 +145,6 @@ class PhysicsWorld {
    */
   auto CreateCollisionMesh(const TriangleMesh& mesh) -> CollisionMeshHandle;
 
-  /**
-   * @brief Builds a hitbox for characters to share: one convex hull per
-   * part, hit only by CastRay. It lives until the world is destroyed.
-   *
-   * Parts that make no hull are skipped.
-   * @param parts In the hitbox's space, whose origin goes at the feet.
-   * @return The hitbox, or an invalid handle if no part made a hull.
-   */
-  auto CreateHitbox(const std::vector<ConvexPart>& parts) -> HitboxHandle;
-
   /** @brief Removes and destroys @p body, waking what touched it. */
   void DestroyBody(BodyHandle body);
 
@@ -237,14 +224,6 @@ class PhysicsWorld {
   void SetCharacterVelocity(CharacterHandle character,
                             const bx::Vec3& velocity);
 
-  /**
-   * @brief Turns and scales @p character's hitbox about its feet; the capsule
-   * stays upright and unscaled. Identity rotation and unit scale by default.
-   * @param scale Per axis; every axis non-zero.
-   */
-  void SetHitboxPose(CharacterHandle character, const bx::Quaternion& rotation,
-                     const bx::Vec3& scale);
-
   /** @brief Returns @p character's state after the last Step. */
   [[nodiscard]] auto GetCharacter(CharacterHandle character) const
       -> CharacterState;
@@ -320,8 +299,8 @@ class PhysicsWorld {
 
   /**
    * @brief Casts @p ray against every body, ragdoll and character, as of the
-   * last Step (and PoseRagdoll). A character with a hitbox is hit only on
-   * its hitbox, and one that isn't a ray target never.
+   * last Step (and PoseRagdoll). A character that isn't a ray target is
+   * never hit.
    *
    * A ray starting inside a convex shape hits it at distance 0; meshes are
    * one-sided, so their back faces are never hit.

@@ -1,6 +1,6 @@
 # 0015: Per-bone convex hitboxes for characters
 
-**Status:** accepted 2026-10-16
+**Status:** superseded by [0017](0017-ragdoll-hitboxes.md)
 
 ## Context
 

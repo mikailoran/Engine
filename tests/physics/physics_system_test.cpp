@@ -32,7 +32,6 @@
 #include "engine/math/rotation.h"
 #include "engine/physics/body_handle.h"
 #include "engine/physics/collision_mesh_handle.h"
-#include "engine/physics/hitbox_handle.h"
 #include "engine/physics/jolt_runtime.h"
 #include "engine/physics/physics_world.h"
 #include "engine/physics/pose.h"
@@ -230,12 +229,6 @@ class PhysicsHarness {
   /** @brief How many ragdolls the physics world holds. */
   [[nodiscard]] auto RagdollCount() const -> std::size_t {
     return world_.Ragdolls().size();
-  }
-
-  /** @brief Builds a hitbox in the physics world. */
-  auto CreateHitbox(const std::vector<physics::ConvexPart>& parts)
-      -> physics::HitboxHandle {
-    return world_.CreateHitbox(parts);
   }
 
   /** @brief Builds a collision mesh in the physics world. */
@@ -890,36 +883,6 @@ TEST(Physics, RaySkipsTheIgnoredCharacter) {
   EXPECT_EQ(scene.Cast(eye, {1.0F, 0.0F, 0.0F}).entity, shooter);
   const auto hit = scene.Cast(eye, {1.0F, 0.0F, 0.0F}, shooter);
   EXPECT_EQ(hit.entity, wall);
-}
-
-TEST(Physics, RayHitsACharacterHitboxTurnedByItsTransform) {
-  PhysicsHarness scene;
-  scene.AddFloor();
-  const Entity character = scene.AddCharacter({0.0F, 0.0F, 0.0F});
-  // One arm, 0.1 m thick, reaching from x 0.4 to 1.0 at a height of 1.4 m
-  physics::ConvexPart arm;
-  for (const float x : {0.4F, 1.0F}) {
-    for (const float y : {1.35F, 1.45F}) {
-      for (const float z : {-0.05F, 0.05F}) {
-        arm.points.emplace_back(x, y, z);
-      }
-    }
-  }
-  scene.Get<CharacterBody>(character).hitbox = scene.CreateHitbox({arm});
-  scene.Run(1);
-
-  // Past the capsule, along the arm
-  const bx::Vec3 forward{0.0F, 0.0F, -1.0F};
-  EXPECT_EQ(scene.Cast({0.7F, 1.4F, 5.0F}, forward).entity, character);
-
-  // A quarter turn left swings the arm from +X to -Z
-  scene.Get<Transform>(character).rotation =
-      bx::fromAxisAngle({0.0F, 1.0F, 0.0F}, bx::kPiHalf);
-  scene.Run(1);
-  EXPECT_EQ(scene.Cast({0.7F, 1.4F, 5.0F}, forward).entity, kMaxEntities);
-  const auto hit = scene.Cast({0.0F, 1.4F, -5.0F}, {0.0F, 0.0F, 1.0F});
-  EXPECT_EQ(hit.entity, character);
-  EXPECT_NEAR(hit.distance, 4.0F, 1e-2F);
 }
 
 TEST(Physics, RaySkipsADestroyedEntityNotYetSwept) {
