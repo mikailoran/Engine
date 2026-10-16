@@ -72,10 +72,15 @@ void PlayerSystem::Control(Ecs& ecs, const FrameContext& ctx,
   }
 
   // Fire only in play mode; PlaceCamera aims once physics has moved us
-  const bool trigger = has_control && input.Pressed(engine::MouseButton::kLeft);
+  const bool weapon_trigger =
+      has_control && input.Down(engine::MouseButton::kLeft);
+  const bool spawn_trigger =
+      has_control && input.Pressed(engine::MouseButton::kRight);
   ecs.View<Player, Aim>().ForEach(
-      [trigger](Entity /*entity*/, const Player& /*player*/, Aim& aim) -> void {
-        aim.trigger = trigger;
+      [weapon_trigger, spawn_trigger](
+          Entity /*entity*/, const Player& /*player*/, Aim& aim) -> void {
+        aim.weapon_trigger = weapon_trigger;
+        aim.spawn_trigger = spawn_trigger;
       });
 
   // The body turns about the vertical only; looking up tilts the camera

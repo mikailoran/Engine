@@ -6,6 +6,7 @@
 #include "engine/ecs/core/types.h"
 #include "engine/engine.h"
 #include "engine/platform/frame_context.h"
+#include "game/enemy_spawning.h"
 #include "game/shooting_system.h"
 
 using engine::Camera;
@@ -37,6 +38,7 @@ void GameSession::PrePhysics(Engine& engine, const FrameContext& ctx,
 
 void GameSession::PostPhysics(Engine& engine) const {
   player_.PlaceCamera(engine.World());
+  HandleEnemySpawns(engine);
   HandleShots(engine);
 }
 

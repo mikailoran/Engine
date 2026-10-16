@@ -84,7 +84,7 @@ auto HandleShots(Engine& engine) -> void {
   engine.World().View<Aim, Weapon>().ForEach(
       [&](Entity entity, const Aim& aim, Weapon& weapon) -> void {
         // Fire only on a trigger pull with the weapon ready
-        if (!aim.trigger || weapon.cooldown_left_s > 0.0F) {
+        if (!aim.weapon_trigger || weapon.cooldown_left_s > 0.0F) {
           return;
         }
         Shot shot{.from = Muzzle(aim.ray), .beam_s = weapon.beam_s};
@@ -103,14 +103,19 @@ auto HandleShots(Engine& engine) -> void {
         // Damage the hit entity
         auto& ecs = engine.World();
         if (auto* health = ecs.TryGetComponent<Health>(hit->entity)) {
-          ApplyDamage(*health, weapon.damage);
+          const auto remaining_health = ApplyDamage(*health, weapon.damage);
           const auto* name = ecs.TryGetComponent<Name>(hit->entity);
           std::cout << std::format(
                            "Player shot entity {} for {} damage. Remaining "
                            "health: {}",
                            name ? name->value : "<unnamed>", weapon.damage,
-                           health->current)
+                           remaining_health)
                     << "\n";
+
+          // TODO: Use a death system
+          if (remaining_health <= 0) {
+            ecs.DestroyEntity(hit->entity);
+          }
         }
       });
 
