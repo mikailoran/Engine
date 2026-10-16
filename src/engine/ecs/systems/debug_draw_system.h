@@ -9,12 +9,15 @@ namespace engine {
 
 class AssetRegistry;
 class Ecs;
+namespace physics {
+class PhysicsWorld;
+}  // namespace physics
 struct FrameContext;
 
 /**
  * @brief Draws a ground grid, origin axes, every Collider's wireframe,
  * every RigidBody's velocity arrow, every posed skeleton (through its
- * mesh), and boxes around highlighted entities.
+ * mesh) and ragdoll, and boxes around highlighted entities.
  *
  * Owns bgfx's debugdraw context, a process-wide global, so at most one
  * instance may exist. Draws to kDebugView, over the scene and against its
@@ -42,7 +45,8 @@ class DebugDrawSystem {
    *
    * @param assets Registry to resolve highlighted entities' mesh bounds.
    */
-  void Update(Ecs& ecs, const AssetRegistry& assets, const FrameContext& ctx);
+  void Update(Ecs& ecs, const AssetRegistry& assets,
+              const physics::PhysicsWorld& physics, const FrameContext& ctx);
 
   /**
    * @brief Requests a wire box around @p entity's mesh for this frame only.

@@ -15,12 +15,14 @@
 #include "engine/ecs/components/camera.h"
 #include "engine/ecs/components/character_body.h"
 #include "engine/ecs/components/collider.h"
+#include "engine/ecs/components/ragdoll_link.h"
 #include "engine/ecs/components/renderable.h"
 #include "engine/ecs/components/rigid_body.h"
 #include "engine/ecs/components/skin_pose.h"
 #include "engine/ecs/components/transform.h"
 #include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
+#include "engine/physics/physics_world.h"
 #include "engine/physics/shape.h"
 #include "engine/platform/frame_context.h"
 #include "engine/render_views.h"
@@ -148,6 +150,7 @@ DebugDrawSystem::DebugDrawSystem() { ddInit(); }
 DebugDrawSystem::~DebugDrawSystem() { ddShutdown(); }
 
 void DebugDrawSystem::Update(Ecs& ecs, const AssetRegistry& assets,
+                             const physics::PhysicsWorld& physics,
                              const FrameContext& ctx) {
   if (!active_camera_) {
     highlights_.clear();
@@ -179,6 +182,14 @@ void DebugDrawSystem::Update(Ecs& ecs, const AssetRegistry& assets,
       [&encoder](Entity /*entity*/, const Transform& transform,
                  const Collider& collider) -> void {
         DrawCollider(encoder, transform, collider);
+      });
+  // Ragdoll parts, kinematic or simulated
+  ecs.View<RagdollLink>().ForEach(
+      [&encoder, &physics](Entity /*entity*/, const RagdollLink& link) -> void {
+        for (const bx::Capsule& capsule :
+             physics.RagdollCapsules(link.Ragdoll())) {
+          encoder.draw(capsule);
+        }
       });
   ecs.View<Transform, CharacterBody>().ForEach(
       [&encoder](Entity /*entity*/, const Transform& transform,

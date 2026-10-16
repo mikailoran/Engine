@@ -18,6 +18,7 @@
 #include "engine/ecs/components/collider.h"
 #include "engine/ecs/components/directional_light.h"
 #include "engine/ecs/components/lifetime.h"
+#include "engine/ecs/components/ragdoll.h"
 #include "engine/ecs/components/renderable.h"
 #include "engine/ecs/components/rigid_body.h"
 #include "engine/ecs/components/transform.h"
@@ -165,6 +166,28 @@ void LoadAttachments(const json& data, Entity entity, Ecs& ecs,
     attached.meshes.push_back(mesh);
   }
   ecs.AddComponent(entity, std::move(attached));
+}
+
+/**
+ * @brief Adds a Ragdoll. "file" (a ragdoll file) is required and needs the
+ * entity's skinned Renderable; "simulate" (default false) starts it limp.
+ * @throws std::runtime_error If the entity has no skinned Renderable or the
+ *         file doesn't fit its rig.
+ */
+void LoadRagdoll(const json& data, Entity entity, Ecs& ecs,
+                 AssetRegistry& assets, physics::PhysicsWorld& physics) {
+  CheckKeys(data, {"file", "simulate"});
+  const auto* renderable = ecs.TryGetComponent<Renderable>(entity);
+  const RigHandle rig = renderable != nullptr
+                            ? assets.GetMesh(renderable->mesh_handle).rig
+                            : RigHandle{};
+  if (!rig.IsValid()) {
+    throw std::runtime_error("ragdoll needs a skinned mesh");
+  }
+  ecs.AddComponent(
+      entity, Ragdoll{.settings = assets.LoadRagdoll(
+                          data.at("file").get<std::string>(), rig, physics),
+                      .simulate = data.value("simulate", false)});
 }
 
 /** @brief Adds a DirectionalLight; every field is optional. */
@@ -347,6 +370,7 @@ void RegisterBuiltinLoaders(SceneLoader& loader) {
   loader.Register("renderable", LoadRenderable);
   loader.Register("animator", LoadAnimator);
   loader.Register("attachments", LoadAttachments);
+  loader.Register("ragdoll", LoadRagdoll);
   loader.Register("directional_light", LoadDirectionalLight);
   loader.Register("collider", LoadCollider);
   loader.Register("rigid_body", LoadRigidBody);

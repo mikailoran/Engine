@@ -12,16 +12,24 @@
 #include "engine/ecs/components/character_link.h"
 #include "engine/ecs/components/collider.h"
 #include "engine/ecs/components/physics_link.h"
+#include "engine/ecs/components/ragdoll.h"
+#include "engine/ecs/components/ragdoll_link.h"
 #include "engine/ecs/components/rigid_body.h"
+#include "engine/ecs/components/skin_pose.h"
 #include "engine/ecs/components/transform.h"
 #include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
+#include "engine/math/rotation.h"
 #include "engine/physics/body_handle.h"
 #include "engine/physics/character_handle.h"
 #include "engine/physics/hitbox_handle.h"
 #include "engine/physics/physics_world.h"
+#include "engine/physics/pose.h"
+#include "engine/physics/ragdoll.h"
+#include "engine/physics/ragdoll_handle.h"
 #include "engine/physics/shape.h"
 #include "engine/platform/frame_context.h"
+#include "engine/util/mat4.h"
 
 namespace engine {
 
@@ -61,9 +69,13 @@ auto SameShape(const CharacterBody& a, const CharacterBody& b) -> bool {
          a.push_force == b.push_force && a.hitbox == b.hitbox;
 }
 
-/** @brief Describes @p entity's character, standing at @p feet. */
-auto CharacterDescOf(const CharacterBody& body, const bx::Vec3& feet,
-                     Entity entity) -> physics::CharacterDesc {
+/**
+ * @brief Describes @p entity's character, standing at @p feet. With a
+ * Ragdoll, its parts take ray hits, so the capsule takes none.
+ */
+auto CharacterDescOf(const Ecs& ecs, const CharacterBody& body,
+                     const bx::Vec3& feet, Entity entity)
+    -> physics::CharacterDesc {
   return {.feet = feet,
           .height = body.height,
           .radius = body.radius,
@@ -71,7 +83,27 @@ auto CharacterDescOf(const CharacterBody& body, const bx::Vec3& feet,
           .mass = body.mass,
           .push_force = body.push_force,
           .hitbox = body.hitbox,
+          .ray_target = !ecs.HasComponent<Ragdoll>(entity),
           .user_data = Tag(entity)};
+}
+
+/**
+ * @brief Every joint's world pose for an entity placed by @p transform in
+ * @p pose; the Transform's scale is assumed 1.
+ */
+auto JointWorldPoses(const Transform& transform, const SkinPose& pose)
+    -> std::vector<physics::Pose> {
+  const Mat4 entity = ModelMatrix(transform);
+  std::vector<physics::Pose> joints;
+  joints.reserve(pose.model.size());
+  for (const Mat4& model : pose.model) {
+    Mat4 world{};
+    // Row vectors: the joint's model transform applies first
+    bx::mtxMul(world.data(), model.data(), entity.data());
+    joints.push_back({.position = bx::load<bx::Vec3>(&world.at(12)),
+                      .rotation = RotationOf(world)});
+  }
+  return joints;
 }
 
 /** @brief Turns and scales @p character's hitbox, if any, as @p transform. */
@@ -268,7 +300,7 @@ void PhysicsSystem::AttachCharacters(Ecs& ecs, physics::PhysicsWorld& world) {
     const auto& transform = ecs.GetComponent<Transform>(entity);
     const bx::Vec3 feet = transform.position;
     const physics::CharacterHandle character =
-        world.CreateCharacter(CharacterDescOf(body, feet, entity));
+        world.CreateCharacter(CharacterDescOf(ecs, body, feet, entity));
     world.SetCharacterVelocity(character, body.velocity);
     PushHitboxPose(world, character, body, transform);
     ecs.AddComponent(entity, CharacterLink(character, feet, body));
@@ -283,7 +315,7 @@ void PhysicsSystem::PushCharacterEdits(Ecs& ecs, physics::PhysicsWorld& world) {
           // A new capsule needs a new character; the velocity carries over
           world.DestroyCharacter(link.character_);
           link.character_ = world.CreateCharacter(
-              CharacterDescOf(body, transform.position, entity));
+              CharacterDescOf(ecs, body, transform.position, entity));
           world.SetCharacterVelocity(link.character_, body.velocity);
         } else {
           if (!Same(transform.position, link.feet_)) {
@@ -316,6 +348,102 @@ void PhysicsSystem::PullCharacters(Ecs& ecs,
       });
 }
 
+void PhysicsSystem::SweepOrphanRagdolls(Ecs& ecs,
+                                        physics::PhysicsWorld& world) {
+  for (const physics::RagdollEntry& entry : world.Ragdolls()) {
+    const auto* link =
+        ecs.TryGetComponent<RagdollLink>(static_cast<Entity>(entry.user_data));
+    if (link == nullptr || link->ragdoll_ != entry.ragdoll) {
+      world.DestroyRagdoll(entry.ragdoll);
+    }
+  }
+}
+
+void PhysicsSystem::DetachRagdolls(Ecs& ecs, physics::PhysicsWorld& world) {
+  std::vector<Entity> unlinked;
+  ecs.View<RagdollLink>().ForEach(
+      [&](Entity entity, const RagdollLink& link) -> void {
+        const bool owns = world.UserData(link.ragdoll_) == Tag(entity);
+        const auto* ragdoll = ecs.TryGetComponent<Ragdoll>(entity);
+        if (owns && ragdoll != nullptr && ragdoll->settings == link.settings_ &&
+            ecs.HasComponent<Transform>(entity)) {
+          return;
+        }
+        if (owns) {
+          world.DestroyRagdoll(link.ragdoll_);
+        }
+        unlinked.push_back(entity);
+      });
+  // Removing a viewed component inside ForEach asserts, so remove after
+  for (const Entity entity : unlinked) {
+    ecs.RemoveComponent<RagdollLink>(entity);
+  }
+}
+
+void PhysicsSystem::AttachRagdolls(Ecs& ecs, physics::PhysicsWorld& world) {
+  std::vector<Entity> unlinked;
+  ecs.View<Ragdoll, Transform, SkinPose>().ForEach(
+      [&](Entity entity, const Ragdoll& ragdoll, const Transform&,
+          const SkinPose& pose) -> void {
+        if (ragdoll.settings.IsValid() && !pose.model.empty() &&
+            !ecs.HasComponent<RagdollLink>(entity)) {
+          unlinked.push_back(entity);
+        }
+      });
+
+  for (const Entity entity : unlinked) {
+    const auto& ragdoll = ecs.GetComponent<Ragdoll>(entity);
+    const physics::RagdollHandle handle =
+        world.CreateRagdoll(ragdoll.settings,
+                            JointWorldPoses(ecs.GetComponent<Transform>(entity),
+                                            ecs.GetComponent<SkinPose>(entity)),
+                            Tag(entity));
+    if (handle.IsValid()) {
+      ecs.AddComponent(entity, RagdollLink(handle, ragdoll.settings));
+    }
+  }
+}
+
+void PhysicsSystem::PushRagdollEdits(Ecs& ecs, physics::PhysicsWorld& world) {
+  ecs.View<RagdollLink, Ragdoll>().ForEach(
+      [&](Entity, RagdollLink& link, const Ragdoll& ragdoll) -> void {
+        if (ragdoll.simulate != link.simulated_) {
+          world.SetRagdollSimulated(link.ragdoll_, ragdoll.simulate);
+          link.simulated_ = ragdoll.simulate;
+          link.driven_.clear();
+        }
+      });
+}
+
+void PhysicsSystem::PullRagdolls(Ecs& ecs, const physics::PhysicsWorld& world) {
+  ecs.View<RagdollLink>().ForEach([&](Entity, RagdollLink& link) -> void {
+    if (!link.simulated_) {
+      return;
+    }
+    link.driven_.clear();
+    for (const physics::RagdollJoint& joint :
+         world.RagdollJointPoses(link.ragdoll_)) {
+      link.driven_.push_back(
+          {.joint = joint.joint,
+           .world = ModelMatrix({.position = joint.pose.position,
+                                 .rotation = joint.pose.rotation})});
+    }
+  });
+}
+
+void PhysicsSystem::PoseRagdolls(Ecs& ecs, physics::PhysicsWorld& world,
+                                 const FrameContext& ctx) {
+  AttachRagdolls(ecs, world);
+  ecs.View<RagdollLink, Transform, SkinPose>().ForEach(
+      [&](Entity, const RagdollLink& link, const Transform& transform,
+          const SkinPose& pose) -> void {
+        if (!link.simulated_) {
+          world.PoseRagdoll(link.ragdoll_, JointWorldPoses(transform, pose),
+                            ctx.dt);
+        }
+      });
+}
+
 void PhysicsSystem::Update(Ecs& ecs, physics::PhysicsWorld& world,
                            const FrameContext& ctx) {
   SweepOrphans(ecs, world);
@@ -326,6 +454,10 @@ void PhysicsSystem::Update(Ecs& ecs, physics::PhysicsWorld& world,
   DetachCharacters(ecs, world);
   AttachCharacters(ecs, world);
   PushCharacterEdits(ecs, world);
+  // Ragdolls attach in PoseRagdolls, once this frame's pose exists
+  SweepOrphanRagdolls(ecs, world);
+  DetachRagdolls(ecs, world);
+  PushRagdollEdits(ecs, world);
 
   // A long hitch would otherwise queue more steps than the frame can afford.
   accumulator_ += std::min(ctx.dt, kMaxFrameDt);
@@ -338,6 +470,7 @@ void PhysicsSystem::Update(Ecs& ecs, physics::PhysicsWorld& world,
 
   PullResults(ecs, world);
   PullCharacters(ecs, world);
+  PullRagdolls(ecs, world);
 }
 
 }  // namespace engine

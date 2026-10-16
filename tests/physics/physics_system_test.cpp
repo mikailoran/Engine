@@ -21,7 +21,10 @@
 #include "engine/ecs/components/character_link.h"
 #include "engine/ecs/components/collider.h"
 #include "engine/ecs/components/physics_link.h"
+#include "engine/ecs/components/ragdoll.h"
+#include "engine/ecs/components/ragdoll_link.h"
 #include "engine/ecs/components/rigid_body.h"
+#include "engine/ecs/components/skin_pose.h"
 #include "engine/ecs/components/transform.h"
 #include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
@@ -32,8 +35,12 @@
 #include "engine/physics/hitbox_handle.h"
 #include "engine/physics/jolt_runtime.h"
 #include "engine/physics/physics_world.h"
+#include "engine/physics/pose.h"
+#include "engine/physics/ragdoll.h"
+#include "engine/physics/ragdoll_handle.h"
 #include "engine/physics/shape.h"
 #include "engine/platform/frame_context.h"
+#include "engine/util/mat4.h"
 
 namespace engine {
 
@@ -113,6 +120,9 @@ class PhysicsHarness {
     ecs_.RegisterComponent<PhysicsLink>();
     ecs_.RegisterComponent<CharacterBody>();
     ecs_.RegisterComponent<CharacterLink>();
+    ecs_.RegisterComponent<Ragdoll>();
+    ecs_.RegisterComponent<RagdollLink>();
+    ecs_.RegisterComponent<SkinPose>();
   }
 
   /** @brief Runs @p frames frames of exactly one 60 Hz step each. */
@@ -121,6 +131,8 @@ class PhysicsHarness {
     ctx.dt = 1.0F / 60.0F;
     for (int i = 0; i < frames; ++i) {
       system_.Update(ecs_, world_, ctx);
+      // As Engine::Update: ragdolls take the pose after animation
+      PhysicsSystem::PoseRagdolls(ecs_, world_, ctx);
       ecs_.Flush();
     }
   }
@@ -168,6 +180,56 @@ class PhysicsHarness {
         At({0.0F, 1.0F, -14.0F}, EulerToQuat({bx::toRad(15.0F), 0.0F, 0.0F}),
            {6.0F, 0.3F, 8.0F}),
         WithRestitution(Collider{}, restitution));
+  }
+
+  /**
+   * @brief Builds a three-part chain ragdoll (hips, chest, head) over a
+   * skeleton of three joints standing 1, 1.4 and 1.8 m above the feet.
+   */
+  auto CreateChainRagdoll() -> physics::RagdollSettingsHandle {
+    physics::RagdollDesc desc;
+    for (std::uint32_t joint = 0; joint < 3; ++joint) {
+      physics::RagdollPart part;
+      part.joint = joint;
+      if (joint > 0) {
+        part.parent = joint - 1;
+      }
+      part.offset.position = {0.0F, 0.2F, 0.0F};
+      part.half_height = 0.08F;
+      part.radius = 0.1F;
+      part.mass = 10.0F;
+      desc.parts.push_back(part);
+    }
+    std::vector<physics::Pose> rest;
+    for (const Mat4& model : ChainPose().model) {
+      rest.push_back({.position = bx::load<bx::Vec3>(&model.at(12))});
+    }
+    return world_.CreateRagdollSettings(desc, rest);
+  }
+
+  /** @brief The chain's skeleton standing still, in model space. */
+  static auto ChainPose() -> SkinPose {
+    SkinPose pose;
+    for (const float height : {1.0F, 1.4F, 1.8F}) {
+      pose.model.push_back(ModelMatrix(At({0.0F, height, 0.0F})));
+    }
+    pose.palette = pose.model;
+    return pose;
+  }
+
+  /** @brief Adds a posed entity at @p feet with a chain Ragdoll. */
+  auto AddRagdoll(const bx::Vec3& feet, physics::RagdollSettingsHandle settings)
+      -> Entity {
+    const Entity entity = ecs_.CreateEntity();
+    ecs_.AddComponent(entity, At(feet));
+    ecs_.AddComponent(entity, ChainPose());
+    ecs_.AddComponent(entity, Ragdoll{.settings = settings});
+    return entity;
+  }
+
+  /** @brief How many ragdolls the physics world holds. */
+  [[nodiscard]] auto RagdollCount() const -> std::size_t {
+    return world_.Ragdolls().size();
   }
 
   /** @brief Builds a hitbox in the physics world. */
@@ -872,6 +934,68 @@ TEST(Physics, RaySkipsADestroyedEntityNotYetSwept) {
   ASSERT_EQ(scene.BodyCount(), 2U);
   const auto hit = scene.Cast({0.0F, 0.0F, 0.0F}, {1.0F, 0.0F, 0.0F});
   EXPECT_EQ(hit.entity, behind);
+}
+
+TEST(Physics, RagdollFollowsItsEntitysPose) {
+  PhysicsHarness harness;
+  const Entity entity =
+      harness.AddRagdoll({5.0F, 0.0F, 0.0F}, harness.CreateChainRagdoll());
+  harness.Run(1);
+  ASSERT_TRUE(harness.Entities().HasComponent<RagdollLink>(entity));
+  EXPECT_EQ(harness.RagdollCount(), 1U);
+  // The chest capsule stands 1.6 m up
+  EXPECT_EQ(harness.Cast({2.0F, 1.6F, 0.0F}, {1.0F, 0.0F, 0.0F}).entity,
+            entity);
+
+  harness.Get<Transform>(entity).position = {8.0F, 0.0F, -6.0F};
+  harness.Run(1);
+  EXPECT_EQ(harness.Cast({2.0F, 1.6F, 0.0F}, {1.0F, 0.0F, 0.0F}).entity,
+            kMaxEntities);
+  EXPECT_EQ(harness.Cast({8.0F, 1.6F, -9.0F}, {0.0F, 0.0F, 1.0F}).entity,
+            entity);
+}
+
+TEST(Physics, SimulatedRagdollFallsAndDrivesItsJoints) {
+  PhysicsHarness harness;
+  harness.AddFloor();
+  const Entity entity =
+      harness.AddRagdoll({0.0F, 0.0F, 0.0F}, harness.CreateChainRagdoll());
+  harness.Run(1);
+  harness.Get<Ragdoll>(entity).simulate = true;
+  harness.Run(180);
+
+  const auto& link = harness.Get<RagdollLink>(entity);
+  EXPECT_TRUE(link.Simulated());
+  ASSERT_EQ(link.Driven().size(), 3U);
+  // The head joint came down from 1.8 m but stays above the floor
+  const float head = link.Driven().at(2).world.at(13);
+  EXPECT_LT(head, 1.0F);
+  EXPECT_GT(head, 0.0F);
+}
+
+TEST(Physics, RaysHitACharactersRagdollNotItsCapsule) {
+  PhysicsHarness harness;
+  harness.AddFloor();
+  const Entity entity =
+      harness.AddRagdoll({0.0F, 0.0F, 0.0F}, harness.CreateChainRagdoll());
+  harness.Entities().AddComponent(entity, CharacterBody{});
+  harness.Run(2);
+  // Through the 0.3 m capsule but beside the 0.1 m parts
+  EXPECT_EQ(harness.Cast({-3.0F, 1.6F, 0.2F}, {1.0F, 0.0F, 0.0F}).entity,
+            kMaxEntities);
+  EXPECT_EQ(harness.Cast({-3.0F, 1.6F, 0.0F}, {1.0F, 0.0F, 0.0F}).entity,
+            entity);
+}
+
+TEST(Physics, DestroyedEntityLosesItsRagdoll) {
+  PhysicsHarness harness;
+  const Entity entity =
+      harness.AddRagdoll({0.0F, 0.0F, 0.0F}, harness.CreateChainRagdoll());
+  harness.Run(1);
+  ASSERT_EQ(harness.RagdollCount(), 1U);
+  harness.Entities().DestroyEntity(entity);
+  harness.Run(2);
+  EXPECT_EQ(harness.RagdollCount(), 0U);
 }
 
 }  // namespace

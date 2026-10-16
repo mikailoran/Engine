@@ -64,8 +64,8 @@ class Engine {
   void Resize(PixelSize size);
 
   /**
-   * @brief Steps physics, then animation, then lifetimes, and sets this
-   * frame's lighting.
+   * @brief Steps physics, then animation (posing kinematic ragdolls after
+   * it), then lifetimes, and sets this frame's lighting.
    */
   void Update(const FrameContext& ctx);
 

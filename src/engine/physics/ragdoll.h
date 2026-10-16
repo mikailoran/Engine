@@ -5,18 +5,9 @@
 #include <vector>
 
 #include "engine/physics/pose.h"
-#include "engine/util/handle.h"  // IWYU pragma: export
+#include "engine/physics/ragdoll_handle.h"  // IWYU pragma: export
 
 namespace engine::physics {
-
-/**
- * @brief Opaque id of shared ragdoll settings in a PhysicsWorld, one per
- * rig. Never goes stale.
- */
-using RagdollSettingsHandle = Handle<struct RagdollSettingsTag>;
-
-/** @brief Opaque id of a ragdoll in a PhysicsWorld. Stale ids never alias. */
-using RagdollHandle = Handle<struct RagdollTag>;
 
 /**
  * @brief One rigid part of a ragdoll: a capsule that follows one joint of a
@@ -48,6 +39,14 @@ struct RagdollPart {
 struct RagdollDesc {
   /// Parents come before their children.
   std::vector<RagdollPart> parts;
+};
+
+/** @brief Output of RagdollJointPoses: where a part puts its joint. */
+struct RagdollJoint {
+  /// The skeleton joint, as in RagdollPart::joint.
+  std::uint32_t joint{0};
+  /// Its world pose.
+  Pose pose;
 };
 
 /** @brief Output of Ragdolls: a live ragdoll and its creation tag. */

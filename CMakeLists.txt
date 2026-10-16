@@ -130,6 +130,7 @@ add_library(engine_physics STATIC
   src/engine/physics/physics_world.h
   src/engine/physics/pose.h
   src/engine/physics/ragdoll.h
+  src/engine/physics/ragdoll_handle.h
   src/engine/physics/shape.h
   src/engine/physics/physics_world.cpp)
 
@@ -152,7 +153,8 @@ add_library(engine_physics_system STATIC
   src/engine/ecs/systems/physics_query.h
   src/engine/ecs/systems/physics_query.cpp)
 
-target_link_libraries(engine_physics_system PUBLIC ecs_core engine_physics)
+target_link_libraries(engine_physics_system PUBLIC ecs_core engine_physics
+  PRIVATE engine_math)
 target_compile_options(engine_physics_system PRIVATE -Wall -Wextra -Wpedantic)
 
 set_target_properties(engine_physics_system PROPERTIES
@@ -294,6 +296,8 @@ add_library(engine_runtime STATIC
   src/engine/ecs/components/animator.h
   src/engine/ecs/components/skin_pose.h
   src/engine/ecs/components/attached_meshes.h
+  src/engine/ecs/components/ragdoll.h
+  src/engine/ecs/components/ragdoll_link.h
   src/engine/ecs/systems/attachments.h
   src/engine/ecs/systems/attachments.cpp
   src/engine/ecs/systems/animation_system.h

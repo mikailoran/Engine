@@ -297,12 +297,16 @@ class PhysicsWorld {
   void SetRagdollSimulated(RagdollHandle ragdoll, bool simulated);
 
   /**
-   * @brief Writes the world pose of every joint a part follows into
-   * @p joints, from where the parts are now; other entries stay as they are.
-   * @param joints One entry per skeleton joint.
+   * @brief The world pose of every joint a part follows, from where the
+   * parts are now, in part order.
    */
-  void RagdollJointPoses(RagdollHandle ragdoll,
-                         std::vector<Pose>& joints) const;
+  [[nodiscard]] auto RagdollJointPoses(RagdollHandle ragdoll) const
+      -> std::vector<RagdollJoint>;
+
+  /** @brief Each of @p ragdoll's part capsules in world space, in part order.
+   */
+  [[nodiscard]] auto RagdollCapsules(RagdollHandle ragdoll) const
+      -> std::vector<bx::Capsule>;
 
   /**
    * @brief Returns @p ragdoll's tag, or nothing if it no longer exists.

@@ -5,6 +5,7 @@ namespace engine {
 class CharacterLink;
 class Ecs;
 class PhysicsLink;
+class RagdollLink;
 namespace physics {
 class PhysicsWorld;
 }  // namespace physics
@@ -21,7 +22,9 @@ struct RigidBody;
  * body's entity gets a PhysicsLink, and each character's a CharacterLink, that
  * only this system writes. Bodies and characters are created and destroyed as
  * components come and go, edits made outside physics are pushed in, and
- * motion is read back.
+ * motion is read back. Each entity with a Ragdoll, a Transform and a SkinPose
+ * gets a ragdoll and a RagdollLink, posed by PoseRagdolls once animation has
+ * run.
  */
 class PhysicsSystem {
  public:
@@ -36,6 +39,15 @@ class PhysicsSystem {
    * @param ctx Per-frame inputs; only its variable @c dt is consumed.
    */
   void Update(Ecs& ecs, physics::PhysicsWorld& world, const FrameContext& ctx);
+
+  /**
+   * @brief Gives each entity with a Ragdoll, a Transform and a SkinPose its
+   * ragdoll, then moves every kinematic ragdoll's parts to its entity's pose.
+   * Run after animation, so the parts match this frame's pose for ray casts.
+   * @param ctx Its dt sets how fast the parts move when they're let go.
+   */
+  static void PoseRagdolls(Ecs& ecs, physics::PhysicsWorld& world,
+                           const FrameContext& ctx);
 
  private:
   // Static: steps reach PhysicsLink's privates through this class's friendship
@@ -93,6 +105,25 @@ class PhysicsSystem {
 
   /** @brief Copies characters' feet, velocities and ground state back. */
   static void PullCharacters(Ecs& ecs, const physics::PhysicsWorld& world);
+
+  /** @brief Destroys ragdolls that no RagdollLink points to. */
+  static void SweepOrphanRagdolls(Ecs& ecs, physics::PhysicsWorld& world);
+
+  /**
+   * @brief Unlinks entities that lost their Ragdoll or Transform, or whose
+   * Ragdoll names other settings, destroying their ragdolls; drops links
+   * that don't own theirs.
+   */
+  static void DetachRagdolls(Ecs& ecs, physics::PhysicsWorld& world);
+
+  /** @brief Creates a ragdoll for each posed Ragdoll entity without one. */
+  static void AttachRagdolls(Ecs& ecs, physics::PhysicsWorld& world);
+
+  /** @brief Hands ragdolls to the simulation, or back, as Ragdoll asks. */
+  static void PushRagdollEdits(Ecs& ecs, physics::PhysicsWorld& world);
+
+  /** @brief Copies simulated ragdolls' joints into their links. */
+  static void PullRagdolls(Ecs& ecs, const physics::PhysicsWorld& world);
 
   /// Simulation step length, in seconds (60 Hz).
   static constexpr float kFixedDt = 1.0F / 60.0F;

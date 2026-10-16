@@ -932,21 +932,49 @@ void PhysicsWorld::SetRagdollSimulated(RagdollHandle ragdoll, bool simulated) {
   }
 }
 
-void PhysicsWorld::RagdollJointPoses(RagdollHandle ragdoll,
-                                     std::vector<Pose>& joints) const {
+auto PhysicsWorld::RagdollJointPoses(RagdollHandle ragdoll) const
+    -> std::vector<RagdollJoint> {
   assert(impl_->ragdolls.contains(ragdoll.Value()) && "unknown ragdoll");
   const RagdollSlot& slot = impl_->ragdolls.at(ragdoll.Value());
   const RagdollKind& kind = impl_->ragdoll_kinds.at(slot.kind);
   const JPH::BodyInterface& body_interface = impl_->system.GetBodyInterface();
+  std::vector<RagdollJoint> joints;
+  joints.reserve(kind.parts.size());
   for (std::size_t i = 0; i < kind.parts.size(); ++i) {
     const RagdollPart& part = kind.parts.at(i);
     JPH::RVec3 position = JPH::RVec3::sZero();
     JPH::Quat rotation = JPH::Quat::sIdentity();
     body_interface.GetPositionAndRotation(
         slot.ragdoll.Get().GetBodyID(static_cast<int>(i)), position, rotation);
-    joints.at(part.joint) = JointOfPart(
-        {.position = ToBx(position), .rotation = ToBx(rotation)}, part.offset);
+    joints.push_back({.joint = part.joint,
+                      .pose = JointOfPart({.position = ToBx(position),
+                                           .rotation = ToBx(rotation)},
+                                          part.offset)});
   }
+  return joints;
+}
+
+auto PhysicsWorld::RagdollCapsules(RagdollHandle ragdoll) const
+    -> std::vector<bx::Capsule> {
+  assert(impl_->ragdolls.contains(ragdoll.Value()) && "unknown ragdoll");
+  const RagdollSlot& slot = impl_->ragdolls.at(ragdoll.Value());
+  const RagdollKind& kind = impl_->ragdoll_kinds.at(slot.kind);
+  const JPH::BodyInterface& body_interface = impl_->system.GetBodyInterface();
+  std::vector<bx::Capsule> capsules;
+  capsules.reserve(kind.parts.size());
+  for (std::size_t i = 0; i < kind.parts.size(); ++i) {
+    const RagdollPart& part = kind.parts.at(i);
+    JPH::RVec3 position = JPH::RVec3::sZero();
+    JPH::Quat rotation = JPH::Quat::sIdentity();
+    body_interface.GetPositionAndRotation(
+        slot.ragdoll.Get().GetBodyID(static_cast<int>(i)), position, rotation);
+    // The capsule's axis is the body's +Y
+    const JPH::Vec3 half = rotation * JPH::Vec3(0.0F, part.half_height, 0.0F);
+    capsules.push_back({.pos = ToBx(position - half),
+                        .end = ToBx(position + half),
+                        .radius = part.radius});
+  }
+  return capsules;
 }
 
 auto PhysicsWorld::UserData(RagdollHandle ragdoll) const

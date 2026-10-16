@@ -17,6 +17,8 @@
 #include "engine/ecs/components/lifetime.h"
 #include "engine/ecs/components/name.h"
 #include "engine/ecs/components/physics_link.h"
+#include "engine/ecs/components/ragdoll.h"
+#include "engine/ecs/components/ragdoll_link.h"
 #include "engine/ecs/components/renderable.h"
 #include "engine/ecs/components/rigid_body.h"
 #include "engine/ecs/components/skin_pose.h"
@@ -26,6 +28,7 @@
 #include "engine/ecs/core/types.h"
 #include "engine/ecs/systems/lifetime_system.h"
 #include "engine/ecs/systems/physics_query.h"
+#include "engine/ecs/systems/physics_system.h"
 #include "engine/hud/crosshair.h"
 #include "engine/platform/frame_context.h"
 #include "engine/platform/native_surface.h"
@@ -53,6 +56,8 @@ Engine::Engine(const NativeSurface& surface) : bgfx_context_(surface) {
   ecs_.RegisterComponent<Animator>();
   ecs_.RegisterComponent<SkinPose>();
   ecs_.RegisterComponent<AttachedMeshes>();
+  ecs_.RegisterComponent<Ragdoll>();
+  ecs_.RegisterComponent<RagdollLink>();
 
   RegisterBuiltinLoaders(scene_loader_);
 }
@@ -63,6 +68,8 @@ void Engine::Update(const FrameContext& ctx) {
   physics_system_.Update(ecs_, physics_world_, ctx);
   // After physics: gameplay picks clips from this frame's motion
   animation_.Update(ecs_, assets_, ctx);
+  // Kinematic ragdolls take this frame's pose, for ray casts after Update
+  PhysicsSystem::PoseRagdolls(ecs_, physics_world_, ctx);
   ExpireLifetimes(ecs_, ctx);
   // Frame uniforms must be set before the renderer submits
   lighting_.Update(ecs_, ctx);
@@ -75,7 +82,7 @@ void Engine::Render(const FrameContext& ctx, RenderOptions options) {
   sky_.Update(ecs_);
   // Submits to kDebugView; must precede the renderer's bgfx::frame()
   if (options.debug_draw) {
-    debug_draw_.Update(ecs_, assets_, ctx);
+    debug_draw_.Update(ecs_, assets_, physics_world_, ctx);
     bgfx_context_.SetDebugStats(true);
   } else {
     bgfx_context_.SetDebugStats(false);

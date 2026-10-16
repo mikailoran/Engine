@@ -76,7 +76,10 @@ class RagdollScene : public testing::Test {
   /** @brief Where @p ragdoll's parts put its three joints. */
   auto Joints(RagdollHandle ragdoll) -> std::vector<Pose> {
     std::vector<Pose> joints(3);
-    world_.RagdollJointPoses(ragdoll, joints);
+    for (const physics::RagdollJoint& joint :
+         world_.RagdollJointPoses(ragdoll)) {
+      joints.at(joint.joint) = joint.pose;
+    }
     return joints;
   }
 
@@ -106,6 +109,16 @@ TEST_F(RagdollScene, KinematicRagdollFollowsItsPoses) {
   // Kinematic: stepping leaves it where it was put
   Run(30);
   EXPECT_NEAR(Joints(ragdoll).at(0).position.y, 1.0F, 1e-4F);
+}
+
+TEST_F(RagdollScene, CapsulesStandOverTheirJoints) {
+  const RagdollHandle ragdoll = AddRagdoll(kOrigin);
+  const auto capsules = World().RagdollCapsules(ragdoll);
+  ASSERT_EQ(capsules.size(), 3U);
+  // The hips capsule: centred 0.2 m above the hips joint, upright
+  EXPECT_NEAR(capsules.at(0).pos.y, 1.2F - 0.08F, 1e-4F);
+  EXPECT_NEAR(capsules.at(0).end.y, 1.2F + 0.08F, 1e-4F);
+  EXPECT_FLOAT_EQ(capsules.at(0).radius, 0.1F);
 }
 
 TEST_F(RagdollScene, RayHitsAPartWithItsRagdollAndTag) {

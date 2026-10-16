@@ -21,7 +21,8 @@ struct FrameContext;
  * Runs in Engine::Update after physics, so this frame's character velocity
  * can have chosen the clips, and before anything reads joint poses (the
  * renderer, attachments). Adds a SkinPose to each entity with an Animator
- * and a skinned Renderable; an Animator on a static mesh is ignored.
+ * and a skinned Renderable; an Animator on a static mesh is ignored. An
+ * entity whose ragdoll is simulated is posed from its parts instead.
  */
 class AnimationSystem {
  public:

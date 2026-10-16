@@ -6,6 +6,7 @@
 
 #include "engine/ecs/components/character_link.h"
 #include "engine/ecs/components/physics_link.h"
+#include "engine/ecs/components/ragdoll_link.h"
 #include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
 #include "engine/physics/physics_world.h"
@@ -20,6 +21,10 @@ auto LinkedTo(Ecs& ecs, Entity entity, const physics::RayHit& hit) -> bool {
   if (hit.body.IsValid()) {
     const auto* link = ecs.TryGetComponent<PhysicsLink>(entity);
     return link != nullptr && link->Body() == hit.body;
+  }
+  if (hit.ragdoll.IsValid()) {
+    const auto* link = ecs.TryGetComponent<RagdollLink>(entity);
+    return link != nullptr && link->Ragdoll() == hit.ragdoll;
   }
   const auto* link = ecs.TryGetComponent<CharacterLink>(entity);
   return link != nullptr && link->Character() == hit.character;

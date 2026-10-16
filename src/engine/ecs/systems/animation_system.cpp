@@ -1,6 +1,10 @@
 #include "engine/ecs/systems/animation_system.h"
 
+#include <bx/math.h>
+
+#include <cstddef>
 #include <cstdint>
+#include <ranges>
 #include <string>
 #include <utility>
 #include <vector>
@@ -10,13 +14,17 @@
 #include "engine/animation/playback.h"
 #include "engine/animation/rig.h"
 #include "engine/ecs/components/animator.h"
+#include "engine/ecs/components/ragdoll_link.h"
 #include "engine/ecs/components/renderable.h"
 #include "engine/ecs/components/skin_pose.h"
+#include "engine/ecs/components/transform.h"
 #include "engine/ecs/core/ecs.h"
 #include "engine/ecs/core/types.h"
 #include "engine/platform/frame_context.h"
 #include "engine/resource/animation_handles.h"
 #include "engine/resource/asset_registry.h"
+#include "engine/resource/skeleton.h"
+#include "engine/util/mat4.h"
 
 namespace engine {
 
@@ -81,6 +89,59 @@ void StepLayer(animation::LayerState& layer, float dt,
   }
 }
 
+/** @brief The product applying @p first, then @p second (row vectors). */
+auto Then(const Mat4& first, const Mat4& second) -> Mat4 {
+  Mat4 out{};
+  bx::mtxMul(out.data(), first.data(), second.data());
+  return out;
+}
+
+/** @brief The inverse of @p m. */
+auto Inverse(const Mat4& m) -> Mat4 {
+  Mat4 out{};
+  bx::mtxInverse(out.data(), m.data());
+  return out;
+}
+
+/**
+ * @brief Rebuilds @p model around a simulated ragdoll: the joints its parts
+ * move go where physics put them, and every other joint follows its parent
+ * with the local transform it had in the last pose.
+ * @param entity_model The entity's world matrix.
+ */
+void FollowRagdoll(const Skeleton& skeleton, const Mat4& entity_model,
+                   const std::vector<DrivenJoint>& driven,
+                   std::vector<Mat4>& model) {
+  const std::vector<Mat4> before = model;
+  std::vector<bool> done(model.size(), false);
+  const Mat4 to_model = Inverse(entity_model);
+  for (const DrivenJoint& joint : driven) {
+    model.at(joint.joint) = Then(joint.world, to_model);
+    done.at(joint.joint) = true;
+  }
+
+  for (std::size_t i = 0; i < model.size(); ++i) {
+    // Parents may follow their children: resolve the chain from its top
+    std::vector<std::size_t> chain{i};
+    for (auto parent = skeleton.joints.at(i).parent;
+         parent && !done.at(chain.back());
+         parent = skeleton.joints.at(*parent).parent) {
+      chain.push_back(*parent);
+    }
+    for (const std::size_t joint : std::views::reverse(chain)) {
+      if (done.at(joint)) {
+        continue;
+      }
+      // Roots above the parts stay; the rest keep their local transform
+      if (const auto parent = skeleton.joints.at(joint).parent) {
+        const Mat4 local = Then(before.at(joint), Inverse(before.at(*parent)));
+        model.at(joint) = Then(local, model.at(*parent));
+      }
+      done.at(joint) = true;
+    }
+  }
+}
+
 }  // namespace
 
 void AnimationSystem::Update(Ecs& ecs, const AssetRegistry& assets,
@@ -100,13 +161,24 @@ void AnimationSystem::Update(Ecs& ecs, const AssetRegistry& assets,
   }
 
   ecs.View<Animator, Renderable, SkinPose>().ForEach(
-      [&](Entity /*entity*/, Animator& animator, const Renderable& renderable,
+      [&](Entity entity, Animator& animator, const Renderable& renderable,
           SkinPose& pose) -> void {
         const RigHandle rig_handle = assets.GetMesh(renderable.mesh_handle).rig;
         if (!rig_handle.IsValid()) {
           return;
         }
         const animation::Rig& rig = assets.GetRig(rig_handle);
+
+        // A simulated ragdoll poses the skeleton instead of the clips
+        const auto* link = ecs.TryGetComponent<RagdollLink>(entity);
+        const auto* transform = ecs.TryGetComponent<Transform>(entity);
+        if (link != nullptr && link->Simulated() && !link->Driven().empty() &&
+            transform != nullptr && pose.model.size() == rig.JointCount()) {
+          FollowRagdoll(rig.Source(), ModelMatrix(*transform), link->Driven(),
+                        pose.model);
+          animation::Palette(rig.Source(), pose.model, pose.palette);
+          return;
+        }
 
         samples_.clear();
         for (animation::LayerState& layer : animator.layers) {
