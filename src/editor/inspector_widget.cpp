@@ -21,12 +21,18 @@ InspectorWidget::InspectorWidget(QWidget* parent)
   content_->addWidget(transform_panel_);
 
   SetDiagnostic(Diagnostic::kNoSelection);
+
+  connect(transform_panel_, &TransformPanel::PositionEdited, this,
+          &InspectorWidget::PositionEdited);
 }
 
-auto InspectorWidget::UpdateTransform(const QString& entity_name,
-                                      const engine::Transform& transform)
+auto InspectorWidget::UpdateEntityName(const QString& entity_name) -> void {
+  transform_panel_->SetEntityName(entity_name);
+}
+
+auto InspectorWidget::UpdateTransform(const engine::Transform& transform)
     -> void {
-  transform_panel_->DisplayTransform(entity_name, transform);
+  transform_panel_->DisplayTransform(transform);
   content_->setCurrentWidget(transform_panel_);
 }
 

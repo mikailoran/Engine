@@ -5,6 +5,7 @@
 #include <QObject>
 #include <QVariant>
 #include <Qt>
+#include <algorithm>
 #include <cstddef>
 
 #include "engine/ecs/components/name.h"
@@ -54,6 +55,31 @@ auto EntityListModel::Refresh(Ecs& world) -> void {
   });
   // TODO: Sort by their names then by the entity
   endResetModel();
+}
+
+auto EntityListModel::Sync(engine::Ecs& world) -> void {
+  // TODO: name changes not picked up
+  // Remove deleted entities
+  for (const auto i :
+       std::views::iota(std::size_t{0}, rows_.size()) | std::views::reverse) {
+    if (!world.HasComponent<Name>(rows_.at(i).entity)) {
+      beginRemoveRows(QModelIndex(), static_cast<int>(i), static_cast<int>(i));
+      rows_.erase(rows_.begin() + i);
+      endRemoveRows();
+    }
+  }
+
+  // TODO: not optimal. don't run "find" every frame.
+  // Add new entities
+  world.View<Name>().ForEach([this](Entity entity, const Name& name) -> void {
+    if (const auto it = std::ranges::find(rows_, entity, &EntityRow::entity);
+        it == rows_.end()) {
+      beginInsertRows(QModelIndex(), static_cast<int>(rows_.size()),
+                      static_cast<int>(rows_.size()));
+      rows_.emplace_back(entity, QString::fromStdString(name.value));
+      endInsertRows();
+    }
+  });
 }
 
 auto EntityListModel::Clear() -> void {}

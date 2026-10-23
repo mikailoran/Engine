@@ -86,6 +86,8 @@ class MainWindow : public QMainWindow {
    */
   auto UpdateInspectorFromSelection(const QItemSelection& selected) -> void;
 
+  auto ApplyPosition(bx::Vec3 position) -> void;
+
   // Owned by the central widget's window container.
   ViewportWindow* viewport_{nullptr};
 
@@ -105,6 +107,8 @@ class MainWindow : public QMainWindow {
   std::optional<engine::Engine> engine_;
   // Empty until the first scene loads
   std::optional<game::GameSession> session_;
+  // The entity that's currently selected if any
+  std::optional<engine::Entity> selected_entity_;
 
   // Fires as often as the event loop allows; bgfx's vsync paces the frames
   QTimer frame_timer_;

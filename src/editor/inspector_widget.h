@@ -30,15 +30,19 @@ class InspectorWidget : public QWidget {
   /** @brief Why the inspector shows a message instead of values. */
   enum class Diagnostic : std::uint8_t { kNoSelection = 0, kNoTransform };
 
+  auto UpdateEntityName(const QString& entity_name) -> void;
+
   /** @brief Shows @p transform under @p entity_name, replacing any message. */
-  auto UpdateTransform(const QString& entity_name,
-                       const engine::Transform& transform) -> void;
+  auto UpdateTransform(const engine::Transform& transform) -> void;
 
   /** @brief Hides any values and shows the message for @p diagnostic. */
   auto SetDiagnostic(Diagnostic diagnostic) -> void;
 
   /** @brief Returns to the "nothing selected" state, e.g. after a load. */
   auto Clear() -> void;
+
+ signals:
+  auto PositionEdited(bx::Vec3) -> void;
 
  private:
   // These are Qt children of this widget, which owns them.

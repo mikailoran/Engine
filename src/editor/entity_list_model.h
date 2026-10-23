@@ -47,6 +47,8 @@ class EntityListModel : public QAbstractListModel {
    */
   auto Refresh(engine::Ecs& world) -> void;
 
+  auto Sync(engine::Ecs& world) -> void;
+
   /** @brief Empties the list, e.g. once the world is gone. Stub for now. */
   auto Clear() -> void;
 

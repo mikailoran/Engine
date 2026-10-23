@@ -98,6 +98,10 @@ MainWindow::MainWindow(QWidget* parent)
   connect(view_selection_model, &QItemSelectionModel::selectionChanged, this,
           &MainWindow::UpdateInspectorFromSelection);
 
+  // Connect inspector edit signal to position apply slot
+  connect(inspector_, &InspectorWidget::PositionEdited, this,
+          &MainWindow::ApplyPosition);
+
   // The container takes ownership of the viewport and lays it out like a widget
   QWidget* container = QWidget::createWindowContainer(viewport_, this);
   // Clicking or tabbing to the viewport gives the game the keyboard
@@ -194,6 +198,17 @@ void MainWindow::Tick() {
   session_->PostPhysics(*engine_);
   engine_->Render(ctx, {.debug_draw = false});
   engine_->EndFrame();
+
+  entities_->Sync(engine_.value().World());
+
+  if (selected_entity_) {
+    const auto* transform = engine_->World().TryGetComponent<engine::Transform>(
+        selected_entity_.value());
+
+    if (transform) {
+      inspector_->UpdateTransform(*transform);
+    }
+  }
 }
 
 void MainWindow::OpenScene(const std::filesystem::path& path) {
@@ -234,6 +249,7 @@ auto MainWindow::UpdateInspectorFromSelection(const QItemSelection& selected)
   // Handle deselection case.
   if (selected.empty()) {
     inspector_->SetDiagnostic(InspectorWidget::Diagnostic::kNoSelection);
+    selected_entity_.reset();
     return;
   }
 
@@ -241,16 +257,28 @@ auto MainWindow::UpdateInspectorFromSelection(const QItemSelection& selected)
   const auto entity =
       // NOLINTNEXTLINE(clazy-qvariant-template-instantiation)
       index.data(EntityListModel::kEntityRole).value<engine::Entity>();
+  selected_entity_ = entity;
   const auto name = index.data().toString();
+  inspector_->UpdateEntityName(name);
 
   const auto* transform =
       engine_->World().TryGetComponent<engine::Transform>(entity);
 
   if (transform) {
-    inspector_->UpdateTransform(name, *transform);
+    inspector_->UpdateTransform(*transform);
   } else {
     inspector_->SetDiagnostic(InspectorWidget::Diagnostic::kNoTransform);
   }
+}
+
+auto MainWindow::ApplyPosition(bx::Vec3 position) -> void {
+  if (!engine_ || !selected_entity_) {
+    return;
+  }
+
+  auto& transform = engine_->World().GetComponent<engine::Transform>(
+      selected_entity_.value());
+  transform.position = position;
 }
 
 }  // namespace editor

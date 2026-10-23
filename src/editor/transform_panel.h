@@ -25,9 +25,13 @@ class TransformPanel : public QWidget {
   /** @brief Builds the form; it shows zeros until DisplayTransform. */
   explicit TransformPanel(QWidget* parent = nullptr);
 
+  auto SetEntityName(const QString& entity_name) -> void;
+
   /** @brief Shows @p entity_name and @p transform's position, in metres. */
-  auto DisplayTransform(const QString& entity_name,
-                        const engine::Transform& transform) -> void;
+  auto DisplayTransform(const engine::Transform& transform) -> void;
+
+ signals:
+  void PositionEdited(bx::Vec3 position);
 
  private:
   /// Largest position shown, in metres; values beyond it display clamped.
