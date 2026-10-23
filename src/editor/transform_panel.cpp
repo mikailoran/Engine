@@ -4,6 +4,7 @@
 #include <QGridLayout>
 #include <QGroupBox>
 #include <QLabel>
+#include <QSignalBlocker>
 #include <QString>
 #include <QVBoxLayout>
 #include <QWidget>
@@ -26,17 +27,15 @@ TransformPanel::TransformPanel(QWidget* parent)
   grid->addWidget(new QLabel(tr("Z")), 0, 3);
   grid->addWidget(new QLabel(tr("Position")), 1, 0);
 
-  const auto emit_position = [this]() -> void {
-    emit PositionEdited({static_cast<float>(position_.at(0)->value()),
-                         static_cast<float>(position_.at(1)->value()),
-                         static_cast<float>(position_.at(2)->value())});
-  };
-
   // Set up and add position Spin Boxes.
   for (std::size_t axis = 0; axis < position_.size(); ++axis) {
     auto& spinbox = position_.at(axis);
     spinbox = new QDoubleSpinBox(transform_group_);
-    connect(spinbox, &QDoubleSpinBox::valueChanged, this, emit_position);
+    connect(spinbox, &QDoubleSpinBox::valueChanged, this,
+            [this, axis](double value) -> void {
+              emit PositionEdited(static_cast<Axis>(axis),
+                                  static_cast<float>(value));
+            });
 
     spinbox->setReadOnly(false);
     spinbox->setKeyboardTracking(false);

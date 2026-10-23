@@ -3,6 +3,7 @@
 #include <QString>
 #include <QWidget>
 #include <array>
+#include <cstdint>
 
 #include "engine/ecs/components/transform.h"
 
@@ -11,6 +12,9 @@ class QGroupBox;
 class QDoubleSpinBox;
 
 namespace editor {
+
+/** @brief One coordinate of a position; its value is the box's index. */
+enum class Axis : std::uint8_t { kX = 0, kY, kZ };
 
 /**
  * @brief A read-only form showing an entity's name and Transform position.
@@ -31,7 +35,12 @@ class TransformPanel : public QWidget {
   auto DisplayTransform(const engine::Transform& transform) -> void;
 
  signals:
-  void PositionEdited(bx::Vec3 position);
+  /**
+   * @brief The user changed one position box. Only that axis is sent, so the
+   * others' rounded or stale display values never overwrite the entity.
+   * @param value The new coordinate, in metres.
+   */
+  void PositionEdited(Axis axis, float value);
 
  private:
   /// Largest position shown, in metres; values beyond it display clamped.

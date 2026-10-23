@@ -10,6 +10,7 @@
 #include <optional>
 
 #include "editor/entity_list_model.h"
+#include "editor/transform_panel.h"
 #include "engine/engine.h"
 #include "game/game_session.h"
 
@@ -86,7 +87,11 @@ class MainWindow : public QMainWindow {
    */
   auto UpdateInspectorFromSelection(const QItemSelection& selected) -> void;
 
-  auto ApplyPosition(bx::Vec3 position) -> void;
+  /**
+   * @brief Writes one coordinate of the selected entity's Transform position.
+   * Does nothing if there is no selection or it has no Transform.
+   */
+  auto ApplyPosition(Axis axis, float value) -> void;
 
   // Owned by the central widget's window container.
   ViewportWindow* viewport_{nullptr};

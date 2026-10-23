@@ -4,14 +4,13 @@
 #include <QWidget>
 #include <cstdint>
 
+#include "editor/transform_panel.h"
 #include "engine/ecs/components/transform.h"
 
 class QStackedWidget;
 class QLabel;
 
 namespace editor {
-
-class TransformPanel;
 
 /**
  * @brief Shows the selected entity's components, or a message saying why
@@ -42,7 +41,8 @@ class InspectorWidget : public QWidget {
   auto Clear() -> void;
 
  signals:
-  auto PositionEdited(bx::Vec3) -> void;
+  /** @brief Forwards TransformPanel::PositionEdited. */
+  void PositionEdited(Axis axis, float value);
 
  private:
   // These are Qt children of this widget, which owns them.

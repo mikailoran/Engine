@@ -31,6 +31,7 @@
 
 #include "editor/entity_list_model.h"
 #include "editor/inspector_widget.h"
+#include "editor/transform_panel.h"
 #include "editor/viewport_window.h"
 #include "engine/ecs/components/transform.h"
 #include "engine/ecs/core/types.h"
@@ -207,6 +208,8 @@ void MainWindow::Tick() {
 
     if (transform) {
       inspector_->UpdateTransform(*transform);
+    } else {
+      inspector_->SetDiagnostic(InspectorWidget::Diagnostic::kNoTransform);
     }
   }
 }
@@ -228,6 +231,7 @@ void MainWindow::OpenScene(const std::filesystem::path& path) {
   }
   // The model reset drops the selection without emitting selectionChanged
   inspector_->Clear();
+  selected_entity_.reset();
 }
 
 void MainWindow::ChooseScene() {
@@ -271,14 +275,28 @@ auto MainWindow::UpdateInspectorFromSelection(const QItemSelection& selected)
   }
 }
 
-auto MainWindow::ApplyPosition(bx::Vec3 position) -> void {
+auto MainWindow::ApplyPosition(Axis axis, float value) -> void {
   if (!engine_ || !selected_entity_) {
     return;
   }
 
-  auto& transform = engine_->World().GetComponent<engine::Transform>(
+  auto* transform = engine_->World().TryGetComponent<engine::Transform>(
       selected_entity_.value());
-  transform.position = position;
+  if (!transform) {
+    return;
+  }
+  // Only the edited axis: the others may have moved since they were displayed
+  switch (axis) {
+    case Axis::kX:
+      transform->position.x = value;
+      break;
+    case Axis::kY:
+      transform->position.y = value;
+      break;
+    case Axis::kZ:
+      transform->position.z = value;
+      break;
+  }
 }
 
 }  // namespace editor
